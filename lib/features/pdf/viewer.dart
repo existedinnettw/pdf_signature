@@ -7,12 +7,10 @@ import 'package:path_provider/path_provider.dart' as pp;
 import 'dart:typed_data';
 import '../share/export_service.dart';
 import 'package:hand_signature/signature.dart' as hand;
-import 'package:meta/meta.dart';
 
 part 'viewer_state.dart';
 part 'viewer_widgets.dart';
 
-// Testing hook: allow using a mock viewer instead of pdfrx to avoid async I/O in widget tests
 final useMockViewerProvider = Provider<bool>((_) => false);
 // Export service injection for testability
 final exportServiceProvider = Provider<ExportService>((_) => ExportService());
@@ -138,30 +136,39 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final fullPath = _ensurePdfExtension(path.trim());
     final exporter = ref.read(exportServiceProvider);
     final targetDpi = ref.read(exportDpiProvider);
-    // Multi-page export: iterate pages by navigating the viewer
-    final controller = ref.read(pdfProvider.notifier);
-    final current = pdf.currentPage;
-    final targetPage = pdf.signedPage; // may be null if not marked
-    final ok = await exporter.exportMultiPageFromBoundary(
-      boundaryKey: _captureKey,
-      outputPath: fullPath,
-      pageCount: pdf.pageCount,
-      targetDpi: targetDpi,
-      onGotoPage: (p) async {
-        controller.jumpTo(p);
-        // Show overlay only on the signed page (if any)
-        // If a target page is specified, show overlay only on that page.
-        // If not specified, keep overlay visible (backwards compatible single-page case).
-        final show = targetPage == null ? true : (targetPage == p);
-        ref.read(signatureVisibilityProvider.notifier).state = show;
-        // Allow build to occur
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-      },
-    );
-    // Restore page
-    controller.jumpTo(current);
-    // Restore visibility
-    ref.read(signatureVisibilityProvider.notifier).state = true;
+    final useMock = ref.read(useMockViewerProvider);
+    bool ok = false;
+    if (!useMock && pdf.pickedPdfPath != null) {
+      // Preferred path: operate on the original PDF file using engine-rendered backgrounds
+      ok = await exporter.exportSignedPdfFromFile(
+        inputPath: pdf.pickedPdfPath!,
+        outputPath: fullPath,
+        signedPage: pdf.signedPage,
+        signatureRectUi: sig.rect,
+        uiPageSize: SignatureController.pageSize,
+        signatureImageBytes: sig.imageBytes,
+        targetDpi: targetDpi,
+      );
+    } else {
+      // Fallback in mock/tests: snapshot the viewer per page
+      final controller = ref.read(pdfProvider.notifier);
+      final current = pdf.currentPage;
+      final targetPage = pdf.signedPage; // may be null if not marked
+      ok = await exporter.exportMultiPageFromBoundary(
+        boundaryKey: _captureKey,
+        outputPath: fullPath,
+        pageCount: pdf.pageCount,
+        targetDpi: targetDpi,
+        onGotoPage: (p) async {
+          controller.jumpTo(p);
+          final show = targetPage == null ? true : (targetPage == p);
+          ref.read(signatureVisibilityProvider.notifier).state = show;
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        },
+      );
+      controller.jumpTo(current);
+      ref.read(signatureVisibilityProvider.notifier).state = true;
+    }
     if (ok) {
       ScaffoldMessenger.of(
         context,

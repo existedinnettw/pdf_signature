@@ -10,7 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
 import 'dart:ui' show PointerDeviceKind;
-import 'dart:async';
 
 import 'package:pdf_signature/features/pdf/viewer.dart';
 import 'package:pdf_signature/features/share/export_service.dart';
