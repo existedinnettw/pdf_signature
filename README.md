@@ -1,2 +1,3 @@
 # pdf_signature
-create a signature on pdf page
+
+A GUI app to create a signature on PDF page interactively.
