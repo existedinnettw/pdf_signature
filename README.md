@@ -10,8 +10,11 @@ checkout [`docs/FRs.md`](docs/FRs.md)
 
 ```bash
 flutter pub get
+
+# run the app
 flutter run
 
+# run unit tests and widget tests
 flutter test
 
 flutter build

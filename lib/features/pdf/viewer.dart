@@ -6,6 +6,8 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:path_provider/path_provider.dart' as pp;
 import 'dart:typed_data';
 import '../share/export_service.dart';
+import 'package:hand_signature/signature.dart' as hand;
+import 'package:meta/meta.dart';
 
 part 'viewer_state.dart';
 part 'viewer_widgets.dart';
@@ -14,6 +16,8 @@ part 'viewer_widgets.dart';
 final useMockViewerProvider = Provider<bool>((_) => false);
 // Export service injection for testability
 final exportServiceProvider = Provider<ExportService>((_) => ExportService());
+// Export DPI setting (points per inch mapping), default 144 DPI
+final exportDpiProvider = StateProvider<double>((_) => 144.0);
 // Controls whether signature overlay is visible (used to hide on non-stamped pages during export)
 final signatureVisibilityProvider = StateProvider<bool>((_) => true);
 // Save path picker (injected for tests)
@@ -55,6 +59,12 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   static const Size _pageSize = SignatureController.pageSize;
   final GlobalKey _captureKey = GlobalKey();
 
+  // Exposed for tests to trigger the invalid-file SnackBar without UI.
+  @visibleForTesting
+  void debugShowInvalidSignatureSnackBar() {
+    ref.read(signatureProvider.notifier).setInvalidSelected(context);
+  }
+
   Future<void> _pickPdf() async {
     final typeGroup = const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
     final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
@@ -86,9 +96,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     sig.setImageBytes(bytes);
   }
 
-  void _loadInvalidSignature() {
-    ref.read(signatureProvider.notifier).setInvalidSelected(context);
-  }
+  // removed invalid loader; not part of normal app
 
   void _onDragSignature(Offset delta) {
     ref.read(signatureProvider.notifier).drag(delta);
@@ -101,15 +109,15 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   Future<void> _openDrawCanvas() async {
     final pdf = ref.read(pdfProvider);
     if (!pdf.markedForSigning) return;
-    final current = ref.read(signatureProvider).strokes;
-    final result = await showModalBottomSheet<List<List<Offset>>>(
+    final result = await showModalBottomSheet<Uint8List>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => DrawCanvas(strokes: current),
+      enableDrag: false,
+      builder: (_) => const DrawCanvas(),
     );
-    if (result != null) {
-      ref.read(signatureProvider.notifier).setStrokes(result);
-      ref.read(signatureProvider.notifier).ensureRectForStrokes();
+    if (result != null && result.isNotEmpty) {
+      // Use the drawn image as signature content
+      ref.read(signatureProvider.notifier).setImageBytes(result);
     }
   }
 
@@ -129,6 +137,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     if (path == null || path.trim().isEmpty) return;
     final fullPath = _ensurePdfExtension(path.trim());
     final exporter = ref.read(exportServiceProvider);
+    final targetDpi = ref.read(exportDpiProvider);
     // Multi-page export: iterate pages by navigating the viewer
     final controller = ref.read(pdfProvider.notifier);
     final current = pdf.currentPage;
@@ -137,6 +146,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       boundaryKey: _captureKey,
       outputPath: fullPath,
       pageCount: pdf.pageCount,
+      targetDpi: targetDpi,
       onGotoPage: (p) async {
         controller.jumpTo(p);
         // Show overlay only on the signed page (if any)
@@ -197,6 +207,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   Widget _buildToolbar(PdfState pdf) {
+    final dpi = ref.watch(exportDpiProvider);
     final pageInfo = 'Page ${pdf.currentPage}/${pdf.pageCount}';
     return Wrap(
       spacing: 8,
@@ -241,6 +252,31 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                     if (n != null) _jumpToPage(n);
                   },
                 ),
+              ),
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('DPI:'),
+              const SizedBox(width: 8),
+              DropdownButton<double>(
+                key: const Key('ddl_export_dpi'),
+                value: dpi,
+                items:
+                    const [96.0, 144.0, 200.0, 300.0]
+                        .map(
+                          (v) => DropdownMenuItem(
+                            value: v,
+                            child: Text(v.toStringAsFixed(0)),
+                          ),
+                        )
+                        .toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    ref.read(exportDpiProvider.notifier).state = v;
+                  }
+                },
               ),
             ],
           ),
@@ -407,8 +443,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                     children: [
                       if (sig.imageBytes != null)
                         Image.memory(sig.imageBytes!, fit: BoxFit.contain)
-                      else if (sig.strokes.isNotEmpty)
-                        CustomPaint(painter: StrokesPainter(sig.strokes))
                       else
                         const Center(child: Text('Signature')),
                       Positioned(

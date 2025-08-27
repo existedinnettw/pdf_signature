@@ -115,5 +115,13 @@ Feature: save signed PDF
 		Given a PDF is open with no signatures placed
 		When the user attempts to save
 		Then the user is notified there is nothing to save
+
+    Scenario: Loading sign when exporting/saving files
+		Given a signature is placed with a position and size relative to the page
+		When the user starts exporting the document
+        And the export process is not yet finished
+		Then the user is notified that the export is still in progress
+        And the user cannot edit the document
+
 ```
 

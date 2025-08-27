@@ -115,7 +115,7 @@ class SignatureState {
     bgRemoval: false,
     contrast: 1.0,
     brightness: 0.0,
-    strokes: const [],
+    strokes: [],
     imageBytes: null,
   );
   SignatureState copyWith({

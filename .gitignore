@@ -121,3 +121,4 @@ app.*.symbols
 docs/.*
 .vscode/tasks.json
 .vscode/launch.json
+devtools_options.yaml

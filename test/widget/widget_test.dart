@@ -8,9 +8,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:typed_data';
+import 'dart:ui' show PointerDeviceKind;
+import 'dart:async';
 
 import 'package:pdf_signature/features/pdf/viewer.dart';
 import 'package:pdf_signature/features/share/export_service.dart';
+import 'package:hand_signature/signature.dart' as hand;
 
 // Fakes for export service (top-level; Dart does not allow local class declarations)
 class RecordingExporter extends ExportService {
@@ -22,6 +26,7 @@ class RecordingExporter extends ExportService {
     required int pageCount,
     required Future<void> Function(int page) onGotoPage,
     double pixelRatio = 2.0,
+    double targetDpi = 144.0,
   }) async {
     called = true;
     // Ensure extension
@@ -41,6 +46,7 @@ class BasicExporter extends ExportService {
     required int pageCount,
     required Future<void> Function(int page) onGotoPage,
     double pixelRatio = 2.0,
+    double targetDpi = 144.0,
   }) async {
     for (var i = 1; i <= pageCount; i++) {
       await onGotoPage(i);
@@ -50,7 +56,7 @@ class BasicExporter extends ExportService {
 }
 
 void main() {
-  Future<void> _pumpWithOpenPdf(WidgetTester tester) async {
+  Future<void> pumpWithOpenPdf(WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -65,7 +71,7 @@ void main() {
     await tester.pump();
   }
 
-  Future<void> _pumpWithOpenPdfAndSig(WidgetTester tester) async {
+  Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -84,7 +90,7 @@ void main() {
   }
 
   testWidgets('Open a PDF and navigate pages', (tester) async {
-    await _pumpWithOpenPdf(tester);
+    await pumpWithOpenPdf(tester);
     final pageInfo = find.byKey(const Key('lbl_page_info'));
     expect(pageInfo, findsOneWidget);
     expect((tester.widget<Text>(pageInfo)).data, 'Page 1/5');
@@ -99,7 +105,7 @@ void main() {
   });
 
   testWidgets('Jump to a specific page', (tester) async {
-    await _pumpWithOpenPdf(tester);
+    await pumpWithOpenPdf(tester);
 
     final goto = find.byKey(const Key('txt_goto'));
     await tester.enterText(goto, '4');
@@ -110,7 +116,7 @@ void main() {
   });
 
   testWidgets('Select a page for signing', (tester) async {
-    await _pumpWithOpenPdf(tester);
+    await pumpWithOpenPdf(tester);
 
     await tester.tap(find.byKey(const Key('btn_mark_signing')));
     await tester.pump();
@@ -118,26 +124,29 @@ void main() {
     expect(find.byKey(const Key('btn_load_signature_picker')), findsOneWidget);
   });
 
+  testWidgets('Show invalid/unsupported file SnackBar via test hook', (
+    tester,
+  ) async {
+    await pumpWithOpenPdf(tester);
+    final dynamic state =
+        tester.state(find.byType(PdfSignatureHomePage)) as dynamic;
+    state.debugShowInvalidSignatureSnackBar();
+    await tester.pump();
+    expect(find.text('Invalid or unsupported file'), findsOneWidget);
+  });
+
   testWidgets('Import a signature image', (tester) async {
-    await _pumpWithOpenPdfAndSig(tester);
+    await pumpWithOpenPdfAndSig(tester);
     await tester.tap(find.byKey(const Key('btn_mark_signing')));
     await tester.pump();
     // overlay present from provider override
     expect(find.byKey(const Key('signature_overlay')), findsOneWidget);
   });
 
-  testWidgets('Handle invalid or unsupported files', (tester) async {
-    await _pumpWithOpenPdf(tester);
-    await tester.tap(find.byKey(const Key('btn_mark_signing')));
-    await tester.pump();
-
-    await tester.tap(find.byKey(const Key('btn_load_invalid_signature')));
-    await tester.pump();
-    expect(find.text('Invalid or unsupported file'), findsOneWidget);
-  });
+  // Removed: Load Invalid button is not part of normal app UI.
 
   testWidgets('Resize and move signature within page bounds', (tester) async {
-    await _pumpWithOpenPdfAndSig(tester);
+    await pumpWithOpenPdfAndSig(tester);
     await tester.tap(find.byKey(const Key('btn_mark_signing')));
     await tester.pump();
 
@@ -163,7 +172,7 @@ void main() {
   });
 
   testWidgets('Lock aspect ratio while resizing', (tester) async {
-    await _pumpWithOpenPdfAndSig(tester);
+    await pumpWithOpenPdfAndSig(tester);
     await tester.tap(find.byKey(const Key('btn_mark_signing')));
     await tester.pump();
 
@@ -188,7 +197,7 @@ void main() {
   testWidgets('Background removal and adjustments controls change state', (
     tester,
   ) async {
-    await _pumpWithOpenPdfAndSig(tester);
+    await pumpWithOpenPdfAndSig(tester);
     await tester.tap(find.byKey(const Key('btn_mark_signing')));
     await tester.pump();
 
@@ -210,32 +219,57 @@ void main() {
     expect(find.byKey(const Key('signature_overlay')), findsOneWidget);
   });
 
-  testWidgets('Draw signature: draw, undo, clear, confirm places on page', (
-    tester,
-  ) async {
-    await _pumpWithOpenPdfAndSig(tester);
-    await tester.tap(find.byKey(const Key('btn_mark_signing')));
-    await tester.pump();
-
-    // Open draw canvas
-    await tester.tap(find.byKey(const Key('btn_draw_signature')));
+  testWidgets('DrawCanvas exports non-empty bytes on confirm', (tester) async {
+    Uint8List? exported;
+    final sink = ValueNotifier<Uint8List?>(null);
+    final control = hand.HandSignatureControl();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DrawCanvas(
+            control: control,
+            debugBytesSink: sink,
+            onConfirm: (bytes) {
+              exported = bytes;
+            },
+          ),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
-    final canvas = find.byKey(const Key('draw_canvas'));
-    await tester.drag(canvas, const Offset(80, 0));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('btn_canvas_undo')));
-    await tester.pump();
-    await tester.drag(canvas, const Offset(50, 0));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('btn_canvas_clear')));
-    await tester.pump();
-    await tester.drag(canvas, const Offset(40, 0));
-    await tester.pump();
+
+    // Draw a simple stroke inside the pad
+    final pad = find.byKey(const Key('hand_signature_pad'));
+    expect(pad, findsOneWidget);
+    final rect = tester.getRect(pad);
+    final g = await tester.startGesture(
+      Offset(rect.left + 20, rect.center.dy),
+      kind: PointerDeviceKind.touch,
+    );
+    for (int i = 0; i < 10; i++) {
+      await g.moveBy(
+        const Offset(12, 0),
+        timeStamp: Duration(milliseconds: 16 * (i + 1)),
+      );
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await g.up();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Confirm export
     await tester.tap(find.byKey(const Key('btn_canvas_confirm')));
-    await tester.pumpAndSettle();
+    // Wait until notifier receives bytes
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    await tester.runAsync(() async {
+      final end = DateTime.now().add(const Duration(seconds: 2));
+      while (sink.value == null && DateTime.now().isBefore(end)) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    exported ??= sink.value;
 
-    // Overlay present with drawn strokes painter
-    expect(find.byKey(const Key('signature_overlay')), findsOneWidget);
+    expect(exported, isNotNull);
+    expect(exported!.isNotEmpty, isTrue);
   });
 
   testWidgets('Save uses file selector (via provider) and injected exporter', (

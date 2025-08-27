@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart' as pdf;
 
 // NOTE:
 // - This exporter uses a raster snapshot of the UI (RepaintBoundary) and embeds it into a new PDF.
@@ -14,6 +15,8 @@ class ExportService {
   Future<bool> exportSignedPdfFromBoundary({
     required GlobalKey boundaryKey,
     required String outputPath,
+    double pixelRatio = 4.0,
+    double targetDpi = 144.0,
   }) async {
     try {
       final boundary =
@@ -21,19 +24,32 @@ class ExportService {
               as RenderRepaintBoundary?;
       if (boundary == null) return false;
       // Render current view to image
-      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+      // Higher pixelRatio improves exported quality
+      final ui.Image image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return false;
       final pngBytes = byteData.buffer.asUint8List();
 
-      // Compose single-page PDF with the image
+      // Compose single-page PDF with the image, using page size that matches the image
       final doc = pw.Document();
       final img = pw.MemoryImage(pngBytes);
+      final pageFormat = pdf.PdfPageFormat(
+        image.width.toDouble() * 72.0 / targetDpi,
+        image.height.toDouble() * 72.0 / targetDpi,
+      );
+      // Zero margins and cover the entire page area to avoid letterboxing/cropping
       doc.addPage(
         pw.Page(
+          pageTheme: pw.PageTheme(
+            margin: pw.EdgeInsets.zero,
+            pageFormat: pageFormat,
+          ),
           build:
-              (context) =>
-                  pw.Center(child: pw.Image(img, fit: pw.BoxFit.contain)),
+              (context) => pw.Container(
+                width: double.infinity,
+                height: double.infinity,
+                child: pw.Image(img, fit: pw.BoxFit.fill),
+              ),
         ),
       );
       final bytes = await doc.save();
@@ -53,7 +69,8 @@ class ExportService {
     required String outputPath,
     required int pageCount,
     required Future<void> Function(int page) onGotoPage,
-    double pixelRatio = 3.0,
+    double pixelRatio = 4.0,
+    double targetDpi = 144.0,
   }) async {
     try {
       final doc = pw.Document();
@@ -79,11 +96,23 @@ class ExportService {
         if (byteData == null) return false;
         final pngBytes = byteData.buffer.asUint8List();
         final img = pw.MemoryImage(pngBytes);
+        final pageFormat = pdf.PdfPageFormat(
+          image.width.toDouble() * 72.0 / targetDpi,
+          image.height.toDouble() * 72.0 / targetDpi,
+        );
+        // Zero margins and size page to the image dimensions to avoid borders
         doc.addPage(
           pw.Page(
+            pageTheme: pw.PageTheme(
+              margin: pw.EdgeInsets.zero,
+              pageFormat: pageFormat,
+            ),
             build:
-                (context) =>
-                    pw.Center(child: pw.Image(img, fit: pw.BoxFit.contain)),
+                (context) => pw.Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: pw.Image(img, fit: pw.BoxFit.fill),
+                ),
           ),
         );
       }

@@ -1,40 +1,34 @@
 part of 'viewer.dart';
 
 class DrawCanvas extends StatefulWidget {
-  const DrawCanvas({super.key, required this.strokes});
-  final List<List<Offset>> strokes;
+  const DrawCanvas({
+    super.key,
+    this.control,
+    this.onConfirm,
+    this.debugBytesSink,
+  });
+
+  final hand.HandSignatureControl? control;
+  final ValueChanged<Uint8List?>? onConfirm;
+  // For tests: allows observing exported bytes without relying on Navigator
+  @visibleForTesting
+  final ValueNotifier<Uint8List?>? debugBytesSink;
 
   @override
   State<DrawCanvas> createState() => _DrawCanvasState();
 }
 
 class _DrawCanvasState extends State<DrawCanvas> {
-  late List<List<Offset>> _strokes;
-  final GlobalKey _canvasKey = GlobalKey();
-
-  @override
-  void initState() {
-    super.initState();
-    _strokes = widget.strokes.map((s) => List.of(s)).toList();
-  }
-
-  void _startStroke(Offset localPosition) {
-    setState(() => _strokes.add([localPosition]));
-  }
-
-  void _extendStroke(Offset localPosition) {
-    if (_strokes.isEmpty) return;
-    setState(() => _strokes.last.add(localPosition));
-  }
-
-  void _undo() {
-    if (_strokes.isEmpty) return;
-    setState(() => _strokes.removeLast());
-  }
-
-  void _clear() {
-    setState(() => _strokes.clear());
-  }
+  late final hand.HandSignatureControl _control =
+      widget.control ??
+      hand.HandSignatureControl(
+        initialSetup: const hand.SignaturePathSetup(
+          threshold: 3.0,
+          smoothRatio: 0.7,
+          velocityRange: 2.0,
+          pressureRatio: 0.0,
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -48,19 +42,40 @@ class _DrawCanvasState extends State<DrawCanvas> {
               children: [
                 ElevatedButton(
                   key: const Key('btn_canvas_confirm'),
-                  onPressed: () => Navigator.of(context).pop(_strokes),
+                  onPressed: () async {
+                    // Export signature to PNG bytes
+                    final data = await _control.toImage(
+                      color: Colors.black,
+                      background: Colors.transparent,
+                      fit: true,
+                      width: 1024,
+                      height: 512,
+                    );
+                    final bytes = data?.buffer.asUint8List();
+                    // print("onPressed, Exported signature bytes: ${bytes?.length}");
+                    // Notify tests if provided
+                    widget.debugBytesSink?.value = bytes;
+                    if (widget.onConfirm != null) {
+                      // print("onConfirm callback called");
+                      widget.onConfirm!(bytes);
+                    } else {
+                      if (context.mounted) {
+                        Navigator.of(context).pop(bytes);
+                      }
+                    }
+                  },
                   child: const Text('Confirm'),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
                   key: const Key('btn_canvas_undo'),
-                  onPressed: _undo,
+                  onPressed: () => _control.stepBack(),
                   child: const Text('Undo'),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
                   key: const Key('btn_canvas_clear'),
-                  onPressed: _clear,
+                  onPressed: () => _control.clear(),
                   child: const Text('Clear'),
                 ),
               ],
@@ -68,30 +83,24 @@ class _DrawCanvasState extends State<DrawCanvas> {
             const SizedBox(height: 8),
             SizedBox(
               key: const Key('draw_canvas'),
-              height: 240,
-              child: Focus(
-                // prevent text selection focus stealing on desktop
-                canRequestFocus: false,
-                child: Listener(
-                  key: _canvasKey,
-                  behavior: HitTestBehavior.opaque,
-                  onPointerDown: (e) {
-                    final box =
-                        _canvasKey.currentContext!.findRenderObject()
-                            as RenderBox;
-                    _startStroke(box.globalToLocal(e.position));
-                  },
-                  onPointerMove: (e) {
-                    final box =
-                        _canvasKey.currentContext!.findRenderObject()
-                            as RenderBox;
-                    _extendStroke(box.globalToLocal(e.position));
-                  },
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black26),
+              height: math.max(MediaQuery.of(context).size.height * 0.6, 350),
+              child: AspectRatio(
+                aspectRatio: 10 / 3,
+                child: Container(
+                  constraints: const BoxConstraints.expand(),
+                  color: Colors.white,
+                  child: Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: (_) {},
+                    child: hand.HandSignature(
+                      key: const Key('hand_signature_pad'),
+                      control: _control,
+                      drawer: const hand.ShapeSignatureDrawer(
+                        color: Colors.black,
+                        width: 1.5,
+                        maxWidth: 6.0,
+                      ),
                     ),
-                    child: CustomPaint(painter: StrokesPainter(_strokes)),
                   ),
                 ),
               ),
@@ -101,27 +110,4 @@ class _DrawCanvasState extends State<DrawCanvas> {
       ),
     );
   }
-}
-
-class StrokesPainter extends CustomPainter {
-  final List<List<Offset>> strokes;
-  StrokesPainter(this.strokes);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p =
-        Paint()
-          ..color = Colors.black
-          ..strokeWidth = 2
-          ..style = PaintingStyle.stroke;
-    for (final s in strokes) {
-      for (int i = 1; i < s.length; i++) {
-        canvas.drawLine(s[i - 1], s[i], p);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant StrokesPainter oldDelegate) =>
-      oldDelegate.strokes != strokes;
 }
