@@ -10,6 +10,7 @@ class DrawCanvas extends StatefulWidget {
 
 class _DrawCanvasState extends State<DrawCanvas> {
   late List<List<Offset>> _strokes;
+  final GlobalKey _canvasKey = GlobalKey();
 
   @override
   void initState() {
@@ -17,12 +18,13 @@ class _DrawCanvasState extends State<DrawCanvas> {
     _strokes = widget.strokes.map((s) => List.of(s)).toList();
   }
 
-  void _onPanStart(DragStartDetails d) {
-    setState(() => _strokes.add([d.localPosition]));
+  void _startStroke(Offset localPosition) {
+    setState(() => _strokes.add([localPosition]));
   }
 
-  void _onPanUpdate(DragUpdateDetails d) {
-    setState(() => _strokes.last.add(d.localPosition));
+  void _extendStroke(Offset localPosition) {
+    if (_strokes.isEmpty) return;
+    setState(() => _strokes.last.add(localPosition));
   }
 
   void _undo() {
@@ -67,14 +69,30 @@ class _DrawCanvasState extends State<DrawCanvas> {
             SizedBox(
               key: const Key('draw_canvas'),
               height: 240,
-              child: GestureDetector(
-                onPanStart: _onPanStart,
-                onPanUpdate: _onPanUpdate,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black26),
+              child: Focus(
+                // prevent text selection focus stealing on desktop
+                canRequestFocus: false,
+                child: Listener(
+                  key: _canvasKey,
+                  behavior: HitTestBehavior.opaque,
+                  onPointerDown: (e) {
+                    final box =
+                        _canvasKey.currentContext!.findRenderObject()
+                            as RenderBox;
+                    _startStroke(box.globalToLocal(e.position));
+                  },
+                  onPointerMove: (e) {
+                    final box =
+                        _canvasKey.currentContext!.findRenderObject()
+                            as RenderBox;
+                    _extendStroke(box.globalToLocal(e.position));
+                  },
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black26),
+                    ),
+                    child: CustomPaint(painter: StrokesPainter(_strokes)),
                   ),
-                  child: CustomPaint(painter: StrokesPainter(_strokes)),
                 ),
               ),
             ),

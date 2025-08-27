@@ -100,8 +100,16 @@ Feature: save signed PDF
 	Scenario: Export the signed document to a new file
 		Given a PDF is open and contains at least one placed signature
 		When the user saves/exports the document
-		Then a new PDF file is saved at the chosen location with specified file name
-		And the signatures appear on the corresponding pages in the output
+		Then a new PDF file is saved at specified full path, location and file name
+		And the signatures appear on the corresponding page in the output
+        And keep other unchanged content(pages) intact in the output
+
+	Scenario: Vector-accurate stamping into PDF page coordinates
+		Given a signature is placed with a position and size relative to the page
+		When the user saves/exports the document
+		Then the signature is stamped at the exact PDF page coordinates and size
+		And the stamp remains crisp at any zoom level (not rasterized by the screen)
+		And other page content remains vector and unaltered
 
 	Scenario: Prevent saving when nothing is placed
 		Given a PDF is open with no signatures placed

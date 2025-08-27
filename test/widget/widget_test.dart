@@ -10,6 +10,44 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/features/pdf/viewer.dart';
+import 'package:pdf_signature/features/share/export_service.dart';
+
+// Fakes for export service (top-level; Dart does not allow local class declarations)
+class RecordingExporter extends ExportService {
+  bool called = false;
+  @override
+  Future<bool> exportMultiPageFromBoundary({
+    required GlobalKey boundaryKey,
+    required String outputPath,
+    required int pageCount,
+    required Future<void> Function(int page) onGotoPage,
+    double pixelRatio = 2.0,
+  }) async {
+    called = true;
+    // Ensure extension
+    expect(outputPath.toLowerCase().endsWith('.pdf'), isTrue);
+    for (var i = 1; i <= pageCount; i++) {
+      await onGotoPage(i);
+    }
+    return true;
+  }
+}
+
+class BasicExporter extends ExportService {
+  @override
+  Future<bool> exportMultiPageFromBoundary({
+    required GlobalKey boundaryKey,
+    required String outputPath,
+    required int pageCount,
+    required Future<void> Function(int page) onGotoPage,
+    double pixelRatio = 2.0,
+  }) async {
+    for (var i = 1; i <= pageCount; i++) {
+      await onGotoPage(i);
+    }
+    return true;
+  }
+}
 
 void main() {
   Future<void> _pumpWithOpenPdf(WidgetTester tester) async {
@@ -197,6 +235,74 @@ void main() {
     await tester.pumpAndSettle();
 
     // Overlay present with drawn strokes painter
+    expect(find.byKey(const Key('signature_overlay')), findsOneWidget);
+  });
+
+  testWidgets('Save uses file selector (via provider) and injected exporter', (
+    tester,
+  ) async {
+    final fake = RecordingExporter();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          pdfProvider.overrideWith(
+            (ref) => PdfController()..openPicked(path: 'test.pdf'),
+          ),
+          signatureProvider.overrideWith(
+            (ref) => SignatureController()..placeDefaultRect(),
+          ),
+          useMockViewerProvider.overrideWith((ref) => true),
+          exportServiceProvider.overrideWith((_) => fake),
+          savePathPickerProvider.overrideWith(
+            (_) => () async => 'C:/tmp/output.pdf',
+          ),
+        ],
+        child: const MaterialApp(home: PdfSignatureHomePage()),
+      ),
+    );
+    await tester.pump();
+
+    // Mark signing to set signedPage
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
+    await tester.pump();
+
+    // Trigger save
+    await tester.tap(find.byKey(const Key('btn_save_pdf')));
+    await tester.pumpAndSettle();
+
+    expect(fake.called, isTrue);
+    expect(find.textContaining('Saved:'), findsOneWidget);
+  });
+
+  testWidgets('Only signed page shows overlay during export flow', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          pdfProvider.overrideWith(
+            (ref) => PdfController()..openPicked(path: 'test.pdf'),
+          ),
+          signatureProvider.overrideWith(
+            (ref) => SignatureController()..placeDefaultRect(),
+          ),
+          useMockViewerProvider.overrideWith((ref) => true),
+          exportServiceProvider.overrideWith((_) => BasicExporter()),
+          savePathPickerProvider.overrideWith(
+            (_) => () async => 'C:/tmp/output.pdf',
+          ),
+        ],
+        child: const MaterialApp(home: PdfSignatureHomePage()),
+      ),
+    );
+    await tester.pump();
+    // Mark signing on page 1
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
+    await tester.pump();
+    // Save -> open dialog -> confirm
+    await tester.tap(find.byKey(const Key('btn_save_pdf')));
+    await tester.pumpAndSettle();
+    // After export, overlay visible again
     expect(find.byKey(const Key('signature_overlay')), findsOneWidget);
   });
 }

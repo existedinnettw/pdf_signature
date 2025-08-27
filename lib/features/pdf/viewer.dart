@@ -3,7 +3,7 @@ import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
-import 'dart:io' show Platform;
+import 'package:path_provider/path_provider.dart' as pp;
 import 'dart:typed_data';
 import '../share/export_service.dart';
 
@@ -12,6 +12,36 @@ part 'viewer_widgets.dart';
 
 // Testing hook: allow using a mock viewer instead of pdfrx to avoid async I/O in widget tests
 final useMockViewerProvider = Provider<bool>((_) => false);
+// Export service injection for testability
+final exportServiceProvider = Provider<ExportService>((_) => ExportService());
+// Controls whether signature overlay is visible (used to hide on non-stamped pages during export)
+final signatureVisibilityProvider = StateProvider<bool>((_) => true);
+// Save path picker (injected for tests)
+final savePathPickerProvider = Provider<Future<String?> Function()>((ref) {
+  return () async {
+    String? initialDir;
+    try {
+      final d = await pp.getDownloadsDirectory();
+      initialDir = d?.path;
+    } catch (_) {}
+    if (initialDir == null) {
+      try {
+        final d = await pp.getApplicationDocumentsDirectory();
+        initialDir = d.path;
+      } catch (_) {}
+    }
+    final location = await fs.getSaveLocation(
+      suggestedName: 'signed.pdf',
+      acceptedTypeGroups: [
+        const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']),
+      ],
+      initialDirectory: initialDir,
+    );
+    if (location == null) return null;
+    final path = location.path;
+    return path.toLowerCase().endsWith('.pdf') ? path : '$path.pdf';
+  };
+});
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   const PdfSignatureHomePage({super.key});
@@ -94,25 +124,50 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       );
       return;
     }
-    // Pick a directory to save (fallback when save-as dialog API isn't available)
-    final dir = await fs.getDirectoryPath();
-    if (dir == null) return;
-    final sep = Platform.pathSeparator;
-    final path = '$dir${sep}signed.pdf';
-    final exporter = ExportService();
-    final ok = await exporter.exportSignedPdfFromBoundary(
+    final pick = ref.read(savePathPickerProvider);
+    final path = await pick();
+    if (path == null || path.trim().isEmpty) return;
+    final fullPath = _ensurePdfExtension(path.trim());
+    final exporter = ref.read(exportServiceProvider);
+    // Multi-page export: iterate pages by navigating the viewer
+    final controller = ref.read(pdfProvider.notifier);
+    final current = pdf.currentPage;
+    final targetPage = pdf.signedPage; // may be null if not marked
+    final ok = await exporter.exportMultiPageFromBoundary(
       boundaryKey: _captureKey,
-      outputPath: path,
+      outputPath: fullPath,
+      pageCount: pdf.pageCount,
+      onGotoPage: (p) async {
+        controller.jumpTo(p);
+        // Show overlay only on the signed page (if any)
+        // If a target page is specified, show overlay only on that page.
+        // If not specified, keep overlay visible (backwards compatible single-page case).
+        final show = targetPage == null ? true : (targetPage == p);
+        ref.read(signatureVisibilityProvider.notifier).state = show;
+        // Allow build to occur
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      },
     );
+    // Restore page
+    controller.jumpTo(current);
+    // Restore visibility
+    ref.read(signatureVisibilityProvider.notifier).state = true;
     if (ok) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Saved: $path')));
+      ).showSnackBar(SnackBar(content: Text('Saved: $fullPath')));
     } else {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Failed to save PDF')));
     }
+  }
+
+  // Removed manual full-path dialog; using file_selector.getSaveLocation via provider
+
+  String _ensurePdfExtension(String name) {
+    if (!name.toLowerCase().endsWith('.pdf')) return '$name.pdf';
+    return name;
   }
 
   @override
@@ -208,11 +263,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               onPressed: _loadSignatureFromFile,
               child: const Text('Load Signature from file'),
             ),
-            OutlinedButton(
-              key: const Key('btn_load_invalid_signature'),
-              onPressed: _loadInvalidSignature,
-              child: const Text('Load Invalid'),
-            ),
             ElevatedButton(
               key: const Key('btn_draw_signature'),
               onPressed: _openDrawCanvas,
@@ -254,7 +304,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                 Consumer(
                   builder: (context, ref, _) {
                     final sig = ref.watch(signatureProvider);
-                    return sig.rect != null
+                    final visible = ref.watch(signatureVisibilityProvider);
+                    return sig.rect != null && visible
                         ? _buildSignatureOverlay(sig)
                         : const SizedBox.shrink();
                   },
@@ -301,7 +352,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                     Consumer(
                       builder: (context, ref, _) {
                         final sig = ref.watch(signatureProvider);
-                        return sig.rect != null
+                        final visible = ref.watch(signatureVisibilityProvider);
+                        return sig.rect != null && visible
                             ? _buildSignatureOverlay(sig)
                             : const SizedBox.shrink();
                       },

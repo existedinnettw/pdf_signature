@@ -6,18 +6,21 @@ class PdfState {
   final int currentPage;
   final bool markedForSigning;
   final String? pickedPdfPath;
+  final int? signedPage;
   const PdfState({
     required this.loaded,
     required this.pageCount,
     required this.currentPage,
     required this.markedForSigning,
     this.pickedPdfPath,
+    this.signedPage,
   });
   factory PdfState.initial() => const PdfState(
     loaded: false,
     pageCount: 0,
     currentPage: 1,
     markedForSigning: false,
+    signedPage: null,
   );
   PdfState copyWith({
     bool? loaded,
@@ -25,12 +28,14 @@ class PdfState {
     int? currentPage,
     bool? markedForSigning,
     String? pickedPdfPath,
+    int? signedPage,
   }) => PdfState(
     loaded: loaded ?? this.loaded,
     pageCount: pageCount ?? this.pageCount,
     currentPage: currentPage ?? this.currentPage,
     markedForSigning: markedForSigning ?? this.markedForSigning,
     pickedPdfPath: pickedPdfPath ?? this.pickedPdfPath,
+    signedPage: signedPage ?? this.signedPage,
   );
 }
 
@@ -44,6 +49,7 @@ class PdfController extends StateNotifier<PdfState> {
       currentPage: 1,
       markedForSigning: false,
       pickedPdfPath: null,
+      signedPage: null,
     );
   }
 
@@ -54,6 +60,7 @@ class PdfController extends StateNotifier<PdfState> {
       currentPage: 1,
       markedForSigning: false,
       pickedPdfPath: path,
+      signedPage: null,
     );
   }
 
@@ -65,7 +72,14 @@ class PdfController extends StateNotifier<PdfState> {
 
   void toggleMark() {
     if (!state.loaded) return;
-    state = state.copyWith(markedForSigning: !state.markedForSigning);
+    if (state.signedPage != null) {
+      state = state.copyWith(markedForSigning: false, signedPage: null);
+    } else {
+      state = state.copyWith(
+        markedForSigning: true,
+        signedPage: state.currentPage,
+      );
+    }
   }
 
   void setPageCount(int count) {
@@ -168,24 +182,55 @@ class SignatureController extends StateNotifier<SignatureState> {
   void resize(Offset delta) {
     if (state.rect == null) return;
     final r = state.rect!;
-    double newW = (r.width + delta.dx).clamp(20, pageSize.width);
-    double newH = (r.height + delta.dy).clamp(20, pageSize.height);
+    double newW = r.width + delta.dx;
+    double newH = r.height + delta.dy;
     if (state.aspectLocked) {
       final aspect = r.width / r.height;
-      if ((delta.dx / r.width).abs() >= (delta.dy / r.height).abs()) {
+      // Keep ratio based on the dominant proportional delta
+      final dxRel = (delta.dx / r.width).abs();
+      final dyRel = (delta.dy / r.height).abs();
+      if (dxRel >= dyRel) {
+        newW = newW.clamp(20.0, double.infinity);
         newH = newW / aspect;
       } else {
+        newH = newH.clamp(20.0, double.infinity);
         newW = newH * aspect;
       }
+      // Scale down to fit within page bounds while preserving ratio
+      final scaleW = pageSize.width / newW;
+      final scaleH = pageSize.height / newH;
+      final scale = math.min(1.0, math.min(scaleW, scaleH));
+      newW *= scale;
+      newH *= scale;
+      // Ensure minimum size of 20x20, scaling up proportionally if needed
+      final minScale = math.max(1.0, math.max(20.0 / newW, 20.0 / newH));
+      newW *= minScale;
+      newH *= minScale;
+      Rect resized = Rect.fromLTWH(r.left, r.top, newW, newH);
+      resized = _clampRectPositionToPage(resized);
+      state = state.copyWith(rect: resized);
+      return;
     }
+    // Unlocked aspect: clamp each dimension independently
+    newW = newW.clamp(20.0, pageSize.width);
+    newH = newH.clamp(20.0, pageSize.height);
     Rect resized = Rect.fromLTWH(r.left, r.top, newW, newH);
     resized = _clampRectToPage(resized);
     state = state.copyWith(rect: resized);
   }
 
   Rect _clampRectToPage(Rect r) {
-    double left = r.left.clamp(0.0, pageSize.width - r.width);
-    double top = r.top.clamp(0.0, pageSize.height - r.height);
+    // Ensure size never exceeds page bounds first, to avoid invalid clamp ranges
+    final double w = r.width.clamp(20.0, pageSize.width);
+    final double h = r.height.clamp(20.0, pageSize.height);
+    final double left = r.left.clamp(0.0, pageSize.width - w);
+    final double top = r.top.clamp(0.0, pageSize.height - h);
+    return Rect.fromLTWH(left, top, w, h);
+  }
+
+  Rect _clampRectPositionToPage(Rect r) {
+    final double left = r.left.clamp(0.0, pageSize.width - r.width);
+    final double top = r.top.clamp(0.0, pageSize.height - r.height);
     return Rect.fromLTWH(left, top, r.width, r.height);
   }
 
