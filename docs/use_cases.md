@@ -94,3 +94,18 @@ Feature: draw signature
 		Then the last stroke is removed
 ```
 
+```gherkin
+Feature: save signed PDF
+
+	Scenario: Export the signed document to a new file
+		Given a PDF is open and contains at least one placed signature
+		When the user saves/exports the document
+		Then a new PDF file is saved at the chosen location with specified file name
+		And the signatures appear on the corresponding pages in the output
+
+	Scenario: Prevent saving when nothing is placed
+		Given a PDF is open with no signatures placed
+		When the user attempts to save
+		Then the user is notified there is nothing to save
+```
+

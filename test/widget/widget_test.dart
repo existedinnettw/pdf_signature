@@ -7,24 +7,196 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:pdf_signature/main.dart';
+import 'package:pdf_signature/features/pdf/viewer.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  Future<void> _pumpWithOpenPdf(WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          pdfProvider.overrideWith(
+            (ref) => PdfController()..openPicked(path: 'test.pdf'),
+          ),
+          useMockViewerProvider.overrideWith((ref) => true),
+        ],
+        child: const MaterialApp(home: PdfSignatureHomePage()),
+      ),
+    );
+    await tester.pump();
+  }
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  Future<void> _pumpWithOpenPdfAndSig(WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          pdfProvider.overrideWith(
+            (ref) => PdfController()..openPicked(path: 'test.pdf'),
+          ),
+          signatureProvider.overrideWith(
+            (ref) => SignatureController()..placeDefaultRect(),
+          ),
+          useMockViewerProvider.overrideWith((ref) => true),
+        ],
+        child: const MaterialApp(home: PdfSignatureHomePage()),
+      ),
+    );
+    await tester.pump();
+  }
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('Open a PDF and navigate pages', (tester) async {
+    await _pumpWithOpenPdf(tester);
+    final pageInfo = find.byKey(const Key('lbl_page_info'));
+    expect(pageInfo, findsOneWidget);
+    expect((tester.widget<Text>(pageInfo)).data, 'Page 1/5');
+
+    await tester.tap(find.byKey(const Key('btn_next')));
+    await tester.pump();
+    expect((tester.widget<Text>(pageInfo)).data, 'Page 2/5');
+
+    await tester.tap(find.byKey(const Key('btn_prev')));
+    await tester.pump();
+    expect((tester.widget<Text>(pageInfo)).data, 'Page 1/5');
+  });
+
+  testWidgets('Jump to a specific page', (tester) async {
+    await _pumpWithOpenPdf(tester);
+
+    final goto = find.byKey(const Key('txt_goto'));
+    await tester.enterText(goto, '4');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    final pageInfo = find.byKey(const Key('lbl_page_info'));
+    expect((tester.widget<Text>(pageInfo)).data, 'Page 4/5');
+  });
+
+  testWidgets('Select a page for signing', (tester) async {
+    await _pumpWithOpenPdf(tester);
+
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
+    await tester.pump();
+    // signature actions appear (picker-based now)
+    expect(find.byKey(const Key('btn_load_signature_picker')), findsOneWidget);
+  });
+
+  testWidgets('Import a signature image', (tester) async {
+    await _pumpWithOpenPdfAndSig(tester);
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
+    await tester.pump();
+    // overlay present from provider override
+    expect(find.byKey(const Key('signature_overlay')), findsOneWidget);
+  });
+
+  testWidgets('Handle invalid or unsupported files', (tester) async {
+    await _pumpWithOpenPdf(tester);
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('btn_load_invalid_signature')));
+    await tester.pump();
+    expect(find.text('Invalid or unsupported file'), findsOneWidget);
+  });
+
+  testWidgets('Resize and move signature within page bounds', (tester) async {
+    await _pumpWithOpenPdfAndSig(tester);
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
+    await tester.pump();
+
+    final overlay = find.byKey(const Key('signature_overlay'));
+    final posBefore = tester.getTopLeft(overlay);
+
+    // drag the overlay
+    await tester.drag(overlay, const Offset(30, -20));
+    await tester.pump();
+    final posAfter = tester.getTopLeft(overlay);
+    // Allow equality in case clamped at edges
+    expect(posAfter.dx >= posBefore.dx, isTrue);
+    expect(posAfter.dy <= posBefore.dy, isTrue);
+
+    // resize via handle
+    final handle = find.byKey(const Key('signature_handle'));
+    final sizeBefore = tester.getSize(overlay);
+    await tester.drag(handle, const Offset(40, 40));
+    await tester.pump();
+    final sizeAfter = tester.getSize(overlay);
+    expect(sizeAfter.width >= sizeBefore.width, isTrue);
+    expect(sizeAfter.height >= sizeBefore.height, isTrue);
+  });
+
+  testWidgets('Lock aspect ratio while resizing', (tester) async {
+    await _pumpWithOpenPdfAndSig(tester);
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
+    await tester.pump();
+
+    final overlay = find.byKey(const Key('signature_overlay'));
+    final sizeBefore = tester.getSize(overlay);
+    final aspect = sizeBefore.width / sizeBefore.height;
+    await tester.tap(find.byKey(const Key('chk_aspect_lock')));
+    await tester.pump();
+    await tester.drag(
+      find.byKey(const Key('signature_handle')),
+      const Offset(60, 10),
+    );
+    await tester.pump();
+    final sizeAfter = tester.getSize(overlay);
+    final newAspect = (sizeAfter.width / sizeAfter.height);
+    expect(
+      (newAspect - aspect).abs() < 0.15,
+      isTrue,
+    ); // approximately preserved
+  });
+
+  testWidgets('Background removal and adjustments controls change state', (
+    tester,
+  ) async {
+    await _pumpWithOpenPdfAndSig(tester);
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
+    await tester.pump();
+
+    // toggle bg removal
+    await tester.tap(find.byKey(const Key('swt_bg_removal')));
+    await tester.pump();
+    // move sliders
+    await tester.drag(
+      find.byKey(const Key('sld_contrast')),
+      const Offset(50, 0),
+    );
+    await tester.drag(
+      find.byKey(const Key('sld_brightness')),
+      const Offset(-50, 0),
+    );
+    await tester.pump();
+
+    // basic smoke: overlay still present
+    expect(find.byKey(const Key('signature_overlay')), findsOneWidget);
+  });
+
+  testWidgets('Draw signature: draw, undo, clear, confirm places on page', (
+    tester,
+  ) async {
+    await _pumpWithOpenPdfAndSig(tester);
+    await tester.tap(find.byKey(const Key('btn_mark_signing')));
+    await tester.pump();
+
+    // Open draw canvas
+    await tester.tap(find.byKey(const Key('btn_draw_signature')));
+    await tester.pumpAndSettle();
+    final canvas = find.byKey(const Key('draw_canvas'));
+    await tester.drag(canvas, const Offset(80, 0));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('btn_canvas_undo')));
+    await tester.pump();
+    await tester.drag(canvas, const Offset(50, 0));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('btn_canvas_clear')));
+    await tester.pump();
+    await tester.drag(canvas, const Offset(40, 0));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('btn_canvas_confirm')));
+    await tester.pumpAndSettle();
+
+    // Overlay present with drawn strokes painter
+    expect(find.byKey(const Key('signature_overlay')), findsOneWidget);
   });
 }

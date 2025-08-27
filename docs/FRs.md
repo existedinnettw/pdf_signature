@@ -22,3 +22,7 @@
   * role: user
   * functionality: draw a signature using mouse or touch input
   * benefit: create a custom signature directly on the PDF if no pre-made signature is available.
+* name: save signed PDF
+  * role: user
+  * functionality: save/export the signed PDF document
+  * benefit: easily keep a copy of the signed document for records.
