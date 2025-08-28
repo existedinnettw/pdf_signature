@@ -6,6 +6,7 @@ class PdfState {
   final int currentPage;
   final bool markedForSigning;
   final String? pickedPdfPath;
+  final Uint8List? pickedPdfBytes;
   final int? signedPage;
   const PdfState({
     required this.loaded,
@@ -13,6 +14,7 @@ class PdfState {
     required this.currentPage,
     required this.markedForSigning,
     this.pickedPdfPath,
+    this.pickedPdfBytes,
     this.signedPage,
   });
   factory PdfState.initial() => const PdfState(
@@ -20,6 +22,7 @@ class PdfState {
     pageCount: 0,
     currentPage: 1,
     markedForSigning: false,
+    pickedPdfBytes: null,
     signedPage: null,
   );
   PdfState copyWith({
@@ -28,6 +31,7 @@ class PdfState {
     int? currentPage,
     bool? markedForSigning,
     String? pickedPdfPath,
+    Uint8List? pickedPdfBytes,
     int? signedPage,
   }) => PdfState(
     loaded: loaded ?? this.loaded,
@@ -35,6 +39,7 @@ class PdfState {
     currentPage: currentPage ?? this.currentPage,
     markedForSigning: markedForSigning ?? this.markedForSigning,
     pickedPdfPath: pickedPdfPath ?? this.pickedPdfPath,
+    pickedPdfBytes: pickedPdfBytes ?? this.pickedPdfBytes,
     signedPage: signedPage ?? this.signedPage,
   );
 }
@@ -53,13 +58,18 @@ class PdfController extends StateNotifier<PdfState> {
     );
   }
 
-  void openPicked({required String path, int pageCount = samplePageCount}) {
+  void openPicked({
+    required String path,
+    int pageCount = samplePageCount,
+    Uint8List? bytes,
+  }) {
     state = state.copyWith(
       loaded: true,
       pageCount: pageCount,
       currentPage: 1,
       markedForSigning: false,
       pickedPdfPath: path,
+      pickedPdfBytes: bytes,
       signedPage: null,
     );
   }

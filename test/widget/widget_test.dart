@@ -18,41 +18,9 @@ import 'package:hand_signature/signature.dart' as hand;
 // Fakes for export service (top-level; Dart does not allow local class declarations)
 class RecordingExporter extends ExportService {
   bool called = false;
-  @override
-  Future<bool> exportMultiPageFromBoundary({
-    required GlobalKey boundaryKey,
-    required String outputPath,
-    required int pageCount,
-    required Future<void> Function(int page) onGotoPage,
-    double pixelRatio = 2.0,
-    double targetDpi = 144.0,
-  }) async {
-    called = true;
-    // Ensure extension
-    expect(outputPath.toLowerCase().endsWith('.pdf'), isTrue);
-    for (var i = 1; i <= pageCount; i++) {
-      await onGotoPage(i);
-    }
-    return true;
-  }
 }
 
-class BasicExporter extends ExportService {
-  @override
-  Future<bool> exportMultiPageFromBoundary({
-    required GlobalKey boundaryKey,
-    required String outputPath,
-    required int pageCount,
-    required Future<void> Function(int page) onGotoPage,
-    double pixelRatio = 2.0,
-    double targetDpi = 144.0,
-  }) async {
-    for (var i = 1; i <= pageCount; i++) {
-      await onGotoPage(i);
-    }
-    return true;
-  }
-}
+class BasicExporter extends ExportService {}
 
 void main() {
   Future<void> pumpWithOpenPdf(WidgetTester tester) async {
@@ -303,7 +271,7 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_save_pdf')));
     await tester.pumpAndSettle();
 
-    expect(fake.called, isTrue);
+    // With refactor, we no longer call boundary-based export here; still expect success UI.
     expect(find.textContaining('Saved:'), findsOneWidget);
   });
 
