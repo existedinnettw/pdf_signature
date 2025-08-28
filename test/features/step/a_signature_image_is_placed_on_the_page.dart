@@ -1,0 +1,19 @@
+import 'dart:typed_data';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/features/pdf/viewer.dart';
+import '_world.dart';
+
+/// Usage: a signature image is placed on the page
+Future<void> aSignatureImageIsPlacedOnThePage(WidgetTester tester) async {
+  final container = TestWorld.container ?? ProviderContainer();
+  TestWorld.container = container;
+  container
+      .read(pdfProvider.notifier)
+      .openPicked(path: 'mock.pdf', pageCount: 5);
+  container.read(pdfProvider.notifier).toggleMark();
+  // Set an image to ensure rect exists
+  container
+      .read(signatureProvider.notifier)
+      .setImageBytes(Uint8List.fromList([1, 2, 3]));
+}

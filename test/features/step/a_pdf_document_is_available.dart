@@ -1,0 +1,11 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/features/pdf/viewer.dart';
+import '_world.dart';
+
+/// Usage: a PDF document is available
+Future<void> aPdfDocumentIsAvailable(WidgetTester tester) async {
+  final container = TestWorld.container ?? ProviderContainer();
+  TestWorld.container = container;
+  container.read(pdfProvider.notifier).openSample();
+}
