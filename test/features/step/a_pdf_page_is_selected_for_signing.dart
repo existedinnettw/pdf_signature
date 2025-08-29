@@ -10,5 +10,5 @@ Future<void> aPdfPageIsSelectedForSigning(WidgetTester tester) async {
   container
       .read(pdfProvider.notifier)
       .openPicked(path: 'mock.pdf', pageCount: 1);
-  container.read(pdfProvider.notifier).toggleMark();
+  container.read(pdfProvider.notifier).setSignedPage(1);
 }

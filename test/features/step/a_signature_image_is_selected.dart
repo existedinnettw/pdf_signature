@@ -11,7 +11,7 @@ Future<void> aSignatureImageIsSelected(WidgetTester tester) async {
   container
       .read(pdfProvider.notifier)
       .openPicked(path: 'mock.pdf', pageCount: 2);
-  container.read(pdfProvider.notifier).toggleMark();
+  container.read(pdfProvider.notifier).setSignedPage(1);
   container
       .read(signatureProvider.notifier)
       .setImageBytes(Uint8List.fromList([1, 2, 3]));

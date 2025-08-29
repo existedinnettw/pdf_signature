@@ -67,12 +67,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dpi => 'DPI：';
 
   @override
-  String get markForSigning => '標記簽署';
-
-  @override
-  String get unmarkSigning => '取消標記';
-
-  @override
   String get saveSignedPdf => '儲存已簽名 PDF';
 
   @override
@@ -193,12 +187,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dpi => 'DPI：';
-
-  @override
-  String get markForSigning => '標記簽署';
-
-  @override
-  String get unmarkSigning => '取消標記';
 
   @override
   String get saveSignedPdf => '儲存已簽名 PDF';

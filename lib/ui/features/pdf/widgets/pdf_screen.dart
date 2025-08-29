@@ -51,13 +51,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     ref.read(pdfProvider.notifier).jumpTo(page);
   }
 
-  void _toggleMarkForSigning() {
-    ref.read(pdfProvider.notifier).toggleMark();
-  }
+  // mark-for-signing removed; no toggle needed
 
   Future<void> _loadSignatureFromFile() async {
-    final pdf = ref.read(pdfProvider);
-    if (!pdf.markedForSigning) return;
     final typeGroup = const fs.XTypeGroup(
       label: 'Image',
       extensions: ['png', 'jpg', 'jpeg', 'webp'],
@@ -67,6 +63,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final bytes = await file.readAsBytes();
     final sig = ref.read(signatureProvider.notifier);
     sig.setImageBytes(bytes);
+    // When a signature is added, set the current page as signed.
+    final p = ref.read(pdfProvider);
+    if (p.loaded) {
+      ref.read(pdfProvider.notifier).setSignedPage(p.currentPage);
+    }
   }
 
   void _onDragSignature(Offset delta) {
@@ -78,8 +79,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   Future<void> _openDrawCanvas() async {
-    final pdf = ref.read(pdfProvider);
-    if (!pdf.markedForSigning) return;
     final result = await showModalBottomSheet<Uint8List>(
       context: context,
       isScrollControlled: true,
@@ -89,6 +88,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     if (result != null && result.isNotEmpty) {
       // Use the drawn image as signature content
       ref.read(signatureProvider.notifier).setImageBytes(result);
+      // Mark current page as signed when a signature is created
+      final p = ref.read(pdfProvider);
+      if (p.loaded) {
+        ref.read(pdfProvider.notifier).setSignedPage(p.currentPage);
+      }
     }
   }
 
@@ -386,31 +390,24 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               ),
             ],
           ),
-          ElevatedButton(
-            key: const Key('btn_mark_signing'),
-            onPressed: disabled ? null : _toggleMarkForSigning,
-            child: Text(
-              pdf.markedForSigning ? l.unmarkSigning : l.markForSigning,
-            ),
-          ),
+          // Removed: Mark for signing button
           if (pdf.loaded)
             ElevatedButton(
               key: const Key('btn_save_pdf'),
               onPressed: disabled ? null : _saveSignedPdf,
               child: Text(l.saveSignedPdf),
             ),
-          if (pdf.markedForSigning) ...[
-            OutlinedButton(
-              key: const Key('btn_load_signature_picker'),
-              onPressed: disabled ? null : _loadSignatureFromFile,
-              child: Text(l.loadSignatureFromFile),
-            ),
-            ElevatedButton(
-              key: const Key('btn_draw_signature'),
-              onPressed: disabled ? null : _openDrawCanvas,
-              child: Text(l.drawSignature),
-            ),
-          ],
+          // Signature tools are available when a PDF is loaded
+          OutlinedButton(
+            key: const Key('btn_load_signature_picker'),
+            onPressed: disabled || !pdf.loaded ? null : _loadSignatureFromFile,
+            child: Text(l.loadSignatureFromFile),
+          ),
+          ElevatedButton(
+            key: const Key('btn_draw_signature'),
+            onPressed: disabled || !pdf.loaded ? null : _openDrawCanvas,
+            child: Text(l.drawSignature),
+          ),
         ],
       ],
     );

@@ -20,8 +20,6 @@
   "pageInfo": "Página {current}/{total}",
   "goTo": "Ir a:",
   "dpi": "DPI:",
-  "markForSigning": "Marcar para firmar",
-  "unmarkSigning": "Quitar marca",
   "saveSignedPdf": "Guardar PDF firmado",
   "loadSignatureFromFile": "Cargar firma desde archivo",
   "drawSignature": "Dibujar firma",

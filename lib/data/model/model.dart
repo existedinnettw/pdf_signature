@@ -5,7 +5,6 @@ class PdfState {
   final bool loaded;
   final int pageCount;
   final int currentPage;
-  final bool markedForSigning;
   final String? pickedPdfPath;
   final Uint8List? pickedPdfBytes;
   final int? signedPage;
@@ -13,7 +12,6 @@ class PdfState {
     required this.loaded,
     required this.pageCount,
     required this.currentPage,
-    required this.markedForSigning,
     this.pickedPdfPath,
     this.pickedPdfBytes,
     this.signedPage,
@@ -22,7 +20,6 @@ class PdfState {
     loaded: false,
     pageCount: 0,
     currentPage: 1,
-    markedForSigning: false,
     pickedPdfBytes: null,
     signedPage: null,
   );
@@ -30,7 +27,6 @@ class PdfState {
     bool? loaded,
     int? pageCount,
     int? currentPage,
-    bool? markedForSigning,
     String? pickedPdfPath,
     Uint8List? pickedPdfBytes,
     int? signedPage,
@@ -38,7 +34,6 @@ class PdfState {
     loaded: loaded ?? this.loaded,
     pageCount: pageCount ?? this.pageCount,
     currentPage: currentPage ?? this.currentPage,
-    markedForSigning: markedForSigning ?? this.markedForSigning,
     pickedPdfPath: pickedPdfPath ?? this.pickedPdfPath,
     pickedPdfBytes: pickedPdfBytes ?? this.pickedPdfBytes,
     signedPage: signedPage ?? this.signedPage,

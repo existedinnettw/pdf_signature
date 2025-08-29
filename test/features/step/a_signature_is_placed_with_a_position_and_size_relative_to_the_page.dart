@@ -18,7 +18,7 @@ Future<void> aSignatureIsPlacedWithAPositionAndSizeRelativeToThePage(
         pageCount: 2,
         bytes: Uint8List.fromList([1, 2, 3]),
       );
-  container.read(pdfProvider.notifier).toggleMark();
+  container.read(pdfProvider.notifier).setSignedPage(1);
   final r = Rect.fromLTWH(50, 100, 120, 60);
   final sigN = container.read(signatureProvider.notifier);
   sigN.placeDefaultRect();

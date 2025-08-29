@@ -4,15 +4,13 @@ import '_world.dart';
 /// Usage: the user previously set theme {"<theme>"} and language {"<language>"}
 Future<void> theUserPreviouslySetThemeAndLanguage(
   WidgetTester tester,
-  String param1,
-  String param2,
-  dynamic theme,
-  dynamic language,
+  String themeWrapped,
+  String languageWrapped,
 ) async {
-  final t = theme.toString();
-  final lang = language.toString();
-  expect(param1, '{${t}}');
-  expect(param2, '{${lang}}');
+  String unwrap(String s) =>
+      s.startsWith('{') && s.endsWith('}') ? s.substring(1, s.length - 1) : s;
+  final t = unwrap(themeWrapped);
+  final lang = unwrap(languageWrapped);
   // Simulate stored values
   TestWorld.prefs['theme'] = t;
   TestWorld.prefs['language'] = lang;

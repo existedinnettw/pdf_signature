@@ -16,7 +16,6 @@ class PdfController extends StateNotifier<PdfState> {
       loaded: true,
       pageCount: samplePageCount,
       currentPage: 1,
-      markedForSigning: false,
       pickedPdfPath: null,
       signedPage: null,
     );
@@ -31,7 +30,6 @@ class PdfController extends StateNotifier<PdfState> {
       loaded: true,
       pageCount: pageCount,
       currentPage: 1,
-      markedForSigning: false,
       pickedPdfPath: path,
       pickedPdfBytes: bytes,
       signedPage: null,
@@ -44,15 +42,14 @@ class PdfController extends StateNotifier<PdfState> {
     state = state.copyWith(currentPage: clamped);
   }
 
-  void toggleMark() {
+  // Set or clear the page that will receive the signature overlay.
+  void setSignedPage(int? page) {
     if (!state.loaded) return;
-    if (state.signedPage != null) {
-      state = state.copyWith(markedForSigning: false, signedPage: null);
+    if (page == null) {
+      state = state.copyWith(signedPage: null);
     } else {
-      state = state.copyWith(
-        markedForSigning: true,
-        signedPage: state.currentPage,
-      );
+      final clamped = page.clamp(1, state.pageCount);
+      state = state.copyWith(signedPage: clamped);
     }
   }
 

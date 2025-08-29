@@ -209,18 +209,6 @@ abstract class AppLocalizations {
   /// **'DPI:'**
   String get dpi;
 
-  /// No description provided for @markForSigning.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark for Signing'**
-  String get markForSigning;
-
-  /// No description provided for @unmarkSigning.
-  ///
-  /// In en, this message translates to:
-  /// **'Unmark Signing'**
-  String get unmarkSigning;
-
   /// No description provided for @saveSignedPdf.
   ///
   /// In en, this message translates to:

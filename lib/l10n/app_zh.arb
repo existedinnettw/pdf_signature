@@ -20,8 +20,6 @@
   "pageInfo": "第 {current}/{total} 頁",
   "goTo": "前往：",
   "dpi": "DPI：",
-  "markForSigning": "標記簽署",
-  "unmarkSigning": "取消標記",
   "saveSignedPdf": "儲存已簽名 PDF",
   "loadSignatureFromFile": "從檔案載入簽名",
   "drawSignature": "手寫簽名",

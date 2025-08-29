@@ -31,8 +31,6 @@
   },
   "goTo": "Go to:",
   "dpi": "DPI:",
-  "markForSigning": "Mark for Signing",
-  "unmarkSigning": "Unmark Signing",
   "saveSignedPdf": "Save Signed PDF",
   "loadSignatureFromFile": "Load Signature from file",
   "drawSignature": "Draw Signature",

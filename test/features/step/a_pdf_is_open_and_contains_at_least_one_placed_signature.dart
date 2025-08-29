@@ -17,7 +17,7 @@ Future<void> aPdfIsOpenAndContainsAtLeastOnePlacedSignature(
         pageCount: 2,
         bytes: Uint8List.fromList([1, 2, 3]),
       );
-  container.read(pdfProvider.notifier).toggleMark();
+  container.read(pdfProvider.notifier).setSignedPage(1);
   container.read(signatureProvider.notifier).placeDefaultRect();
   container
       .read(signatureProvider.notifier)

@@ -67,12 +67,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dpi => 'DPI:';
 
   @override
-  String get markForSigning => 'Mark for Signing';
-
-  @override
-  String get unmarkSigning => 'Unmark Signing';
-
-  @override
   String get saveSignedPdf => 'Save Signed PDF';
 
   @override

@@ -4,10 +4,10 @@ import '_world.dart';
 /// Usage: the app language is {"<language>"}
 Future<void> theAppLanguageIs(
   WidgetTester tester,
-  String param1,
-  dynamic language,
+  String languageWrapped,
 ) async {
-  final lang = language.toString();
-  expect(param1, '{${lang}}');
+  String unwrap(String s) =>
+      s.startsWith('{') && s.endsWith('}') ? s.substring(1, s.length - 1) : s;
+  final lang = unwrap(languageWrapped);
   expect(TestWorld.currentLanguage, lang);
 }
