@@ -11,4 +11,6 @@ Future<void> theUserChangesContrastAndBrightnessControls(
   container.read(signatureProvider.notifier)
     ..setContrast(1.3)
     ..setBrightness(0.2);
+  // Let provider updates settle
+  await tester.pumpAndSettle();
 }

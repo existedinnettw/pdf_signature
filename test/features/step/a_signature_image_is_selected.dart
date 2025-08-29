@@ -15,4 +15,6 @@ Future<void> aSignatureImageIsSelected(WidgetTester tester) async {
   container
       .read(signatureProvider.notifier)
       .setImageBytes(Uint8List.fromList([1, 2, 3]));
+  // Allow provider scheduler to process queued updates fully
+  await tester.pumpAndSettle();
 }

@@ -160,10 +160,20 @@ class ExportService {
           signatureImageBytes.isNotEmpty;
       if (shouldStamp) {
         try {
-          final decoded = img.decodeImage(signatureImageBytes);
-          if (decoded != null) {
-            final jpg = img.encodeJpg(decoded, quality: 90);
-            sigImgObj = pw.MemoryImage(Uint8List.fromList(jpg));
+          // If it's already PNG, keep as-is to preserve alpha; otherwise decode/encode PNG
+          final asStr = String.fromCharCodes(signatureImageBytes.take(8));
+          final isPng =
+              signatureImageBytes.length > 8 &&
+              signatureImageBytes[0] == 0x89 &&
+              asStr.startsWith('\u0089PNG');
+          if (isPng) {
+            sigImgObj = pw.MemoryImage(signatureImageBytes);
+          } else {
+            final decoded = img.decodeImage(signatureImageBytes);
+            if (decoded != null) {
+              final png = img.encodePng(decoded, level: 6);
+              sigImgObj = pw.MemoryImage(Uint8List.fromList(png));
+            }
           }
         } catch (_) {}
       }

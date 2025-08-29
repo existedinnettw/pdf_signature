@@ -17,6 +17,9 @@ final exportDpiProvider = StateProvider<double>((_) => 144.0);
 // Controls whether signature overlay is visible (used to hide on non-stamped pages during export)
 final signatureVisibilityProvider = StateProvider<bool>((_) => true);
 
+// Global exporting state to show loading UI and block interactions while saving/exporting
+final exportingProvider = StateProvider<bool>((_) => false);
+
 // Save path picker (injected for tests)
 final savePathPickerProvider = Provider<Future<String?> Function()>((ref) {
   return () async {

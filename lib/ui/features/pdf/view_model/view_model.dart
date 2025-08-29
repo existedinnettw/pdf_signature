@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image/image.dart' as img;
 
 import '../../../../data/model/model.dart';
 
@@ -192,3 +193,74 @@ final signatureProvider =
     StateNotifierProvider<SignatureController, SignatureState>(
       (ref) => SignatureController(),
     );
+
+/// Derived provider that returns processed signature image bytes according to
+/// current adjustment settings (contrast/brightness) and background removal.
+/// Returns null if no image is loaded. The output is a PNG to preserve alpha.
+final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
+  final s = ref.watch(signatureProvider);
+  final bytes = s.imageBytes;
+  if (bytes == null || bytes.isEmpty) return null;
+
+  // Decode (supports PNG/JPEG, etc.)
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) return bytes;
+
+  // Work on a copy and ensure an alpha channel is present (RGBA)
+  var out = decoded.clone();
+  if (out.hasPalette || !out.hasAlpha) {
+    // Force truecolor RGBA image so per-pixel alpha writes take effect
+    out = out.convert(numChannels: 4);
+  }
+
+  // Parameters
+  final double contrast = s.contrast; // [0..2], 1 = neutral
+  final double brightness = s.brightness; // [-1..1], 0 = neutral
+  const int thrLow = 220; // begin soft transparency from this avg luminance
+  const int thrHigh = 245; // fully transparent from this avg luminance
+
+  // Helper to clamp int
+  int _clamp255(num v) => v.clamp(0, 255).toInt();
+
+  // Iterate pixels
+  for (int y = 0; y < out.height; y++) {
+    for (int x = 0; x < out.width; x++) {
+      final p = out.getPixel(x, y);
+      int a = _clamp255(p.aNormalized * 255.0);
+      int r = _clamp255(p.rNormalized * 255.0);
+      int g = _clamp255(p.gNormalized * 255.0);
+      int b = _clamp255(p.bNormalized * 255.0);
+
+      // Apply contrast/brightness in sRGB space
+      // new = (old-128)*contrast + 128 + brightness*255
+      final double brOffset = brightness * 255.0;
+      r = _clamp255((r - 128) * contrast + 128 + brOffset);
+      g = _clamp255((g - 128) * contrast + 128 + brOffset);
+      b = _clamp255((b - 128) * contrast + 128 + brOffset);
+
+      // Near-white background removal (compute average luminance)
+      final int avg = ((r + g + b) / 3).round();
+      int remAlpha = 255; // 255 = fully opaque, 0 = transparent
+      if (s.bgRemoval) {
+        if (avg >= thrHigh) {
+          remAlpha = 0;
+        } else if (avg >= thrLow) {
+          // Soft fade between thrLow..thrHigh
+          final double t = (avg - thrLow) / (thrHigh - thrLow);
+          remAlpha = _clamp255(255 * (1.0 - t));
+        } else {
+          remAlpha = 255;
+        }
+      }
+
+      // Combine with existing alpha (preserve existing transparency)
+      final newA = math.min(a, remAlpha);
+
+      out.setPixelRgba(x, y, r, g, b, newA);
+    }
+  }
+
+  // Encode as PNG to preserve transparency
+  final png = img.encodePng(out, level: 6);
+  return Uint8List.fromList(png);
+});

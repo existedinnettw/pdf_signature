@@ -26,3 +26,11 @@
   * role: user
   * functionality: save/export the signed PDF document
   * benefit: easily keep a copy of the signed document for records.
+* name: preferences for app
+  * role: user
+  * functionality: configure app preferences such as `theme`, `language`.
+  * benefit: customize the app experience to better fit user needs
+* name: remember preferences
+  * role: user
+  * functionality: remember user preferences for future sessions
+  * benefit: provide a consistent and personalized experience

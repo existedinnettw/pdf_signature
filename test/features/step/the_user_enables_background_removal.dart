@@ -7,4 +7,6 @@ import '_world.dart';
 Future<void> theUserEnablesBackgroundRemoval(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
   container.read(signatureProvider.notifier).setBgRemoval(true);
+  // Let provider updates settle
+  await tester.pumpAndSettle();
 }
