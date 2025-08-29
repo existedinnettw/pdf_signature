@@ -9,8 +9,10 @@ checkout [`docs/FRs.md`](docs/FRs.md)
 ## Build
 
 ```bash
+# flutter clean
 flutter pub get
-# flutter pub run build_runner build --delete-conflicting-outputs
+# generate gherkin test
+flutter pub run build_runner build --delete-conflicting-outputs
 # dart run tool/prune_unused_steps.dart --delete
 
 # run the app

@@ -6,6 +6,3 @@ targets:
       - lib/**
       - $package$
     builders:
-      pdf_signature:
-        generate_for:
-          - test/features/**

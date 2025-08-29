@@ -220,23 +220,23 @@ final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
   const int thrHigh = 245; // fully transparent from this avg luminance
 
   // Helper to clamp int
-  int _clamp255(num v) => v.clamp(0, 255).toInt();
+  int clamp255(num v) => v.clamp(0, 255).toInt();
 
   // Iterate pixels
   for (int y = 0; y < out.height; y++) {
     for (int x = 0; x < out.width; x++) {
       final p = out.getPixel(x, y);
-      int a = _clamp255(p.aNormalized * 255.0);
-      int r = _clamp255(p.rNormalized * 255.0);
-      int g = _clamp255(p.gNormalized * 255.0);
-      int b = _clamp255(p.bNormalized * 255.0);
+      int a = clamp255(p.aNormalized * 255.0);
+      int r = clamp255(p.rNormalized * 255.0);
+      int g = clamp255(p.gNormalized * 255.0);
+      int b = clamp255(p.bNormalized * 255.0);
 
       // Apply contrast/brightness in sRGB space
       // new = (old-128)*contrast + 128 + brightness*255
       final double brOffset = brightness * 255.0;
-      r = _clamp255((r - 128) * contrast + 128 + brOffset);
-      g = _clamp255((g - 128) * contrast + 128 + brOffset);
-      b = _clamp255((b - 128) * contrast + 128 + brOffset);
+      r = clamp255((r - 128) * contrast + 128 + brOffset);
+      g = clamp255((g - 128) * contrast + 128 + brOffset);
+      b = clamp255((b - 128) * contrast + 128 + brOffset);
 
       // Near-white background removal (compute average luminance)
       final int avg = ((r + g + b) / 3).round();
@@ -247,7 +247,7 @@ final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
         } else if (avg >= thrLow) {
           // Soft fade between thrLow..thrHigh
           final double t = (avg - thrLow) / (thrHigh - thrLow);
-          remAlpha = _clamp255(255 * (1.0 - t));
+          remAlpha = clamp255(255 * (1.0 - t));
         } else {
           remAlpha = 255;
         }

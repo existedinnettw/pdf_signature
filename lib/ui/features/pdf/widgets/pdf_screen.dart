@@ -11,6 +11,7 @@ import '../../../../data/model/model.dart';
 import '../../../../data/services/providers.dart';
 import '../view_model/view_model.dart';
 import 'draw_canvas.dart';
+import '../../preferences/widgets/settings_screen.dart';
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   const PdfSignatureHomePage({super.key});
@@ -288,6 +289,18 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
+        OutlinedButton(
+          key: const Key('btn_open_settings'),
+          onPressed:
+              disabled
+                  ? null
+                  : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
+          child: const Text('Settings'),
+        ),
         OutlinedButton(
           key: const Key('btn_open_pdf_picker'),
           onPressed: disabled ? null : _pickPdf,

@@ -22,6 +22,15 @@ class TestWorld {
   // Generic flags/values
   static int? selectedPage;
 
+  // Preferences & settings
+  static Map<String, String> prefs = {};
+  static String systemTheme = 'light'; // simulated OS theme: 'light' | 'dark'
+  static String deviceLocale = 'en'; // simulated device locale
+  static String? selectedTheme; // 'light' | 'dark' | 'system'
+  static String? currentTheme; // actual UI theme applied: 'light' | 'dark'
+  static String? currentLanguage; // 'en' | 'zh-TW' | 'es'
+  static bool settingsOpen = false;
+
   static void reset() {
     prevCenter = null;
     prevAspect = null;
@@ -32,5 +41,14 @@ class TestWorld {
     exportInProgress = false;
     nothingToSaveAttempt = false;
     selectedPage = null;
+
+    // Preferences
+    prefs = {};
+    systemTheme = 'light';
+    deviceLocale = 'en';
+    selectedTheme = null;
+    currentTheme = null;
+    currentLanguage = null;
+    settingsOpen = false;
   }
 }
