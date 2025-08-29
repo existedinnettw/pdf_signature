@@ -122,3 +122,4 @@ docs/.*
 .vscode/tasks.json
 .vscode/launch.json
 devtools_options.yaml
+test/features/*_test.dart
