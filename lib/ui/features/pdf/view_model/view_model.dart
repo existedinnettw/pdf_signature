@@ -19,6 +19,7 @@ class PdfController extends StateNotifier<PdfState> {
       pickedPdfPath: null,
       signedPage: null,
       placementsByPage: {},
+      selectedPlacementIndex: null,
     );
   }
 
@@ -35,23 +36,24 @@ class PdfController extends StateNotifier<PdfState> {
       pickedPdfBytes: bytes,
       signedPage: null,
       placementsByPage: {},
+      selectedPlacementIndex: null,
     );
   }
 
   void jumpTo(int page) {
     if (!state.loaded) return;
     final clamped = page.clamp(1, state.pageCount);
-    state = state.copyWith(currentPage: clamped);
+    state = state.copyWith(currentPage: clamped, selectedPlacementIndex: null);
   }
 
   // Set or clear the page that will receive the signature overlay.
   void setSignedPage(int? page) {
     if (!state.loaded) return;
     if (page == null) {
-      state = state.copyWith(signedPage: null);
+      state = state.copyWith(signedPage: null, selectedPlacementIndex: null);
     } else {
       final clamped = page.clamp(1, state.pageCount);
-      state = state.copyWith(signedPage: clamped);
+      state = state.copyWith(signedPage: clamped, selectedPlacementIndex: null);
     }
   }
 
@@ -68,7 +70,7 @@ class PdfController extends StateNotifier<PdfState> {
     final list = List<Rect>.from(map[p] ?? const []);
     list.add(rect);
     map[p] = list;
-    state = state.copyWith(placementsByPage: map);
+    state = state.copyWith(placementsByPage: map, selectedPlacementIndex: null);
   }
 
   void removePlacement({required int page, required int index}) {
@@ -83,12 +85,36 @@ class PdfController extends StateNotifier<PdfState> {
       } else {
         map[p] = list;
       }
-      state = state.copyWith(placementsByPage: map);
+      state = state.copyWith(
+        placementsByPage: map,
+        selectedPlacementIndex: null,
+      );
     }
   }
 
   List<Rect> placementsOn(int page) {
     return List<Rect>.from(state.placementsByPage[page] ?? const []);
+  }
+
+  void selectPlacement(int? index) {
+    if (!state.loaded) return;
+    // Only allow valid index on current page; otherwise clear
+    if (index == null) {
+      state = state.copyWith(selectedPlacementIndex: null);
+      return;
+    }
+    final list = state.placementsByPage[state.currentPage] ?? const [];
+    if (index >= 0 && index < list.length) {
+      state = state.copyWith(selectedPlacementIndex: index);
+    } else {
+      state = state.copyWith(selectedPlacementIndex: null);
+    }
+  }
+
+  void deleteSelectedPlacement() {
+    final idx = state.selectedPlacementIndex;
+    if (idx == null) return;
+    removePlacement(page: state.currentPage, index: idx);
   }
 }
 
@@ -112,6 +138,7 @@ class SignatureController extends StateNotifier<SignatureState> {
         width: w,
         height: h,
       ),
+      editingEnabled: true,
     );
   }
 
@@ -123,6 +150,7 @@ class SignatureController extends StateNotifier<SignatureState> {
         width: w,
         height: h,
       ),
+      editingEnabled: true,
     );
   }
 
@@ -134,13 +162,13 @@ class SignatureController extends StateNotifier<SignatureState> {
   }
 
   void drag(Offset delta) {
-    if (state.rect == null) return;
+    if (state.rect == null || !state.editingEnabled) return;
     final moved = state.rect!.shift(delta);
     state = state.copyWith(rect: _clampRectToPage(moved));
   }
 
   void resize(Offset delta) {
-    if (state.rect == null) return;
+    if (state.rect == null || !state.editingEnabled) return;
     final r = state.rect!;
     double newW = r.width + delta.dx;
     double newH = r.height + delta.dy;
@@ -210,6 +238,7 @@ class SignatureController extends StateNotifier<SignatureState> {
             width: 140,
             height: 70,
           ),
+      editingEnabled: true,
     );
   }
 
@@ -218,6 +247,27 @@ class SignatureController extends StateNotifier<SignatureState> {
     if (state.rect == null) {
       placeDefaultRect();
     }
+    // Mark as draft/editable when user just loaded image
+    state = state.copyWith(editingEnabled: true);
+  }
+
+  // Confirm current signature: freeze editing and place it on the PDF as an immutable overlay.
+  // Returns the Rect placed, or null if no rect to confirm.
+  Rect? confirmCurrentSignature(WidgetRef ref) {
+    final r = state.rect;
+    if (r == null) return null;
+    // Place onto the current page
+    final pdf = ref.read(pdfProvider);
+    if (!pdf.loaded) return null;
+    ref.read(pdfProvider.notifier).addPlacement(page: pdf.currentPage, rect: r);
+    // Freeze editing: keep rect for preview but disable interaction
+    state = state.copyWith(editingEnabled: false);
+    return r;
+  }
+
+  // Remove the active overlay (draft or confirmed preview) but keep image settings intact
+  void clearActiveOverlay() {
+    state = state.copyWith(rect: null, editingEnabled: false);
   }
 }
 

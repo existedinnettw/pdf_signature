@@ -10,6 +10,8 @@ class PdfState {
   final int? signedPage;
   // Multiple signature placements per page, stored as UI-space rects (e.g., 400x560)
   final Map<int, List<Rect>> placementsByPage;
+  // UI state: selected placement index on the current page (if any)
+  final int? selectedPlacementIndex;
   const PdfState({
     required this.loaded,
     required this.pageCount,
@@ -18,6 +20,7 @@ class PdfState {
     this.pickedPdfBytes,
     this.signedPage,
     this.placementsByPage = const {},
+    this.selectedPlacementIndex,
   });
   factory PdfState.initial() => const PdfState(
     loaded: false,
@@ -26,6 +29,7 @@ class PdfState {
     pickedPdfBytes: null,
     signedPage: null,
     placementsByPage: {},
+    selectedPlacementIndex: null,
   );
   PdfState copyWith({
     bool? loaded,
@@ -35,6 +39,7 @@ class PdfState {
     Uint8List? pickedPdfBytes,
     int? signedPage,
     Map<int, List<Rect>>? placementsByPage,
+    int? selectedPlacementIndex,
   }) => PdfState(
     loaded: loaded ?? this.loaded,
     pageCount: pageCount ?? this.pageCount,
@@ -43,6 +48,10 @@ class PdfState {
     pickedPdfBytes: pickedPdfBytes ?? this.pickedPdfBytes,
     signedPage: signedPage ?? this.signedPage,
     placementsByPage: placementsByPage ?? this.placementsByPage,
+    selectedPlacementIndex:
+        selectedPlacementIndex == null
+            ? this.selectedPlacementIndex
+            : selectedPlacementIndex,
   );
 }
 
@@ -54,6 +63,9 @@ class SignatureState {
   final double brightness;
   final List<List<Offset>> strokes;
   final Uint8List? imageBytes;
+  // When true, the active signature overlay is movable/resizable and should not be exported.
+  // When false, the overlay is confirmed (unmovable) and eligible for export.
+  final bool editingEnabled;
   const SignatureState({
     required this.rect,
     required this.aspectLocked,
@@ -62,6 +74,7 @@ class SignatureState {
     required this.brightness,
     required this.strokes,
     this.imageBytes,
+    this.editingEnabled = false,
   });
   factory SignatureState.initial() => const SignatureState(
     rect: null,
@@ -71,6 +84,7 @@ class SignatureState {
     brightness: 0.0,
     strokes: [],
     imageBytes: null,
+    editingEnabled: false,
   );
   SignatureState copyWith({
     Rect? rect,
@@ -80,6 +94,7 @@ class SignatureState {
     double? brightness,
     List<List<Offset>>? strokes,
     Uint8List? imageBytes,
+    bool? editingEnabled,
   }) => SignatureState(
     rect: rect ?? this.rect,
     aspectLocked: aspectLocked ?? this.aspectLocked,
@@ -88,5 +103,6 @@ class SignatureState {
     brightness: brightness ?? this.brightness,
     strokes: strokes ?? this.strokes,
     imageBytes: imageBytes ?? this.imageBytes,
+    editingEnabled: editingEnabled ?? this.editingEnabled,
   );
 }

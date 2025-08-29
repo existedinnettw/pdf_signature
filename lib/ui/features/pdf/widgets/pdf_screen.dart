@@ -70,14 +70,29 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     }
   }
 
-  void _placeCurrentSignatureOnPage() {
-    final pdf = ref.read(pdfProvider);
-    final sig = ref.read(signatureProvider);
-    if (!pdf.loaded || sig.rect == null) return;
-    ref
-        .read(pdfProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: sig.rect!);
-    // Keep the active rect so the user can place multiple times if desired.
+  void _createNewSignature() {
+    // Create a movable signature (draft) that won't be exported until confirmed
+    final sig = ref.read(signatureProvider.notifier);
+    if (ref.read(pdfProvider).loaded) {
+      sig.placeDefaultRect();
+      ref
+          .read(pdfProvider.notifier)
+          .setSignedPage(ref.read(pdfProvider).currentPage);
+      // Hint: how to confirm/delete via context menu
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Long-press or right-click the signature to Confirm or Delete.',
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _confirmSignature() {
+    // Confirm: make current signature immutable and eligible for export by placing it
+    ref.read(signatureProvider.notifier).confirmCurrentSignature(ref);
   }
 
   void _onDragSignature(Offset delta) {
@@ -86,6 +101,41 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   void _onResizeSignature(Offset delta) {
     ref.read(signatureProvider.notifier).resize(delta);
+  }
+
+  void _onSelectPlaced(int? index) {
+    ref.read(pdfProvider.notifier).selectPlacement(index);
+  }
+
+  Future<void> _showContextMenuForPlaced({
+    required Offset globalPos,
+    required int index,
+  }) async {
+    // Opening the menu implicitly selects the item
+    _onSelectPlaced(index);
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        globalPos.dx,
+        globalPos.dy,
+        globalPos.dx,
+        globalPos.dy,
+      ),
+      items: [
+        const PopupMenuItem<String>(
+          key: Key('ctx_delete_signature'),
+          value: 'delete',
+          child: Text('Delete'),
+        ),
+      ],
+    );
+    if (choice == null) return;
+    if (choice == 'delete') {
+      final currentPage = ref.read(pdfProvider).currentPage;
+      ref
+          .read(pdfProvider.notifier)
+          .removePlacement(page: currentPage, index: index);
+    }
   }
 
   Future<void> _openDrawCanvas() async {
@@ -416,21 +466,17 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             onPressed: disabled || !pdf.loaded ? null : _loadSignatureFromFile,
             child: Text(l.loadSignatureFromFile),
           ),
+          OutlinedButton(
+            key: const Key('btn_create_signature'),
+            onPressed: disabled || !pdf.loaded ? null : _createNewSignature,
+            child: const Text('Create new signature'),
+          ),
           ElevatedButton(
             key: const Key('btn_draw_signature'),
             onPressed: disabled || !pdf.loaded ? null : _openDrawCanvas,
             child: Text(l.drawSignature),
           ),
-          OutlinedButton(
-            key: const Key('btn_place_signature'),
-            onPressed:
-                disabled ||
-                        !pdf.loaded ||
-                        ref.read(signatureProvider).rect == null
-                    ? null
-                    : _placeCurrentSignatureOnPage,
-            child: const Text('Place on page'),
-          ),
+          // Confirm and Delete are available via context menus
         ],
       ],
     );
@@ -539,6 +585,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     SignatureState sig,
     Rect r, {
     bool interactive = true,
+    int? placedIndex,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -558,6 +605,15 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               height: height,
               child: Builder(
                 builder: (context) {
+                  final selectedIdx =
+                      ref.read(pdfProvider).selectedPlacementIndex;
+                  final bool isPlaced = placedIndex != null;
+                  final bool isSelected =
+                      isPlaced && selectedIdx == placedIndex;
+                  final Color borderColor =
+                      isPlaced ? Colors.red : Colors.indigo;
+                  final double borderWidth =
+                      isPlaced ? (isSelected ? 3.0 : 2.0) : 2.0;
                   Widget content = DecoratedBox(
                     decoration: BoxDecoration(
                       color: Color.fromRGBO(
@@ -566,7 +622,10 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                         0,
                         0.05 + math.min(0.25, (sig.contrast - 1.0).abs()),
                       ),
-                      border: Border.all(color: Colors.indigo, width: 2),
+                      border: Border.all(
+                        color: borderColor,
+                        width: borderWidth,
+                      ),
                     ),
                     child: Stack(
                       children: [
@@ -603,10 +662,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                               child: const Icon(Icons.open_in_full, size: 20),
                             ),
                           ),
+                        // No inline buttons for placed overlays; use context menu instead
                       ],
                     ),
                   );
-                  if (interactive) {
+                  if (interactive && sig.editingEnabled) {
                     content = GestureDetector(
                       key: const Key('signature_overlay'),
                       behavior: HitTestBehavior.opaque,
@@ -615,6 +675,95 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                           (d) => _onDragSignature(
                             Offset(d.delta.dx / scaleX, d.delta.dy / scaleY),
                           ),
+                      onSecondaryTapDown: (d) {
+                        // Context menu for active signature: confirm or delete draft (clear)
+                        final pos = d.globalPosition;
+                        showMenu<String>(
+                          context: context,
+                          position: RelativeRect.fromLTRB(
+                            pos.dx,
+                            pos.dy,
+                            pos.dx,
+                            pos.dy,
+                          ),
+                          items: [
+                            const PopupMenuItem<String>(
+                              key: Key('ctx_active_confirm'),
+                              value: 'confirm',
+                              child: Text('Confirm'),
+                            ),
+                            const PopupMenuItem<String>(
+                              key: Key('ctx_active_delete'),
+                              value: 'delete',
+                              child: Text('Delete'),
+                            ),
+                          ],
+                        ).then((choice) {
+                          if (choice == 'confirm') {
+                            _confirmSignature();
+                          } else if (choice == 'delete') {
+                            ref
+                                .read(signatureProvider.notifier)
+                                .clearActiveOverlay();
+                          }
+                        });
+                      },
+                      onLongPressStart: (d) {
+                        final pos = d.globalPosition;
+                        showMenu<String>(
+                          context: context,
+                          position: RelativeRect.fromLTRB(
+                            pos.dx,
+                            pos.dy,
+                            pos.dx,
+                            pos.dy,
+                          ),
+                          items: [
+                            const PopupMenuItem<String>(
+                              key: Key('ctx_active_confirm_lp'),
+                              value: 'confirm',
+                              child: Text('Confirm'),
+                            ),
+                            const PopupMenuItem<String>(
+                              key: Key('ctx_active_delete_lp'),
+                              value: 'delete',
+                              child: Text('Delete'),
+                            ),
+                          ],
+                        ).then((choice) {
+                          if (choice == 'confirm') {
+                            _confirmSignature();
+                          } else if (choice == 'delete') {
+                            ref
+                                .read(signatureProvider.notifier)
+                                .clearActiveOverlay();
+                          }
+                        });
+                      },
+                      child: content,
+                    );
+                  } else {
+                    // For placed items: tap to select; long-press/right-click for context menu
+                    content = GestureDetector(
+                      key: Key('placed_signature_${placedIndex ?? 'x'}'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _onSelectPlaced(placedIndex),
+                      onSecondaryTapDown: (d) {
+                        if (placedIndex != null) {
+                          _showContextMenuForPlaced(
+                            globalPos: d.globalPosition,
+                            index: placedIndex,
+                          );
+                        }
+                      },
+                      onLongPressStart: (d) {
+                        if (placedIndex != null) {
+                          _showContextMenuForPlaced(
+                            globalPos: d.globalPosition,
+                            index: placedIndex,
+                          );
+                        }
+                      },
                       child: content,
                     );
                   }
@@ -633,11 +782,15 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final current = pdf.currentPage;
     final placed = pdf.placementsByPage[current] ?? const <Rect>[];
     final widgets = <Widget>[];
-    for (final r in placed) {
-      widgets.add(_buildSignatureOverlay(sig, r, interactive: false));
+    for (int i = 0; i < placed.length; i++) {
+      final r = placed[i];
+      widgets.add(
+        _buildSignatureOverlay(sig, r, interactive: false, placedIndex: i),
+      );
     }
     // Show the active editing rect only on the selected (signed) page
     if (sig.rect != null &&
+        sig.editingEnabled &&
         (pdf.signedPage == null || pdf.signedPage == current)) {
       widgets.add(_buildSignatureOverlay(sig, sig.rect!, interactive: true));
     }
