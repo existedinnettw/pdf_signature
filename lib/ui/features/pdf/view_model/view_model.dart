@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:image/image.dart' as img;
 
 import '../../../../data/model/model.dart';
@@ -96,9 +97,10 @@ class SignatureController extends StateNotifier<SignatureState> {
   }
 
   void setInvalidSelected(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invalid or unsupported file')),
-    );
+    final l = AppLocalizations.of(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l.invalidOrUnsupportedFile)));
   }
 
   void drag(Offset delta) {

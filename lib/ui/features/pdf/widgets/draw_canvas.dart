@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:hand_signature/signature.dart' as hand;
 
 class DrawCanvas extends StatefulWidget {
@@ -35,6 +36,7 @@ class _DrawCanvasState extends State<DrawCanvas> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -64,19 +66,19 @@ class _DrawCanvasState extends State<DrawCanvas> {
                       }
                     }
                   },
-                  child: const Text('Confirm'),
+                  child: Text(l.confirm),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
                   key: const Key('btn_canvas_undo'),
                   onPressed: () => _control.stepBack(),
-                  child: const Text('Undo'),
+                  child: Text(l.undo),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
                   key: const Key('btn_canvas_clear'),
                   onPressed: () => _control.clear(),
-                  child: const Text('Clear'),
+                  child: Text(l.clear),
                 ),
               ],
             ),

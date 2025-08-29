@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
 import '../providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -8,22 +9,23 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(preferencesProvider);
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l.settings)),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Theme', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l.theme, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButton<String>(
               key: const Key('ddl_theme'),
               value: prefs.theme,
-              items: const [
-                DropdownMenuItem(value: 'light', child: Text('Light')),
-                DropdownMenuItem(value: 'dark', child: Text('Dark')),
-                DropdownMenuItem(value: 'system', child: Text('System')),
+              items: [
+                DropdownMenuItem(value: 'light', child: Text(l.themeLight)),
+                DropdownMenuItem(value: 'dark', child: Text(l.themeDark)),
+                DropdownMenuItem(value: 'system', child: Text(l.themeSystem)),
               ],
               onChanged:
                   (v) =>
@@ -32,18 +34,21 @@ class SettingsScreen extends ConsumerWidget {
                           : ref.read(preferencesProvider.notifier).setTheme(v),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Language',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Text(
+              l.language,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             DropdownButton<String>(
               key: const Key('ddl_language'),
               value: prefs.language,
-              items: const [
-                DropdownMenuItem(value: 'en', child: Text('English')),
-                DropdownMenuItem(value: 'zh-TW', child: Text('繁體中文')),
-                DropdownMenuItem(value: 'es', child: Text('Español')),
+              items: [
+                DropdownMenuItem(value: 'en', child: Text(l.languageEnglish)),
+                DropdownMenuItem(
+                  value: 'zh-TW',
+                  child: Text(l.languageChineseTraditional),
+                ),
+                DropdownMenuItem(value: 'es', child: Text(l.languageSpanish)),
               ],
               onChanged:
                   (v) =>
@@ -63,7 +68,7 @@ class SettingsScreen extends ConsumerWidget {
                         ref
                             .read(preferencesProvider.notifier)
                             .resetToDefaults(),
-                child: const Text('Reset to defaults'),
+                child: Text(l.resetToDefaults),
               ),
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:printing/printing.dart' as printing;
 
@@ -101,8 +102,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       final messenger = ScaffoldMessenger.of(context);
       if (!pdf.loaded || sig.rect == null) {
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Nothing to save yet'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).nothingToSaveYet),
           ), // guard per use-case
         );
         return;
@@ -193,22 +194,32 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         // Desktop/mobile: we had a concrete path
         if (ok) {
           messenger.showSnackBar(
-            SnackBar(content: Text('Saved: ${savedPath ?? ''}')),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).savedWithPath(savedPath ?? ''),
+              ),
+            ),
           );
         } else {
           messenger.showSnackBar(
-            const SnackBar(content: Text('Failed to save PDF')),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).failedToSavePdf),
+            ),
           );
         }
       } else {
         // Web: indicate whether we triggered a download dialog
         if (ok) {
           messenger.showSnackBar(
-            const SnackBar(content: Text('Download started')),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).downloadStarted),
+            ),
           );
         } else {
           messenger.showSnackBar(
-            const SnackBar(content: Text('Failed to generate PDF')),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).failedToGeneratePdf),
+            ),
           );
         }
       }
@@ -227,8 +238,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   Widget build(BuildContext context) {
     final pdf = ref.watch(pdfProvider);
     final isExporting = ref.watch(exportingProvider);
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('PDF Signature')),
+      appBar: AppBar(title: Text(l.appTitle)),
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: Stack(
@@ -260,15 +272,15 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               Positioned.fill(
                 child: Container(
                   color: Colors.black45,
-                  child: const Center(
+                  child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         CircularProgressIndicator(),
                         SizedBox(height: 12),
                         Text(
-                          'Exporting... Please wait',
-                          style: TextStyle(color: Colors.white),
+                          l.exportingPleaseWait,
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ],
                     ),
@@ -283,7 +295,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   Widget _buildToolbar(PdfState pdf, {bool disabled = false}) {
     final dpi = ref.watch(exportDpiProvider);
-    final pageInfo = 'Page ${pdf.currentPage}/${pdf.pageCount}';
+    final l = AppLocalizations.of(context);
+    final pageInfo = l.pageInfo(pdf.currentPage, pdf.pageCount);
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -299,12 +312,12 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                       MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     );
                   },
-          child: const Text('Settings'),
+          child: Text(l.settings),
         ),
         OutlinedButton(
           key: const Key('btn_open_pdf_picker'),
           onPressed: disabled ? null : _pickPdf,
-          child: const Text('Open PDF...'),
+          child: Text(l.openPdf),
         ),
         if (pdf.loaded) ...[
           Row(
@@ -315,7 +328,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                 onPressed:
                     disabled ? null : () => _jumpToPage(pdf.currentPage - 1),
                 icon: const Icon(Icons.chevron_left),
-                tooltip: 'Prev',
+                tooltip: l.prev,
               ),
               Text(pageInfo, key: const Key('lbl_page_info')),
               IconButton(
@@ -323,14 +336,14 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                 onPressed:
                     disabled ? null : () => _jumpToPage(pdf.currentPage + 1),
                 icon: const Icon(Icons.chevron_right),
-                tooltip: 'Next',
+                tooltip: l.next,
               ),
             ],
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Go to:'),
+              Text(l.goTo),
               SizedBox(
                 width: 60,
                 child: TextField(
@@ -348,7 +361,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('DPI:'),
+              Text(l.dpi),
               const SizedBox(width: 8),
               DropdownButton<double>(
                 key: const Key('ddl_export_dpi'),
@@ -377,25 +390,25 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             key: const Key('btn_mark_signing'),
             onPressed: disabled ? null : _toggleMarkForSigning,
             child: Text(
-              pdf.markedForSigning ? 'Unmark Signing' : 'Mark for Signing',
+              pdf.markedForSigning ? l.unmarkSigning : l.markForSigning,
             ),
           ),
           if (pdf.loaded)
             ElevatedButton(
               key: const Key('btn_save_pdf'),
               onPressed: disabled ? null : _saveSignedPdf,
-              child: const Text('Save Signed PDF'),
+              child: Text(l.saveSignedPdf),
             ),
           if (pdf.markedForSigning) ...[
             OutlinedButton(
               key: const Key('btn_load_signature_picker'),
               onPressed: disabled ? null : _loadSignatureFromFile,
-              child: const Text('Load Signature from file'),
+              child: Text(l.loadSignatureFromFile),
             ),
             ElevatedButton(
               key: const Key('btn_draw_signature'),
               onPressed: disabled ? null : _openDrawCanvas,
-              child: const Text('Draw Signature'),
+              child: Text(l.drawSignature),
             ),
           ],
         ],
@@ -405,7 +418,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   Widget _buildPageArea(PdfState pdf) {
     if (!pdf.loaded) {
-      return const Center(child: Text('No PDF loaded'));
+      return Center(child: Text(AppLocalizations.of(context).noPdfLoaded));
     }
     final useMock = ref.watch(useMockViewerProvider);
     if (useMock) {
@@ -422,7 +435,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                   color: Colors.grey.shade200,
                   child: Center(
                     child: Text(
-                      'Page ${pdf.currentPage}/${pdf.pageCount}',
+                      AppLocalizations.of(
+                        context,
+                      ).pageInfo(pdf.currentPage, pdf.pageCount),
                       style: const TextStyle(
                         fontSize: 24,
                         color: Colors.black54,
@@ -544,7 +559,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                           );
                           final bytes = processed ?? sig.imageBytes;
                           if (bytes == null) {
-                            return const Center(child: Text('Signature'));
+                            return Center(
+                              child: Text(
+                                AppLocalizations.of(context).signature,
+                              ),
+                            );
                           }
                           return Image.memory(bytes, fit: BoxFit.contain);
                         },
@@ -590,7 +609,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                       .read(signatureProvider.notifier)
                       .toggleAspect(v ?? false),
             ),
-            const Text('Lock aspect ratio'),
+            Text(AppLocalizations.of(context).lockAspectRatio),
             const SizedBox(width: 16),
             Switch(
               key: const Key('swt_bg_removal'),
@@ -598,12 +617,12 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               onChanged:
                   (v) => ref.read(signatureProvider.notifier).setBgRemoval(v),
             ),
-            const Text('Background removal'),
+            Text(AppLocalizations.of(context).backgroundRemoval),
           ],
         ),
         Row(
           children: [
-            const Text('Contrast'),
+            Text(AppLocalizations.of(context).contrast),
             Expanded(
               child: Slider(
                 key: const Key('sld_contrast'),
@@ -619,7 +638,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         ),
         Row(
           children: [
-            const Text('Brightness'),
+            Text(AppLocalizations.of(context).brightness),
             Expanded(
               child: Slider(
                 key: const Key('sld_brightness'),

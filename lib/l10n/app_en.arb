@@ -1,0 +1,61 @@
+{
+  "@@locale": "en",
+  "appTitle": "PDF Signature",
+  "errorWithMessage": "Error: {message}",
+  "@errorWithMessage": {
+    "description": "Generic error text with message",
+    "placeholders": {"message": {"type": "String"}}
+  },
+
+  "settings": "Settings",
+  "theme": "Theme",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "language": "Language",
+  "languageEnglish": "English",
+  "languageChineseTraditional": "Traditional Chinese",
+  "languageSpanish": "Spanish",
+  "resetToDefaults": "Reset to defaults",
+
+  "openPdf": "Open PDF...",
+  "prev": "Prev",
+  "next": "Next",
+  "pageInfo": "Page {current}/{total}",
+  "@pageInfo": {
+    "description": "Label showing current page and total",
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "goTo": "Go to:",
+  "dpi": "DPI:",
+  "markForSigning": "Mark for Signing",
+  "unmarkSigning": "Unmark Signing",
+  "saveSignedPdf": "Save Signed PDF",
+  "loadSignatureFromFile": "Load Signature from file",
+  "drawSignature": "Draw Signature",
+  "noPdfLoaded": "No PDF loaded",
+  "signature": "Signature",
+  "lockAspectRatio": "Lock aspect ratio",
+  "backgroundRemoval": "Background removal",
+  "contrast": "Contrast",
+  "brightness": "Brightness",
+  "exportingPleaseWait": "Exporting... Please wait",
+
+  "nothingToSaveYet": "Nothing to save yet",
+  "savedWithPath": "Saved: {path}",
+  "@savedWithPath": {
+    "description": "Snackbar text showing where file saved",
+    "placeholders": {"path": {"type": "String"}}
+  },
+  "failedToSavePdf": "Failed to save PDF",
+  "downloadStarted": "Download started",
+  "failedToGeneratePdf": "Failed to generate PDF",
+  "invalidOrUnsupportedFile": "Invalid or unsupported file",
+
+  "confirm": "Confirm",
+  "undo": "Undo",
+  "clear": "Clear"
+}

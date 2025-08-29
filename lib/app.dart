@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'ui/features/preferences/providers.dart';
 
@@ -18,13 +18,28 @@ class MyApp extends StatelessWidget {
             loading: () => const SizedBox.shrink(),
             error:
                 (e, st) => MaterialApp(
-                  home: Scaffold(body: Center(child: Text('Error: $e'))),
+                  onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  localizationsDelegates:
+                      AppLocalizations.localizationsDelegates,
+                  home: Builder(
+                    builder:
+                        (ctx) => Scaffold(
+                          body: Center(
+                            child: Text(
+                              AppLocalizations.of(
+                                ctx,
+                              ).errorWithMessage(e.toString()),
+                            ),
+                          ),
+                        ),
+                  ),
                 ),
             data: (_) {
               final themeMode = ref.watch(themeModeProvider);
               final appLocale = ref.watch(localeProvider);
               return MaterialApp(
-                title: 'PDF Signature',
+                onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
                 theme: ThemeData(
                   colorScheme: ColorScheme.fromSeed(
                     seedColor: Colors.indigo,
@@ -39,12 +54,8 @@ class MyApp extends StatelessWidget {
                 ),
                 themeMode: themeMode,
                 locale: appLocale,
-                supportedLocales: supportedLocales,
-                localizationsDelegates: const [
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
+                supportedLocales: AppLocalizations.supportedLocales,
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
                 home: const PdfSignatureHomePage(),
               );
             },
