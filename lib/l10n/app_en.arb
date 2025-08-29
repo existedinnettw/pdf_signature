@@ -1,59 +1,107 @@
 {
   "@@locale": "en",
   "appTitle": "PDF Signature",
+  "@appTitle": {},
+  "backgroundRemoval": "Background removal",
+  "@backgroundRemoval": {},
+  "brightness": "Brightness",
+  "@brightness": {},
+  "clear": "Clear",
+  "@clear": {},
+  "confirm": "Confirm",
+  "@confirm": {},
+  "contrast": "Contrast",
+  "@contrast": {},
+  "createNewSignature": "Create new signature",
+  "@createNewSignature": {},
+  "delete": "Delete",
+  "@delete": {},
+  "downloadStarted": "Download started",
+  "@downloadStarted": {},
+  "dpi": "DPI:",
+  "@dpi": {},
+  "drawSignature": "Draw Signature",
+  "@drawSignature": {},
   "errorWithMessage": "Error: {message}",
   "@errorWithMessage": {
     "description": "Generic error text with message",
-    "placeholders": {"message": {"type": "String"}}
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
   },
-
-  "settings": "Settings",
-  "theme": "Theme",
-  "themeLight": "Light",
-  "themeDark": "Dark",
-  "themeSystem": "System",
+  "exportingPleaseWait": "Exporting... Please wait",
+  "@exportingPleaseWait": {},
+  "failedToGeneratePdf": "Failed to generate PDF",
+  "@failedToGeneratePdf": {},
+  "failedToSavePdf": "Failed to save PDF",
+  "@failedToSavePdf": {},
+  "goTo": "Go to:",
+  "@goTo": {},
+  "invalidOrUnsupportedFile": "Invalid or unsupported file",
+  "@invalidOrUnsupportedFile": {},
   "language": "Language",
-  "languageEnglish": "English",
+  "@language": {},
   "languageChineseTraditional": "Traditional Chinese",
+  "@languageChineseTraditional": {},
+  "languageEnglish": "English",
+  "@languageEnglish": {},
   "languageSpanish": "Spanish",
-  "resetToDefaults": "Reset to defaults",
-
-  "openPdf": "Open PDF...",
-  "prev": "Prev",
+  "@languageSpanish": {},
+  "loadSignatureFromFile": "Load Signature from file",
+  "@loadSignatureFromFile": {},
+  "lockAspectRatio": "Lock aspect ratio",
+  "@lockAspectRatio": {},
+  "longPressOrRightClickTheSignatureToConfirmOrDelete": "Long-press or right-click the signature to Confirm or Delete.",
+  "@longPressOrRightClickTheSignatureToConfirmOrDelete": {},
   "next": "Next",
+  "@next": {},
+  "noPdfLoaded": "No PDF loaded",
+  "@noPdfLoaded": {},
+  "nothingToSaveYet": "Nothing to save yet",
+  "@nothingToSaveYet": {},
+  "openPdf": "Open PDF...",
+  "@openPdf": {},
   "pageInfo": "Page {current}/{total}",
   "@pageInfo": {
     "description": "Label showing current page and total",
     "placeholders": {
-      "current": {"type": "int"},
-      "total": {"type": "int"}
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
-  "goTo": "Go to:",
-  "dpi": "DPI:",
-  "saveSignedPdf": "Save Signed PDF",
-  "loadSignatureFromFile": "Load Signature from file",
-  "drawSignature": "Draw Signature",
-  "noPdfLoaded": "No PDF loaded",
-  "signature": "Signature",
-  "lockAspectRatio": "Lock aspect ratio",
-  "backgroundRemoval": "Background removal",
-  "contrast": "Contrast",
-  "brightness": "Brightness",
-  "exportingPleaseWait": "Exporting... Please wait",
-
-  "nothingToSaveYet": "Nothing to save yet",
+  "prev": "Prev",
+  "@prev": {},
+  "resetToDefaults": "Reset to defaults",
+  "@resetToDefaults": {},
   "savedWithPath": "Saved: {path}",
   "@savedWithPath": {
     "description": "Snackbar text showing where file saved",
-    "placeholders": {"path": {"type": "String"}}
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
   },
-  "failedToSavePdf": "Failed to save PDF",
-  "downloadStarted": "Download started",
-  "failedToGeneratePdf": "Failed to generate PDF",
-  "invalidOrUnsupportedFile": "Invalid or unsupported file",
-
-  "confirm": "Confirm",
+  "saveSignedPdf": "Save Signed PDF",
+  "@saveSignedPdf": {},
+  "settings": "Settings",
+  "@settings": {},
+  "signature": "Signature",
+  "@signature": {},
+  "theme": "Theme",
+  "@theme": {},
+  "themeDark": "Dark",
+  "@themeDark": {},
+  "themeLight": "Light",
+  "@themeLight": {},
+  "themeSystem": "System",
+  "@themeSystem": {},
   "undo": "Undo",
-  "clear": "Clear"
+  "@undo": {}
 }

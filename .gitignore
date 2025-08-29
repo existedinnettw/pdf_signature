@@ -123,3 +123,5 @@ docs/.*
 .vscode/launch.json
 devtools_options.yaml
 test/features/*_test.dart
+**/app_localizations*.dart
+.env

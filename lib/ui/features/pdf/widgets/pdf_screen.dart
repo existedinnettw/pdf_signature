@@ -79,9 +79,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
           .setSignedPage(ref.read(pdfProvider).currentPage);
       // Hint: how to confirm/delete via context menu
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Long-press or right-click the signature to Confirm or Delete.',
+            AppLocalizations.of(
+              context,
+            ).longPressOrRightClickTheSignatureToConfirmOrDelete,
           ),
           duration: Duration(seconds: 3),
         ),

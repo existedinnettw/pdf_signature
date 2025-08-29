@@ -10,6 +10,7 @@ checkout [`docs/FRs.md`](docs/FRs.md)
 
 ```bash
 # flutter clean
+# arb_translate
 flutter pub get
 # generate gherkin test
 flutter pub run build_runner build --delete-conflicting-outputs

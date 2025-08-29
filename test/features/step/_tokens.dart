@@ -30,6 +30,7 @@ const system = _Token('system');
 const en = _Token('en');
 const es = _Token('es');
 const zh = _Token('zh');
+// ignore: constant_identifier_names
 const TW = _Token('TW');
 const theme = _Token('theme');
 const language = _Token('language');

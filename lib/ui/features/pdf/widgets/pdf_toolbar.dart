@@ -129,7 +129,7 @@ class PdfToolbar extends ConsumerWidget {
           OutlinedButton(
             key: const Key('btn_create_signature'),
             onPressed: disabled || !pdf.loaded ? null : onCreateSignature,
-            child: const Text('Create new signature'),
+            child: Text(l.createNewSignature),
           ),
           ElevatedButton(
             key: const Key('btn_draw_signature'),

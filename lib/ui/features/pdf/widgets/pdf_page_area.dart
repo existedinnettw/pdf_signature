@@ -41,11 +41,11 @@ class PdfPageArea extends ConsumerWidget {
         globalPos.dx,
         globalPos.dy,
       ),
-      items: const [
+      items: [
         PopupMenuItem<String>(
           key: Key('ctx_delete_signature'),
           value: 'delete',
-          child: Text('Delete'),
+          child: Text(AppLocalizations.of(context).delete),
         ),
       ],
     );
@@ -281,16 +281,16 @@ class PdfPageArea extends ConsumerWidget {
                             pos.dx,
                             pos.dy,
                           ),
-                          items: const [
+                          items: [
                             PopupMenuItem<String>(
                               key: Key('ctx_active_confirm'),
                               value: 'confirm',
-                              child: Text('Confirm'),
+                              child: Text(AppLocalizations.of(context).confirm),
                             ),
                             PopupMenuItem<String>(
                               key: Key('ctx_active_delete'),
                               value: 'delete',
-                              child: Text('Delete'),
+                              child: Text(AppLocalizations.of(context).delete),
                             ),
                           ],
                         ).then((choice) {
@@ -311,16 +311,16 @@ class PdfPageArea extends ConsumerWidget {
                             pos.dx,
                             pos.dy,
                           ),
-                          items: const [
+                          items: [
                             PopupMenuItem<String>(
                               key: Key('ctx_active_confirm_lp'),
                               value: 'confirm',
-                              child: Text('Confirm'),
+                              child: Text(AppLocalizations.of(context).confirm),
                             ),
                             PopupMenuItem<String>(
                               key: Key('ctx_active_delete_lp'),
                               value: 'delete',
-                              child: Text('Delete'),
+                              child: Text(AppLocalizations.of(context).delete),
                             ),
                           ],
                         ).then((choice) {
