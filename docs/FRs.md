@@ -38,3 +38,7 @@
   * role: user
   * functionality: app provide localization support
   * benefit: improve accessibility and usability for non-English speakers
+* name: [support multiple signatures](../test/features/support_multiple_signatures.feature)
+  * role: user
+  * functionality: the ability to sign multiple locations within a PDF document
+  * benefit: documents requiring multiple signatures can be signed simultaneously

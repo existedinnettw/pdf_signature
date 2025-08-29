@@ -32,6 +32,7 @@ class ExportService {
     required Rect? signatureRectUi,
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
+    Map<int, List<Rect>>? placementsByPage,
     double targetDpi = 144.0,
   }) async {
     // print(
@@ -51,6 +52,7 @@ class ExportService {
       signatureRectUi: signatureRectUi,
       uiPageSize: uiPageSize,
       signatureImageBytes: signatureImageBytes,
+      placementsByPage: placementsByPage,
       targetDpi: targetDpi,
     );
     if (bytes == null) return false;
@@ -70,6 +72,7 @@ class ExportService {
     required Rect? signatureRectUi,
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
+    Map<int, List<Rect>>? placementsByPage,
     double targetDpi = 144.0,
   }) async {
     final out = pw.Document(version: pdf.PdfVersion.pdf_1_4, compress: false);
@@ -91,13 +94,25 @@ class ExportService {
         final bgImg = pw.MemoryImage(bgPng);
 
         pw.MemoryImage? sigImgObj;
-        final shouldStamp =
+        final hasMulti =
+            (placementsByPage != null && placementsByPage.isNotEmpty);
+        final pagePlacements =
+            hasMulti
+                ? (placementsByPage[pageIndex] ?? const <Rect>[])
+                : const <Rect>[];
+        final shouldStampSingle =
+            !hasMulti &&
             signedPage != null &&
             pageIndex == signedPage &&
             signatureRectUi != null &&
             signatureImageBytes != null &&
             signatureImageBytes.isNotEmpty;
-        if (shouldStamp) {
+        final shouldStampMulti =
+            hasMulti &&
+            pagePlacements.isNotEmpty &&
+            signatureImageBytes != null &&
+            signatureImageBytes.isNotEmpty;
+        if (shouldStampSingle || shouldStampMulti) {
           try {
             sigImgObj = pw.MemoryImage(signatureImageBytes);
           } catch (_) {
@@ -125,18 +140,34 @@ class ExportService {
                 ),
               ];
               if (sigImgObj != null) {
-                final r = signatureRectUi!;
-                final left = r.left / uiPageSize.width * widthPts;
-                final top = r.top / uiPageSize.height * heightPts;
-                final w = r.width / uiPageSize.width * widthPts;
-                final h = r.height / uiPageSize.height * heightPts;
-                children.add(
-                  pw.Positioned(
-                    left: left,
-                    top: top,
-                    child: pw.Image(sigImgObj, width: w, height: h),
-                  ),
-                );
+                if (hasMulti && pagePlacements.isNotEmpty) {
+                  for (final r in pagePlacements) {
+                    final left = r.left / uiPageSize.width * widthPts;
+                    final top = r.top / uiPageSize.height * heightPts;
+                    final w = r.width / uiPageSize.width * widthPts;
+                    final h = r.height / uiPageSize.height * heightPts;
+                    children.add(
+                      pw.Positioned(
+                        left: left,
+                        top: top,
+                        child: pw.Image(sigImgObj, width: w, height: h),
+                      ),
+                    );
+                  }
+                } else if (shouldStampSingle) {
+                  final r = signatureRectUi;
+                  final left = r.left / uiPageSize.width * widthPts;
+                  final top = r.top / uiPageSize.height * heightPts;
+                  final w = r.width / uiPageSize.width * widthPts;
+                  final h = r.height / uiPageSize.height * heightPts;
+                  children.add(
+                    pw.Positioned(
+                      left: left,
+                      top: top,
+                      child: pw.Image(sigImgObj, width: w, height: h),
+                    ),
+                  );
+                }
               }
               return pw.Stack(children: children);
             },
@@ -152,13 +183,23 @@ class ExportService {
       final widthPts = pdf.PdfPageFormat.a4.width;
       final heightPts = pdf.PdfPageFormat.a4.height;
       pw.MemoryImage? sigImgObj;
-      final shouldStamp =
+      final hasMulti =
+          (placementsByPage != null && placementsByPage.isNotEmpty);
+      final pagePlacements =
+          hasMulti ? (placementsByPage[1] ?? const <Rect>[]) : const <Rect>[];
+      final shouldStampSingle =
+          !hasMulti &&
           signedPage != null &&
           signedPage == 1 &&
           signatureRectUi != null &&
           signatureImageBytes != null &&
           signatureImageBytes.isNotEmpty;
-      if (shouldStamp) {
+      final shouldStampMulti =
+          hasMulti &&
+          pagePlacements.isNotEmpty &&
+          signatureImageBytes != null &&
+          signatureImageBytes.isNotEmpty;
+      if (shouldStampSingle || shouldStampMulti) {
         try {
           // If it's already PNG, keep as-is to preserve alpha; otherwise decode/encode PNG
           final asStr = String.fromCharCodes(signatureImageBytes.take(8));
@@ -192,18 +233,34 @@ class ExportService {
               ),
             ];
             if (sigImgObj != null) {
-              final r = signatureRectUi!;
-              final left = r.left / uiPageSize.width * widthPts;
-              final top = r.top / uiPageSize.height * heightPts;
-              final w = r.width / uiPageSize.width * widthPts;
-              final h = r.height / uiPageSize.height * heightPts;
-              children.add(
-                pw.Positioned(
-                  left: left,
-                  top: top,
-                  child: pw.Image(sigImgObj, width: w, height: h),
-                ),
-              );
+              if (hasMulti && pagePlacements.isNotEmpty) {
+                for (final r in pagePlacements) {
+                  final left = r.left / uiPageSize.width * widthPts;
+                  final top = r.top / uiPageSize.height * heightPts;
+                  final w = r.width / uiPageSize.width * widthPts;
+                  final h = r.height / uiPageSize.height * heightPts;
+                  children.add(
+                    pw.Positioned(
+                      left: left,
+                      top: top,
+                      child: pw.Image(sigImgObj, width: w, height: h),
+                    ),
+                  );
+                }
+              } else if (shouldStampSingle) {
+                final r = signatureRectUi;
+                final left = r.left / uiPageSize.width * widthPts;
+                final top = r.top / uiPageSize.height * heightPts;
+                final w = r.width / uiPageSize.width * widthPts;
+                final h = r.height / uiPageSize.height * heightPts;
+                children.add(
+                  pw.Positioned(
+                    left: left,
+                    top: top,
+                    child: pw.Image(sigImgObj, width: w, height: h),
+                  ),
+                );
+              }
             }
             return pw.Stack(children: children);
           },

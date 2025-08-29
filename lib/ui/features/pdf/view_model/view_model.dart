@@ -18,6 +18,7 @@ class PdfController extends StateNotifier<PdfState> {
       currentPage: 1,
       pickedPdfPath: null,
       signedPage: null,
+      placementsByPage: {},
     );
   }
 
@@ -33,6 +34,7 @@ class PdfController extends StateNotifier<PdfState> {
       pickedPdfPath: path,
       pickedPdfBytes: bytes,
       signedPage: null,
+      placementsByPage: {},
     );
   }
 
@@ -56,6 +58,37 @@ class PdfController extends StateNotifier<PdfState> {
   void setPageCount(int count) {
     if (!state.loaded) return;
     state = state.copyWith(pageCount: count.clamp(1, 9999));
+  }
+
+  // Multiple-signature helpers
+  void addPlacement({required int page, required Rect rect}) {
+    if (!state.loaded) return;
+    final p = page.clamp(1, state.pageCount);
+    final map = Map<int, List<Rect>>.from(state.placementsByPage);
+    final list = List<Rect>.from(map[p] ?? const []);
+    list.add(rect);
+    map[p] = list;
+    state = state.copyWith(placementsByPage: map);
+  }
+
+  void removePlacement({required int page, required int index}) {
+    if (!state.loaded) return;
+    final p = page.clamp(1, state.pageCount);
+    final map = Map<int, List<Rect>>.from(state.placementsByPage);
+    final list = List<Rect>.from(map[p] ?? const []);
+    if (index >= 0 && index < list.length) {
+      list.removeAt(index);
+      if (list.isEmpty) {
+        map.remove(p);
+      } else {
+        map[p] = list;
+      }
+      state = state.copyWith(placementsByPage: map);
+    }
+  }
+
+  List<Rect> placementsOn(int page) {
+    return List<Rect>.from(state.placementsByPage[page] ?? const []);
   }
 }
 

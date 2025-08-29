@@ -8,6 +8,8 @@ class PdfState {
   final String? pickedPdfPath;
   final Uint8List? pickedPdfBytes;
   final int? signedPage;
+  // Multiple signature placements per page, stored as UI-space rects (e.g., 400x560)
+  final Map<int, List<Rect>> placementsByPage;
   const PdfState({
     required this.loaded,
     required this.pageCount,
@@ -15,6 +17,7 @@ class PdfState {
     this.pickedPdfPath,
     this.pickedPdfBytes,
     this.signedPage,
+    this.placementsByPage = const {},
   });
   factory PdfState.initial() => const PdfState(
     loaded: false,
@@ -22,6 +25,7 @@ class PdfState {
     currentPage: 1,
     pickedPdfBytes: null,
     signedPage: null,
+    placementsByPage: {},
   );
   PdfState copyWith({
     bool? loaded,
@@ -30,6 +34,7 @@ class PdfState {
     String? pickedPdfPath,
     Uint8List? pickedPdfBytes,
     int? signedPage,
+    Map<int, List<Rect>>? placementsByPage,
   }) => PdfState(
     loaded: loaded ?? this.loaded,
     pageCount: pageCount ?? this.pageCount,
@@ -37,6 +42,7 @@ class PdfState {
     pickedPdfPath: pickedPdfPath ?? this.pickedPdfPath,
     pickedPdfBytes: pickedPdfBytes ?? this.pickedPdfBytes,
     signedPage: signedPage ?? this.signedPage,
+    placementsByPage: placementsByPage ?? this.placementsByPage,
   );
 }
 

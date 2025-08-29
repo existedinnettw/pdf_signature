@@ -70,6 +70,16 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     }
   }
 
+  void _placeCurrentSignatureOnPage() {
+    final pdf = ref.read(pdfProvider);
+    final sig = ref.read(signatureProvider);
+    if (!pdf.loaded || sig.rect == null) return;
+    ref
+        .read(pdfProvider.notifier)
+        .addPlacement(page: pdf.currentPage, rect: sig.rect!);
+    // Keep the active rect so the user can place multiple times if desired.
+  }
+
   void _onDragSignature(Offset delta) {
     ref.read(signatureProvider.notifier).drag(delta);
   }
@@ -130,6 +140,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             signatureRectUi: sig.rect,
             uiPageSize: SignatureController.pageSize,
             signatureImageBytes: processed ?? sig.imageBytes,
+            placementsByPage: pdf.placementsByPage,
             targetDpi: targetDpi,
           );
           if (bytes != null) {
@@ -161,6 +172,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             signatureRectUi: sig.rect,
             uiPageSize: SignatureController.pageSize,
             signatureImageBytes: processed ?? sig.imageBytes,
+            placementsByPage: pdf.placementsByPage,
             targetDpi: targetDpi,
           );
           if (useMock) {
@@ -187,6 +199,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               signatureRectUi: sig.rect,
               uiPageSize: SignatureController.pageSize,
               signatureImageBytes: processed ?? sig.imageBytes,
+              placementsByPage: pdf.placementsByPage,
               targetDpi: targetDpi,
             );
           }
@@ -408,6 +421,16 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             onPressed: disabled || !pdf.loaded ? null : _openDrawCanvas,
             child: Text(l.drawSignature),
           ),
+          OutlinedButton(
+            key: const Key('btn_place_signature'),
+            onPressed:
+                disabled ||
+                        !pdf.loaded ||
+                        ref.read(signatureProvider).rect == null
+                    ? null
+                    : _placeCurrentSignatureOnPage,
+            child: const Text('Place on page'),
+          ),
         ],
       ],
     );
@@ -428,7 +451,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               key: const Key('page_stack'),
               children: [
                 Container(
-                  key: const Key('pdf_page'),
+                  key: ValueKey('pdf_page_view_${pdf.currentPage}'),
                   color: Colors.grey.shade200,
                   child: Center(
                     child: Text(
@@ -446,8 +469,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                   builder: (context, ref, _) {
                     final sig = ref.watch(signatureProvider);
                     final visible = ref.watch(signatureVisibilityProvider);
-                    return sig.rect != null && visible
-                        ? _buildSignatureOverlay(sig)
+                    return visible
+                        ? _buildPageOverlays(sig)
                         : const SizedBox.shrink();
                   },
                 ),
@@ -486,6 +509,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                   key: const Key('page_stack'),
                   children: [
                     PdfPageView(
+                      key: ValueKey('pdf_page_view_$pageNum'),
                       document: document,
                       pageNumber: pageNum,
                       alignment: Alignment.center,
@@ -494,8 +518,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                       builder: (context, ref, _) {
                         final sig = ref.watch(signatureProvider);
                         final visible = ref.watch(signatureVisibilityProvider);
-                        return sig.rect != null && visible
-                            ? _buildSignatureOverlay(sig)
+                        return visible
+                            ? _buildPageOverlays(sig)
                             : const SizedBox.shrink();
                       },
                     ),
@@ -511,8 +535,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildSignatureOverlay(SignatureState sig) {
-    final r = sig.rect!;
+  Widget _buildSignatureOverlay(
+    SignatureState sig,
+    Rect r, {
+    bool interactive = true,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scaleX = constraints.maxWidth / _pageSize.width;
@@ -529,67 +556,92 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               top: top,
               width: width,
               height: height,
-              child: GestureDetector(
-                key: const Key('signature_overlay'),
-                behavior: HitTestBehavior.opaque,
-                onPanStart: (_) {},
-                onPanUpdate:
-                    (d) => _onDragSignature(
-                      Offset(d.delta.dx / scaleX, d.delta.dy / scaleY),
+              child: Builder(
+                builder: (context) {
+                  Widget content = DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color.fromRGBO(
+                        0,
+                        0,
+                        0,
+                        0.05 + math.min(0.25, (sig.contrast - 1.0).abs()),
+                      ),
+                      border: Border.all(color: Colors.indigo, width: 2),
                     ),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Color.fromRGBO(
-                      0,
-                      0,
-                      0,
-                      0.05 + math.min(0.25, (sig.contrast - 1.0).abs()),
-                    ),
-                    border: Border.all(color: Colors.indigo, width: 2),
-                  ),
-                  child: Stack(
-                    children: [
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final processed = ref.watch(
-                            processedSignatureImageProvider,
-                          );
-                          final bytes = processed ?? sig.imageBytes;
-                          if (bytes == null) {
-                            return Center(
-                              child: Text(
-                                AppLocalizations.of(context).signature,
-                              ),
+                    child: Stack(
+                      children: [
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final processed = ref.watch(
+                              processedSignatureImageProvider,
                             );
-                          }
-                          return Image.memory(bytes, fit: BoxFit.contain);
-                        },
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: GestureDetector(
-                          key: const Key('signature_handle'),
-                          behavior: HitTestBehavior.opaque,
-                          onPanUpdate:
-                              (d) => _onResizeSignature(
-                                Offset(
-                                  d.delta.dx / scaleX,
-                                  d.delta.dy / scaleY,
+                            final bytes = processed ?? sig.imageBytes;
+                            if (bytes == null) {
+                              return Center(
+                                child: Text(
+                                  AppLocalizations.of(context).signature,
                                 ),
-                              ),
-                          child: const Icon(Icons.open_in_full, size: 20),
+                              );
+                            }
+                            return Image.memory(bytes, fit: BoxFit.contain);
+                          },
                         ),
-                      ),
-                    ],
-                  ),
-                ),
+                        if (interactive)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: GestureDetector(
+                              key: const Key('signature_handle'),
+                              behavior: HitTestBehavior.opaque,
+                              onPanUpdate:
+                                  (d) => _onResizeSignature(
+                                    Offset(
+                                      d.delta.dx / scaleX,
+                                      d.delta.dy / scaleY,
+                                    ),
+                                  ),
+                              child: const Icon(Icons.open_in_full, size: 20),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                  if (interactive) {
+                    content = GestureDetector(
+                      key: const Key('signature_overlay'),
+                      behavior: HitTestBehavior.opaque,
+                      onPanStart: (_) {},
+                      onPanUpdate:
+                          (d) => _onDragSignature(
+                            Offset(d.delta.dx / scaleX, d.delta.dy / scaleY),
+                          ),
+                      child: content,
+                    );
+                  }
+                  return content;
+                },
               ),
             ),
           ],
         );
       },
     );
+  }
+
+  Widget _buildPageOverlays(SignatureState sig) {
+    final pdf = ref.watch(pdfProvider);
+    final current = pdf.currentPage;
+    final placed = pdf.placementsByPage[current] ?? const <Rect>[];
+    final widgets = <Widget>[];
+    for (final r in placed) {
+      widgets.add(_buildSignatureOverlay(sig, r, interactive: false));
+    }
+    // Show the active editing rect only on the selected (signed) page
+    if (sig.rect != null &&
+        (pdf.signedPage == null || pdf.signedPage == current)) {
+      widgets.add(_buildSignatureOverlay(sig, sig.rect!, interactive: true));
+    }
+    return Stack(children: widgets);
   }
 
   Widget _buildAdjustmentsPanel(SignatureState sig) {
