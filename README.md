@@ -19,4 +19,6 @@ flutter run
 flutter test
 
 flutter build
+# create windows installer
+flutter pub run msix:create
 ```

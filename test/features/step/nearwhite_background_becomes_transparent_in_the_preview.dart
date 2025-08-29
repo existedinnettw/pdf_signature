@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/features/pdf/viewer.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
 import '_world.dart';
 
 /// Usage: near-white background becomes transparent in the preview

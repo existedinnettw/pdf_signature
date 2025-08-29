@@ -1,4 +1,7 @@
-part of 'viewer.dart';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:hand_signature/signature.dart' as hand;
 
 class DrawCanvas extends StatefulWidget {
   const DrawCanvas({
@@ -52,11 +55,8 @@ class _DrawCanvasState extends State<DrawCanvas> {
                       height: 512,
                     );
                     final bytes = data?.buffer.asUint8List();
-                    // print("onPressed, Exported signature bytes: ${bytes?.length}");
-                    // Notify tests if provided
                     widget.debugBytesSink?.value = bytes;
                     if (widget.onConfirm != null) {
-                      // print("onConfirm callback called");
                       widget.onConfirm!(bytes);
                     } else {
                       if (context.mounted) {

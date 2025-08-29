@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' show Rect, Size;
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/features/pdf/viewer.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
 import '_world.dart';
 
 // A lightweight fake exporter to avoid platform rasterization in tests.

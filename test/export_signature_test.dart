@@ -7,7 +7,7 @@ import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart' as pdf;
 import 'package:pdf/widgets.dart' as pw;
 
-import 'package:pdf_signature/features/share/export_service.dart';
+import 'package:pdf_signature/data/services/export_service.dart';
 
 void main() {
   test(

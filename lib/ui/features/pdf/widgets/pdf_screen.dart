@@ -1,51 +1,16 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart' as fs;
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
-import 'package:path_provider/path_provider.dart' as pp;
-import 'dart:typed_data';
-import '../share/export_service.dart';
-import 'package:hand_signature/signature.dart' as hand;
 import 'package:printing/printing.dart' as printing;
 
-part 'viewer_state.dart';
-part 'viewer_widgets.dart';
-
-final useMockViewerProvider = Provider<bool>((_) => false);
-// Export service injection for testability
-final exportServiceProvider = Provider<ExportService>((_) => ExportService());
-// Export DPI setting (points per inch mapping), default 144 DPI
-final exportDpiProvider = StateProvider<double>((_) => 144.0);
-// Controls whether signature overlay is visible (used to hide on non-stamped pages during export)
-final signatureVisibilityProvider = StateProvider<bool>((_) => true);
-// Save path picker (injected for tests)
-final savePathPickerProvider = Provider<Future<String?> Function()>((ref) {
-  return () async {
-    String? initialDir;
-    try {
-      final d = await pp.getDownloadsDirectory();
-      initialDir = d?.path;
-    } catch (_) {}
-    if (initialDir == null) {
-      try {
-        final d = await pp.getApplicationDocumentsDirectory();
-        initialDir = d.path;
-      } catch (_) {}
-    }
-    final location = await fs.getSaveLocation(
-      suggestedName: 'signed.pdf',
-      acceptedTypeGroups: [
-        const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']),
-      ],
-      initialDirectory: initialDir,
-    );
-    if (location == null) return null;
-    final path = location.path;
-    return path.toLowerCase().endsWith('.pdf') ? path : '$path.pdf';
-  };
-});
+import '../../../../data/model/model.dart';
+import '../../../../data/services/providers.dart';
+import '../view_model/view_model.dart';
+import 'draw_canvas.dart';
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   const PdfSignatureHomePage({super.key});
@@ -101,8 +66,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final sig = ref.read(signatureProvider.notifier);
     sig.setImageBytes(bytes);
   }
-
-  // removed invalid loader; not part of normal app
 
   void _onDragSignature(Offset delta) {
     ref.read(signatureProvider.notifier).drag(delta);
@@ -238,8 +201,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       }
     }
   }
-
-  // Removed manual full-path dialog; using file_selector.getSaveLocation via provider
 
   String _ensurePdfExtension(String name) {
     if (!name.toLowerCase().endsWith('.pdf')) return '$name.pdf';

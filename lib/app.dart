@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/features/pdf/viewer.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

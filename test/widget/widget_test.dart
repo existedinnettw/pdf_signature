@@ -11,8 +11,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
 import 'dart:ui' show PointerDeviceKind;
 
-import 'package:pdf_signature/features/pdf/viewer.dart';
-import 'package:pdf_signature/features/share/export_service.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
+import 'package:pdf_signature/data/services/providers.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/draw_canvas.dart';
+
+import 'package:pdf_signature/data/services/export_service.dart';
 import 'package:hand_signature/signature.dart' as hand;
 
 // Fakes for export service (top-level; Dart does not allow local class declarations)
