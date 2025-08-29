@@ -51,7 +51,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   build_runner: ^2.4.12
+  build: ^3.0.2
   bdd_widget_test: ^2.0.1
+  custom_lint: ^0.7.6
+  riverpod_lint: ^2.6.5
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

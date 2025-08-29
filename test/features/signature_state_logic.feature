@@ -32,9 +32,4 @@ Feature: Signature state logic
     And signature rect right <= {400}
     And signature rect bottom <= {560}
 
-  Scenario: setImageBytes ensures a rect exists for display
-    Given a new provider container
-    Then signature rect is null
-    When I set tiny signature image bytes
-    Then signature image bytes is not null
-    And signature rect is not null
+

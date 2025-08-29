@@ -6,9 +6,10 @@ import '_world.dart';
 
 /// Usage: the user saves/exports the document
 Future<void> theUserSavesexportsTheDocument(WidgetTester tester) async {
-  // Logic-only: simulate a successful export without invoking IO or printing.raster
+  // Logic-only: simulate a successful export without invoking IO or printing raster
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
+
   // Ensure state looks exportable
   final pdf = container.read(pdfProvider);
   final sig = container.read(signatureProvider);
@@ -16,6 +17,7 @@ Future<void> theUserSavesexportsTheDocument(WidgetTester tester) async {
   expect(pdf.signedPage, isNotNull, reason: 'A signed page must be selected');
   expect(sig.rect, isNotNull, reason: 'Signature rect must exist');
   expect(sig.imageBytes, isNotNull, reason: 'Signature image must exist');
+
   // Simulate output
   TestWorld.lastExportBytes =
       TestWorld.lastExportBytes ?? Uint8List.fromList([1, 2, 3]);

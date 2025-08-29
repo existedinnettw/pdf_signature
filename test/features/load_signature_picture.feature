@@ -12,7 +12,7 @@ Feature: load signature picture
     And the image is not added to the document
 
     Examples:
-      | file          |
-      | corrupted.png |
-      | signature.bmp |
-      | empty.jpg     |
+      | file            |
+      | 'corrupted.png' |
+      | 'signature.bmp' |
+      | 'empty.jpg'     |

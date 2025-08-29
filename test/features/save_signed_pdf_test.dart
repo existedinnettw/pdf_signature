@@ -23,49 +23,32 @@ import './step/the_user_cannot_edit_the_document.dart';
 
 void main() {
   group('''save signed PDF''', () {
-    testWidgets(
-      '''Export the signed document to a new file''',
-      (tester) async {
-        await aPdfIsOpenAndContainsAtLeastOnePlacedSignature(tester);
-        await theUserSavesexportsTheDocument(tester);
-        await aNewPdfFileIsSavedAtSpecifiedFullPathLocationAndFileName(tester);
-        await theSignaturesAppearOnTheCorrespondingPageInTheOutput(tester);
-        await keepOtherUnchangedContentpagesIntactInTheOutput(tester);
-      },
-      timeout: const Timeout(Duration(seconds: 30)),
-    );
-    testWidgets(
-      '''Vector-accurate stamping into PDF page coordinates''',
-      (tester) async {
-        await aSignatureIsPlacedWithAPositionAndSizeRelativeToThePage(tester);
-        await theUserSavesexportsTheDocument(tester);
-        await theSignatureIsStampedAtTheExactPdfPageCoordinatesAndSize(tester);
-        await theStampRemainsCrispAtAnyZoomLevelNotRasterizedByTheScreen(
-          tester,
-        );
-        await otherPageContentRemainsVectorAndUnaltered(tester);
-      },
-      timeout: const Timeout(Duration(seconds: 30)),
-    );
-    testWidgets(
-      '''Prevent saving when nothing is placed''',
-      (tester) async {
-        await aPdfIsOpenWithNoSignaturesPlaced(tester);
-        await theUserAttemptsToSave(tester);
-        await theUserIsNotifiedThereIsNothingToSave(tester);
-      },
-      timeout: const Timeout(Duration(seconds: 30)),
-    );
-    testWidgets(
-      '''Loading sign when exporting/saving files''',
-      (tester) async {
-        await aSignatureIsPlacedWithAPositionAndSizeRelativeToThePage(tester);
-        await theUserStartsExportingTheDocument(tester);
-        await theExportProcessIsNotYetFinished(tester);
-        await theUserIsNotifiedThatTheExportIsStillInProgress(tester);
-        await theUserCannotEditTheDocument(tester);
-      },
-      timeout: const Timeout(Duration(seconds: 30)),
-    );
+    testWidgets('''Export the signed document to a new file''', (tester) async {
+      await aPdfIsOpenAndContainsAtLeastOnePlacedSignature(tester);
+      await theUserSavesexportsTheDocument(tester);
+      await aNewPdfFileIsSavedAtSpecifiedFullPathLocationAndFileName(tester);
+      await theSignaturesAppearOnTheCorrespondingPageInTheOutput(tester);
+      await keepOtherUnchangedContentpagesIntactInTheOutput(tester);
+    });
+    testWidgets('''Vector-accurate stamping into PDF page coordinates''',
+        (tester) async {
+      await aSignatureIsPlacedWithAPositionAndSizeRelativeToThePage(tester);
+      await theUserSavesexportsTheDocument(tester);
+      await theSignatureIsStampedAtTheExactPdfPageCoordinatesAndSize(tester);
+      await theStampRemainsCrispAtAnyZoomLevelNotRasterizedByTheScreen(tester);
+      await otherPageContentRemainsVectorAndUnaltered(tester);
+    });
+    testWidgets('''Prevent saving when nothing is placed''', (tester) async {
+      await aPdfIsOpenWithNoSignaturesPlaced(tester);
+      await theUserAttemptsToSave(tester);
+      await theUserIsNotifiedThereIsNothingToSave(tester);
+    });
+    testWidgets('''Loading sign when exporting/saving files''', (tester) async {
+      await aSignatureIsPlacedWithAPositionAndSizeRelativeToThePage(tester);
+      await theUserStartsExportingTheDocument(tester);
+      await theExportProcessIsNotYetFinished(tester);
+      await theUserIsNotifiedThatTheExportIsStillInProgress(tester);
+      await theUserCannotEditTheDocument(tester);
+    });
   });
 }

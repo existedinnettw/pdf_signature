@@ -1,0 +1,11 @@
+targets:
+  $default:
+    sources:
+      - integration_test/**
+      - test/**
+      - lib/**
+      - $package$
+    builders:
+      pdf_signature|prune_unused_steps:
+        generate_for:
+          - test/features/**

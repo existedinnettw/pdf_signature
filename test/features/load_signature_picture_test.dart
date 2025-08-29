@@ -11,7 +11,6 @@ import './step/the_user_selects.dart';
 import './step/the_app_attempts_to_load_the_image.dart';
 import './step/the_user_is_notified_of_the_issue.dart';
 import './step/the_image_is_not_added_to_the_document.dart';
-import './step/_tokens.dart';
 
 void main() {
   group('''load signature picture''', () {
@@ -21,31 +20,28 @@ void main() {
       await theImageIsLoadedAndShownAsASignatureAsset(tester);
     });
     testWidgets(
-      '''Outline: Handle invalid or unsupported files (corrupted.png)''',
-      (tester) async {
-        await theUserSelects(tester, corrupted.png);
-        await theAppAttemptsToLoadTheImage(tester);
-        await theUserIsNotifiedOfTheIssue(tester);
-        await theImageIsNotAddedToTheDocument(tester);
-      },
-    );
+        '''Outline: Handle invalid or unsupported files ('corrupted.png')''',
+        (tester) async {
+      await theUserSelects(tester, 'corrupted.png');
+      await theAppAttemptsToLoadTheImage(tester);
+      await theUserIsNotifiedOfTheIssue(tester);
+      await theImageIsNotAddedToTheDocument(tester);
+    });
     testWidgets(
-      '''Outline: Handle invalid or unsupported files (signature.bmp)''',
-      (tester) async {
-        await theUserSelects(tester, signature.bmp);
-        await theAppAttemptsToLoadTheImage(tester);
-        await theUserIsNotifiedOfTheIssue(tester);
-        await theImageIsNotAddedToTheDocument(tester);
-      },
-    );
+        '''Outline: Handle invalid or unsupported files ('signature.bmp')''',
+        (tester) async {
+      await theUserSelects(tester, 'signature.bmp');
+      await theAppAttemptsToLoadTheImage(tester);
+      await theUserIsNotifiedOfTheIssue(tester);
+      await theImageIsNotAddedToTheDocument(tester);
+    });
     testWidgets(
-      '''Outline: Handle invalid or unsupported files (empty.jpg)''',
-      (tester) async {
-        await theUserSelects(tester, empty.jpg);
-        await theAppAttemptsToLoadTheImage(tester);
-        await theUserIsNotifiedOfTheIssue(tester);
-        await theImageIsNotAddedToTheDocument(tester);
-      },
-    );
+        '''Outline: Handle invalid or unsupported files ('empty.jpg')''',
+        (tester) async {
+      await theUserSelects(tester, 'empty.jpg');
+      await theAppAttemptsToLoadTheImage(tester);
+      await theUserIsNotifiedOfTheIssue(tester);
+      await theImageIsNotAddedToTheDocument(tester);
+    });
   });
 }

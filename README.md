@@ -10,7 +10,8 @@ checkout [`docs/FRs.md`](docs/FRs.md)
 
 ```bash
 flutter pub get
-# flutter run build_runner build --delete-conflicting-outputs
+# flutter pub run build_runner build --delete-conflicting-outputs
+# dart run tool/prune_unused_steps.dart --delete
 
 # run the app
 flutter run

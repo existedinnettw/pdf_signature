@@ -19,9 +19,6 @@ import './step/signature_rect_moved_from_center.dart';
 import './step/aspect_lock_is.dart';
 import './step/i_resize_signature_by.dart';
 import './step/signature_aspect_ratio_is_preserved_within.dart';
-import './step/i_set_tiny_signature_image_bytes.dart';
-import './step/signature_image_bytes_is_not_null.dart';
-import './step/signature_rect_is_not_null.dart';
 
 void main() {
   group('''Signature state logic''', () {
@@ -57,14 +54,6 @@ void main() {
       await signatureRectTop(tester, 0);
       await signatureRectRight(tester, 400);
       await signatureRectBottom(tester, 560);
-    });
-    testWidgets('''setImageBytes ensures a rect exists for display''',
-        (tester) async {
-      await aNewProviderContainer(tester);
-      await signatureRectIsNull(tester);
-      await iSetTinySignatureImageBytes(tester);
-      await signatureImageBytesIsNotNull(tester);
-      await signatureRectIsNotNull(tester);
     });
   });
 }

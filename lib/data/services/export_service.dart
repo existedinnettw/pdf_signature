@@ -34,9 +34,9 @@ class ExportService {
     required Uint8List? signatureImageBytes,
     double targetDpi = 144.0,
   }) async {
-    print(
-      'exportSignedPdfFromFile: enter signedPage=$signedPage outputPath=$outputPath',
-    );
+    // print(
+    //   'exportSignedPdfFromFile: enter signedPage=$signedPage outputPath=$outputPath',
+    // );
     // Read source bytes and delegate to bytes-based exporter
     Uint8List? srcBytes;
     try {

@@ -93,8 +93,10 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   Future<void> _saveSignedPdf() async {
     final pdf = ref.read(pdfProvider);
     final sig = ref.read(signatureProvider);
+    // Cache messenger before any awaits to avoid using BuildContext across async gaps.
+    final messenger = ScaffoldMessenger.of(context);
     if (!pdf.loaded || sig.rect == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Nothing to save yet'),
         ), // guard per use-case
@@ -180,24 +182,24 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     if (!kIsWeb) {
       // Desktop/mobile: we had a concrete path
       if (ok) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Saved: ${savedPath ?? ''}')));
+        messenger.showSnackBar(
+          SnackBar(content: Text('Saved: ${savedPath ?? ''}')),
+        );
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Failed to save PDF')));
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Failed to save PDF')),
+        );
       }
     } else {
       // Web: indicate whether we triggered a download dialog
       if (ok) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Download started')));
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Download started')),
+        );
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Failed to generate PDF')));
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Failed to generate PDF')),
+        );
       }
     }
   }
@@ -461,7 +463,10 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                     ),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(
+                    color: Color.fromRGBO(
+                      0,
+                      0,
+                      0,
                       0.05 + math.min(0.25, (sig.contrast - 1.0).abs()),
                     ),
                     border: Border.all(color: Colors.indigo, width: 2),
