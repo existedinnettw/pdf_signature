@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localized_locales/flutter_localized_locales.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'ui/features/preferences/providers.dart';
@@ -55,7 +56,10 @@ class MyApp extends StatelessWidget {
                 themeMode: themeMode,
                 locale: appLocale,
                 supportedLocales: AppLocalizations.supportedLocales,
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: [
+                  ...AppLocalizations.localizationsDelegates,
+                  LocaleNamesLocalizationsDelegate(),
+                ],
                 home: const PdfSignatureHomePage(),
               );
             },

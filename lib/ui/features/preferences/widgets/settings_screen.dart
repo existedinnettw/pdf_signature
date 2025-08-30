@@ -39,25 +39,62 @@ class SettingsScreen extends ConsumerWidget {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            DropdownButton<String>(
-              key: const Key('ddl_language'),
-              value: prefs.language,
-              items: [
-                DropdownMenuItem(value: 'en', child: Text(l.languageEnglish)),
-                DropdownMenuItem(
-                  value: 'zh-TW',
-                  child: Text(l.languageChineseTraditional),
+            ref
+                .watch(languageAutonymsProvider)
+                .when(
+                  loading:
+                      () => const SizedBox(
+                        height: 48,
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                  error:
+                      (_, __) => DropdownButton<String>(
+                        key: const Key('ddl_language'),
+                        value: prefs.language,
+                        items:
+                            AppLocalizations.supportedLocales.map((loc) {
+                              final tag = toLanguageTag(loc);
+                              return DropdownMenuItem<String>(
+                                value: tag,
+                                child: Text(tag),
+                              );
+                            }).toList(),
+                        onChanged:
+                            (v) =>
+                                v == null
+                                    ? null
+                                    : ref
+                                        .read(preferencesProvider.notifier)
+                                        .setLanguage(v),
+                      ),
+                  data: (names) {
+                    final items =
+                        AppLocalizations.supportedLocales
+                            .map((loc) => toLanguageTag(loc))
+                            .toList()
+                          ..sort();
+                    return DropdownButton<String>(
+                      key: const Key('ddl_language'),
+                      value: prefs.language,
+                      items:
+                          items
+                              .map(
+                                (tag) => DropdownMenuItem<String>(
+                                  value: tag,
+                                  child: Text(names[tag] ?? tag),
+                                ),
+                              )
+                              .toList(),
+                      onChanged:
+                          (v) =>
+                              v == null
+                                  ? null
+                                  : ref
+                                      .read(preferencesProvider.notifier)
+                                      .setLanguage(v),
+                    );
+                  },
                 ),
-                DropdownMenuItem(value: 'es', child: Text(l.languageSpanish)),
-              ],
-              onChanged:
-                  (v) =>
-                      v == null
-                          ? null
-                          : ref
-                              .read(preferencesProvider.notifier)
-                              .setLanguage(v),
-            ),
             const Spacer(),
             Align(
               alignment: Alignment.bottomRight,

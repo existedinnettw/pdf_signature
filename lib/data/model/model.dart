@@ -49,9 +49,7 @@ class PdfState {
     signedPage: signedPage ?? this.signedPage,
     placementsByPage: placementsByPage ?? this.placementsByPage,
     selectedPlacementIndex:
-        selectedPlacementIndex == null
-            ? this.selectedPlacementIndex
-            : selectedPlacementIndex,
+        selectedPlacementIndex ?? this.selectedPlacementIndex,
   );
 }
 
