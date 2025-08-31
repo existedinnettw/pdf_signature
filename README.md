@@ -1,6 +1,6 @@
 # pdf_signature
 
-A GUI app to create a signature on PDF page interactively.
+A GUI app to create signatures on PDF pages interactively.
 
 ## Features
 
@@ -15,6 +15,7 @@ flutter pub get
 # generate gherkin test
 flutter pub run build_runner build --delete-conflicting-outputs
 # dart run tool/prune_unused_steps.dart --delete
+# dart run tool/gen_view_wireframe_md.dart
 
 # run the app
 flutter run
