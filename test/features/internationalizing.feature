@@ -5,7 +5,7 @@ Feature: internationalizing
     Then the language is set to the device locale
 
   Scenario: Invalid stored language falls back to the device locale
-    Given stored preferences contain theme {sepia} and language {xx}
+    Given stored preferences contain theme {"sepia"} and language {"xx"}
     When the app launches
     Then the language falls back to the device locale
 

@@ -9,7 +9,7 @@ Refs:
 - https://github.com/excalidraw/svg-to-excalidraw
 -->
 
-## 1 Welcome / First screen
+## Welcome / First screen
 
 Purpose: let the user open a PDF quickly via drag & drop or file picker.
 Route: root
@@ -23,7 +23,7 @@ Illustration:
 
 ![](wireframe.assets/first_screen.excalidraw)
 
-## 1-Settings dialog
+## Settings dialog
 
 Purpose: provide basic configuration before/after opening a PDF.
 Route: root --> settings
@@ -44,9 +44,8 @@ Route: root --> opened
 
 Design notes:
 - Main canvas shows the current page.
-- Navigation: previous/next page, zoom controls near the canvas.
-- Space reserved for a future “Sign” tool in the toolbar.
-- drag signature onto page
+- Navigation: previous/next page, zoom controls are placed in toolbar which is at top of main PDF canvas.
+- Drag signature onto page.
 
 Illustration:
 

@@ -28,6 +28,7 @@ Set<String> _supportedTags() {
 // Keys
 const _kTheme = 'theme'; // 'light'|'dark'|'system'
 const _kLanguage = 'language'; // BCP-47 tag like 'en', 'zh-TW', 'es'
+const _kPageView = 'page_view'; // 'single' | 'continuous'
 
 String _normalizeLanguageTag(String tag) {
   final tags = _supportedTags();
@@ -64,13 +65,22 @@ String _normalizeLanguageTag(String tag) {
 class PreferencesState {
   final String theme; // 'light' | 'dark' | 'system'
   final String language; // 'en' | 'zh-TW' | 'es'
-  const PreferencesState({required this.theme, required this.language});
+  final String pageView; // 'single' | 'continuous'
+  const PreferencesState({
+    required this.theme,
+    required this.language,
+    required this.pageView,
+  });
 
-  PreferencesState copyWith({String? theme, String? language}) =>
-      PreferencesState(
-        theme: theme ?? this.theme,
-        language: language ?? this.language,
-      );
+  PreferencesState copyWith({
+    String? theme,
+    String? language,
+    String? pageView,
+  }) => PreferencesState(
+    theme: theme ?? this.theme,
+    language: language ?? this.language,
+    pageView: pageView ?? this.pageView,
+  );
 }
 
 class PreferencesNotifier extends StateNotifier<PreferencesState> {
@@ -84,6 +94,7 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
                 WidgetsBinding.instance.platformDispatcher.locale
                     .toLanguageTag(),
           ),
+          pageView: prefs.getString(_kPageView) ?? 'single',
         ),
       ) {
     // normalize language to supported/fallback
@@ -100,6 +111,11 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
     if (normalized != state.language) {
       state = state.copyWith(language: normalized);
       prefs.setString(_kLanguage, normalized);
+    }
+    final pageViewValid = {'single', 'continuous'};
+    if (!pageViewValid.contains(state.pageView)) {
+      state = state.copyWith(pageView: 'single');
+      prefs.setString(_kPageView, 'single');
     }
   }
 
@@ -120,9 +136,21 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
     final device =
         WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag();
     final normalized = _normalizeLanguageTag(device);
-    state = PreferencesState(theme: 'system', language: normalized);
+    state = PreferencesState(
+      theme: 'system',
+      language: normalized,
+      pageView: 'single',
+    );
     await prefs.setString(_kTheme, 'system');
     await prefs.setString(_kLanguage, normalized);
+    await prefs.setString(_kPageView, 'single');
+  }
+
+  Future<void> setPageView(String pageView) async {
+    final valid = {'single', 'continuous'};
+    if (!valid.contains(pageView)) return;
+    state = state.copyWith(pageView: pageView);
+    await prefs.setString(_kPageView, pageView);
   }
 }
 
@@ -144,6 +172,16 @@ final preferencesProvider =
           );
       return PreferencesNotifier(prefs);
     });
+
+/// Safe accessor for page view mode that falls back to 'single' until
+/// SharedPreferences is available (useful for lightweight widget tests).
+final pageViewModeProvider = Provider<String>((ref) {
+  final sp = ref.watch(sharedPreferencesProvider);
+  return sp.maybeWhen(
+    data: (_) => ref.watch(preferencesProvider).pageView,
+    orElse: () => 'single',
+  );
+});
 
 /// Derive the active ThemeMode based on preference and platform brightness
 final themeModeProvider = Provider<ThemeMode>((ref) {

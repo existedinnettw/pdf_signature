@@ -8,9 +8,9 @@ Feature: App preferences
 
     Examples:
       | theme  |
-      | light  |
-      | dark   |
-      | system |
+      | 'light'  |
+      | 'dark'   |
+      | 'system' |
 
   Scenario Outline: Choose a language and apply it immediately
     Given the settings screen is open
@@ -20,7 +20,7 @@ Feature: App preferences
 
     Examples:
       | language |
-      | en       |
-      | zh-TW    |
-      | es       |
+      | 'en'       |
+      | 'zh-TW'    |
+      | 'es'       |
 

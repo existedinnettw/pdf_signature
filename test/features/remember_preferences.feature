@@ -8,9 +8,9 @@ Feature: remember preferences
 
     Examples:
       | theme  | language |
-      | dark   | en       |
-      | light  | zh-TW    |
-      | system | es       |
+      | 'dark'   | 'en'       |
+      | 'light' | 'zh-TW'    |
+      | 'system' | 'es'       |
 
   Scenario: Follow system appearance when theme is set to system
     Given the user selects the "system" theme

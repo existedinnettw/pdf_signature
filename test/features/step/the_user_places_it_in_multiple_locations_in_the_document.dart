@@ -18,30 +18,3 @@ Future<void> theUserPlacesItInMultipleLocationsInTheDocument(
   notifier.addPlacement(page: 2, rect: const Rect.fromLTWH(120, 50, 80, 40));
   notifier.addPlacement(page: 4, rect: const Rect.fromLTWH(20, 200, 100, 50));
 }
-
-/// Usage: identical signature instances appear in each location
-Future<void> identicalSignatureInstancesAppearInEachLocation(
-  WidgetTester tester,
-) async {
-  final container = TestWorld.container ?? ProviderContainer();
-  TestWorld.container = container;
-  final state = container.read(pdfProvider);
-  final p2 = state.placementsByPage[2] ?? const [];
-  final p4 = state.placementsByPage[4] ?? const [];
-  expect(p2.length, greaterThanOrEqualTo(2));
-  expect(p4.length, greaterThanOrEqualTo(1));
-}
-
-/// Usage: adjusting one instance does not affect the others
-Future<void> adjustingOneInstanceDoesNotAffectTheOthers(
-  WidgetTester tester,
-) async {
-  final container = TestWorld.container ?? ProviderContainer();
-  final before = container.read(pdfProvider.notifier).placementsOn(2);
-  expect(before.length, greaterThanOrEqualTo(2));
-  final modified = before[0].inflate(5);
-  container.read(pdfProvider.notifier).removePlacement(page: 2, index: 0);
-  container.read(pdfProvider.notifier).addPlacement(page: 2, rect: modified);
-  final after = container.read(pdfProvider.notifier).placementsOn(2);
-  expect(after.any((r) => r == before[1]), isTrue);
-}

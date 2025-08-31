@@ -29,15 +29,3 @@ Future<void> aPdfIsOpenAndContainsMultiplePlacedSignaturesAcrossPages(
   container.read(pdfProvider.notifier).setSignedPage(1);
   container.read(signatureProvider.notifier).placeDefaultRect();
 }
-
-/// Usage: all placed signatures appear on their corresponding pages in the output
-Future<void> allPlacedSignaturesAppearOnTheirCorrespondingPagesInTheOutput(
-  WidgetTester tester,
-) async {
-  // In this logic-level test suite, we simply assert that placements exist
-  // on multiple pages and that a simulated export has bytes.
-  final container = TestWorld.container ?? ProviderContainer();
-  expect(container.read(pdfProvider.notifier).placementsOn(1), isNotEmpty);
-  expect(container.read(pdfProvider.notifier).placementsOn(4), isNotEmpty);
-  expect(TestWorld.lastExportBytes, isNotNull);
-}

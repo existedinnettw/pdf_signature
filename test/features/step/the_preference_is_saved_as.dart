@@ -7,8 +7,19 @@ Future<void> thePreferenceIsSavedAs(
   dynamic keyToken,
   String valueWrapped,
 ) async {
-  String unwrap(String s) =>
-      s.startsWith('{') && s.endsWith('}') ? s.substring(1, s.length - 1) : s;
+  String unwrap(String s) {
+    var out = s;
+    if (out.startsWith('{') && out.endsWith('}')) {
+      out = out.substring(1, out.length - 1);
+    }
+    // Remove surrounding single or double quotes if present
+    if ((out.startsWith("'") && out.endsWith("'")) ||
+        (out.startsWith('"') && out.endsWith('"'))) {
+      out = out.substring(1, out.length - 1);
+    }
+    return out;
+  }
+
   final key = keyToken.toString();
   final expected = unwrap(valueWrapped);
   expect(TestWorld.prefs[key], expected);

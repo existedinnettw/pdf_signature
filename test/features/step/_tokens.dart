@@ -34,3 +34,7 @@ const zh = _Token('zh');
 const TW = _Token('TW');
 const theme = _Token('theme');
 const language = _Token('language');
+
+// Additional tokens used by i18n tests
+const sepia = _Token('sepia');
+const xx = _Token('xx');

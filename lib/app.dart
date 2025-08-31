@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localized_locales/flutter_localized_locales.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
+import 'package:pdf_signature/ui/features/welcome/widgets/welcome_screen.dart';
 import 'ui/features/preferences/providers.dart';
 
 class MyApp extends StatelessWidget {
@@ -60,12 +62,25 @@ class MyApp extends StatelessWidget {
                   ...AppLocalizations.localizationsDelegates,
                   LocaleNamesLocalizationsDelegate(),
                 ],
-                home: const PdfSignatureHomePage(),
+                home: const _RootHomeSwitcher(),
               );
             },
           );
         },
       ),
     );
+  }
+}
+
+class _RootHomeSwitcher extends ConsumerWidget {
+  const _RootHomeSwitcher();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pdf = ref.watch(pdfProvider);
+    if (!pdf.loaded) {
+      return const WelcomeScreen();
+    }
+    return const PdfSignatureHomePage();
   }
 }

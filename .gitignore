@@ -127,4 +127,5 @@ test/features/*_test.dart
 .env
 docs/wireframe.assets/*.excalidraw.svg
 docs/wireframe.assets/*.svg
+docs/wireframe.assets/*.png
 node_modules/

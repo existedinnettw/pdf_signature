@@ -15,7 +15,10 @@ class AdjustmentsPanel extends ConsumerWidget {
     return Column(
       key: const Key('adjustments_panel'),
       children: [
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Checkbox(
               key: const Key('chk_aspect_lock'),

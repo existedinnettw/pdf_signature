@@ -21,6 +21,7 @@ class TestWorld {
 
   // Generic flags/values
   static int? selectedPage;
+  static int? pendingGoTo; // for simulating typed Go To value across steps
 
   // Preferences & settings
   static Map<String, String> prefs = {};
@@ -41,6 +42,7 @@ class TestWorld {
     exportInProgress = false;
     nothingToSaveAttempt = false;
     selectedPage = null;
+    pendingGoTo = null;
 
     // Preferences
     prefs = {};

@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
 import '_world.dart';
 
-/// Usage: the user selects a specific page number
-Future<void> theUserSelectsASpecificPageNumber(WidgetTester tester) async {
+/// Usage: the document is open
+Future<void> theDocumentIsOpen(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
-  container.read(pdfProvider.notifier).jumpTo(3);
+  TestWorld.container = container;
+  final pdf = container.read(pdfProvider);
+  expect(pdf.loaded, isTrue);
+  expect(pdf.pageCount, greaterThan(0));
 }
