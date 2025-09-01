@@ -33,8 +33,29 @@ class PdfPageArea extends ConsumerStatefulWidget {
 }
 
 class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
-  final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _pageKeys = {};
+  final PdfViewerController _viewerController = PdfViewerController();
+  // Guards to avoid scroll feedback between provider and viewer
+  int? _programmaticTargetPage;
+  bool _suppressProviderListen = false;
+  int? _visiblePage; // last page reported by viewer
+  int? _pendingPage; // pending target for mock ensureVisible retry
+  int _scrollRetryCount = 0;
+  static const int _maxScrollRetries = 50;
+  @override
+  void initState() {
+    super.initState();
+    // If app starts in continuous mode with a loaded PDF, ensure the viewer
+    // is instructed to align to the provider's current page once ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final mode = ref.read(pageViewModeProvider);
+      final pdf = ref.read(pdfProvider);
+      if (mode == 'continuous' && pdf.pickedPdfPath != null && pdf.loaded) {
+        _scrollToPage(pdf.currentPage);
+      }
+    });
+  }
 
   GlobalKey _pageKey(int page) => _pageKeys.putIfAbsent(
     page,
@@ -43,88 +64,135 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
   void _scrollToPage(int page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final key = _pageKey(page);
-      final ctx = key.currentContext;
+      final pdf = ref.read(pdfProvider);
+      final isContinuous = ref.read(pageViewModeProvider) == 'continuous';
+
+      // Real continuous: drive via PdfViewerController
+      if (pdf.pickedPdfPath != null && isContinuous) {
+        if (_viewerController.isReady) {
+          _programmaticTargetPage = page;
+          // print("[DEBUG] viewerController Scrolling to page $page");
+          _viewerController.goToPage(
+            pageNumber: page,
+            anchor: PdfPageAnchor.top,
+          );
+          // Fallback: if no onPageChanged arrives (e.g., same page), don't block future jumps
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            Future<void>.delayed(const Duration(milliseconds: 120), () {
+              if (!mounted) return;
+              if (_programmaticTargetPage == page) {
+                _programmaticTargetPage = null;
+              }
+            });
+          });
+          _pendingPage = null;
+          _scrollRetryCount = 0;
+        } else {
+          _pendingPage = page;
+          if (_scrollRetryCount < _maxScrollRetries) {
+            _scrollRetryCount += 1;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              final p = _pendingPage;
+              if (p == null) return;
+              _scrollToPage(p);
+            });
+          }
+        }
+        return;
+      }
+      // print("[DEBUG] Mock Scrolling to page $page");
+      // Mock continuous: try ensureVisible on the page container
+      final ctx = _pageKey(page).currentContext;
       if (ctx != null) {
-        Scrollable.ensureVisible(
-          ctx,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          alignment: 0.1,
-        );
+        try {
+          final scrollable = Scrollable.of(ctx);
+          final position = scrollable.position;
+          final targetBox = ctx.findRenderObject() as RenderBox?;
+          final scrollBox = scrollable.context.findRenderObject() as RenderBox?;
+          if (targetBox != null && scrollBox != null) {
+            final offsetInViewport = targetBox.localToGlobal(
+              Offset.zero,
+              ancestor: scrollBox,
+            );
+            final desiredTop = scrollBox.size.height * 0.1;
+            final newPixels =
+                (position.pixels + offsetInViewport.dy - desiredTop)
+                    .clamp(position.minScrollExtent, position.maxScrollExtent)
+                    .toDouble();
+            position.jumpTo(newPixels);
+            return;
+          }
+        } catch (_) {
+          // Fallback to ensureVisible if any calculation fails
+          Scrollable.ensureVisible(
+            ctx,
+            alignment: 0.1,
+            duration: const Duration(milliseconds: 1),
+            curve: Curves.linear,
+          );
+          return;
+        }
+        return;
+      }
+      _pendingPage = page;
+      if (_scrollRetryCount < _maxScrollRetries) {
+        _scrollRetryCount += 1;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final p = _pendingPage;
+          if (p == null) return;
+          _scrollToPage(p);
+        });
       }
     });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _showContextMenuForPlaced({
-    required BuildContext context,
-    required WidgetRef ref,
-    required Offset globalPos,
-    required int index,
-    required int page,
-  }) async {
-    widget.onSelectPlaced(index);
-    final choice = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        globalPos.dx,
-        globalPos.dy,
-        globalPos.dx,
-        globalPos.dy,
-      ),
-      items: [
-        PopupMenuItem<String>(
-          key: Key('ctx_delete_signature'),
-          value: 'delete',
-          child: Text(AppLocalizations.of(context).delete),
-        ),
-      ],
-    );
-    if (choice == 'delete') {
-      ref.read(pdfProvider.notifier).removePlacement(page: page, index: index);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final pdf = ref.watch(pdfProvider);
     final pageViewMode = ref.watch(pageViewModeProvider);
-    // Subscribe to provider changes during build (allowed by Riverpod) to trigger side-effects.
+
+    // React to provider currentPage changes (e.g., user tapped overview)
     ref.listen(pdfProvider, (prev, next) {
       final mode = ref.read(pageViewModeProvider);
+      if (_suppressProviderListen) return;
       if (mode == 'continuous' && (prev?.currentPage != next.currentPage)) {
-        _scrollToPage(next.currentPage);
+        final target = next.currentPage;
+        // If we're already navigating to this target, ignore; otherwise allow new target.
+        if (_programmaticTargetPage != null &&
+            _programmaticTargetPage == target) {
+          return;
+        }
+        // Only navigate if target differs from what viewer shows
+        if (_visiblePage != target) {
+          _scrollToPage(target);
+        }
       }
     });
+    // When switching to continuous, bring current page into view
     ref.listen<String>(pageViewModeProvider, (prev, next) {
       if (next == 'continuous') {
+        // Skip initial auto-scroll in mock mode to avoid fighting with
+        // early provider-driven jumps during tests.
+        final isMock = ref.read(useMockViewerProvider);
+        if (isMock) return;
         final p = ref.read(pdfProvider).currentPage;
-        _scrollToPage(p);
+        if (_visiblePage != p) {
+          _scrollToPage(p);
+        }
       }
     });
+
     if (!pdf.loaded) {
       return Center(child: Text(AppLocalizations.of(context).noPdfLoaded));
     }
+
     final useMock = ref.watch(useMockViewerProvider);
     final isContinuous = pageViewMode == 'continuous';
-    if (isContinuous) {
-      // Make sure the current page is visible after first build of continuous list.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _scrollToPage(pdf.currentPage);
-      });
-    }
+
+    // Mock single-page
     if (useMock && !isContinuous) {
       return Center(
         child: AspectRatio(
@@ -168,53 +236,86 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
         ),
       );
     }
+
+    // Mock continuous: ListView with prebuilt children, no controller
     if (useMock && isContinuous) {
       final count = pdf.pageCount > 0 ? pdf.pageCount : 1;
-      return ListView.builder(
-        key: const Key('pdf_continuous_mock_list'),
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: count,
-        itemBuilder: (context, idx) {
-          final pageNum = idx + 1;
-          return Center(
-            child: Padding(
-              key: _pageKey(pageNum),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: AspectRatio(
-                aspectRatio: widget.pageSize.width / widget.pageSize.height,
-                child: Stack(
-                  key: ValueKey('page_stack_$pageNum'),
-                  children: [
-                    Container(
-                      color: Colors.grey.shade200,
-                      child: Center(
-                        child: Text(
-                          AppLocalizations.of(context).pageInfo(pageNum, count),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            color: Colors.black54,
+      return Builder(
+        builder: (ctx) {
+          // Defer processing of any pending jump until after the tree is mounted.
+          if (_pendingPage != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              final p = _pendingPage;
+              if (p != null) {
+                _pendingPage = null;
+                _scrollRetryCount = 0;
+                Future<void>.delayed(const Duration(milliseconds: 1), () {
+                  if (!mounted) return;
+                  _scrollToPage(p);
+                });
+              }
+            });
+          }
+          return SingleChildScrollView(
+            key: const Key('pdf_continuous_mock_list'),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              children: List.generate(count, (idx) {
+                final pageNum = idx + 1;
+                return Center(
+                  child: Padding(
+                    key: _pageKey(pageNum),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: AspectRatio(
+                      aspectRatio:
+                          widget.pageSize.width / widget.pageSize.height,
+                      child: Stack(
+                        key: ValueKey('page_stack_$pageNum'),
+                        children: [
+                          Container(
+                            color: Colors.grey.shade200,
+                            child: Center(
+                              child: Text(
+                                AppLocalizations.of(
+                                  context,
+                                ).pageInfo(pageNum, count),
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final sig = ref.watch(signatureProvider);
+                              final visible = ref.watch(
+                                signatureVisibilityProvider,
+                              );
+                              return visible
+                                  ? _buildPageOverlays(
+                                    context,
+                                    ref,
+                                    sig,
+                                    pageNum,
+                                  )
+                                  : const SizedBox.shrink();
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final sig = ref.watch(signatureProvider);
-                        final visible = ref.watch(signatureVisibilityProvider);
-                        return visible
-                            ? _buildPageOverlays(context, ref, sig, pageNum)
-                            : const SizedBox.shrink();
-                      },
-                    ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              }),
             ),
           );
         },
       );
     }
+
+    // Real single-page mode
     if (pdf.pickedPdfPath != null && !isContinuous) {
       return PdfDocumentViewBuilder.file(
         pdf.pickedPdfPath!,
@@ -266,65 +367,110 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
         },
       );
     }
+
+    // Real continuous mode (pdfrx): copy example patterns
     if (pdf.pickedPdfPath != null && isContinuous) {
-      return PdfDocumentViewBuilder.file(
+      return PdfViewer.file(
         pdf.pickedPdfPath!,
-        builder: (context, document) {
-          if (document == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final pages = document.pages;
-          if (pdf.pageCount != pages.length) {
+        controller: _viewerController,
+        params: PdfViewerParams(
+          pageAnchor: PdfPageAnchor.top,
+          onViewerReady: (doc, controller) {
+            if (pdf.pageCount != doc.pages.length) {
+              ref.read(pdfProvider.notifier).setPageCount(doc.pages.length);
+            }
+            final target = _pendingPage ?? pdf.currentPage;
+            _pendingPage = null;
+            _scrollRetryCount = 0;
+            _programmaticTargetPage = target;
+            controller.goToPage(pageNumber: target, anchor: PdfPageAnchor.top);
+            // Fallback: if the viewer doesn't emit onPageChanged (e.g., already at target),
+            // ensure we don't keep blocking provider-driven jumps.
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(pdfProvider.notifier).setPageCount(pages.length);
+              if (!mounted) return;
+              Future<void>.delayed(const Duration(milliseconds: 120), () {
+                if (!mounted) return;
+                if (_programmaticTargetPage == target) {
+                  _programmaticTargetPage = null;
+                }
+              });
             });
-          }
-          return ListView.builder(
-            key: const Key('pdf_continuous_list'),
-            controller: _scrollController,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: pages.length,
-            itemBuilder: (context, idx) {
-              final pageNum = idx + 1;
-              final page = pages[idx];
-              final aspect = page.width / page.height;
-              return Center(
-                child: Padding(
-                  key: _pageKey(pageNum),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: AspectRatio(
-                    aspectRatio: aspect,
-                    child: Stack(
-                      key: ValueKey('page_stack_$pageNum'),
-                      children: [
-                        PdfPageView(
-                          key: ValueKey('pdf_page_view_$pageNum'),
-                          document: document,
-                          pageNumber: pageNum,
-                          alignment: Alignment.center,
-                        ),
-                        Consumer(
-                          builder: (context, ref, _) {
-                            final sig = ref.watch(signatureProvider);
-                            final visible = ref.watch(
-                              signatureVisibilityProvider,
-                            );
-                            return visible
-                                ? _buildPageOverlays(context, ref, sig, pageNum)
-                                : const SizedBox.shrink();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+            // Also ensure a scroll attempt is queued in case current state suppressed earlier.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              if (_visiblePage != ref.read(pdfProvider).currentPage) {
+                _scrollToPage(ref.read(pdfProvider).currentPage);
+              }
+            });
+          },
+          onPageChanged: (n) {
+            if (n == null) return;
+            _visiblePage = n;
+            // Programmatic navigation: wait until target reached
+            if (_programmaticTargetPage != null) {
+              if (n == _programmaticTargetPage) {
+                if (n != ref.read(pdfProvider).currentPage) {
+                  _suppressProviderListen = true;
+                  ref.read(pdfProvider.notifier).jumpTo(n);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _suppressProviderListen = false;
+                  });
+                }
+                _programmaticTargetPage = null;
+              }
+              return;
+            }
+            // User scroll -> reflect page to provider without re-triggering scroll
+            if (n != ref.read(pdfProvider).currentPage) {
+              _suppressProviderListen = true;
+              ref.read(pdfProvider.notifier).jumpTo(n);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _suppressProviderListen = false;
+              });
+            }
+          },
+        ),
       );
     }
+
     return const SizedBox.shrink();
+  }
+
+  // Context menu for already placed signatures
+  void _showContextMenuForPlaced({
+    required BuildContext context,
+    required WidgetRef ref,
+    required Offset globalPos,
+    required int index,
+    required int page,
+  }) {
+    final l = AppLocalizations.of(context);
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        globalPos.dx,
+        globalPos.dy,
+        globalPos.dx,
+        globalPos.dy,
+      ),
+      items: [
+        PopupMenuItem<String>(
+          key: const Key('ctx_placed_delete'),
+          value: 'delete',
+          child: Text(l.delete),
+        ),
+      ],
+    ).then((choice) {
+      switch (choice) {
+        case 'delete':
+          ref
+              .read(pdfProvider.notifier)
+              .removePlacement(page: page, index: index);
+          break;
+        default:
+          break;
+      }
+    });
   }
 
   Widget _buildPageOverlays(
