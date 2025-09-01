@@ -4,7 +4,7 @@ Feature: App preferences
     Given the settings screen is open
     When the user selects the "<theme>" theme
     Then the app UI updates to use the "<theme>" theme
-    And the preference {theme} is saved as {"<theme>"}
+  And the preference {'theme'} is saved as <theme>
 
     Examples:
       | theme  |
@@ -16,7 +16,7 @@ Feature: App preferences
     Given the settings screen is open
     When the user selects a supported language "<language>"
     Then all visible texts are displayed in "<language>"
-    And the preference {language} is saved as {"<language>"}
+  And the preference {'language'} is saved as <language>
 
     Examples:
       | language |

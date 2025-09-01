@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import '_world.dart';
+// Re-export tokens so tests that import this step have access to token symbols
+export '_tokens.dart';
 
 /// Usage: the preference {language} is saved as {"<language>"}
 Future<void> thePreferenceIsSavedAs(

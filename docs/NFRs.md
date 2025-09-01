@@ -1,4 +1,5 @@
 # Non-Functional Requirements
 
-* Package structure
-  * plz follow official [Package structure](https://docs.flutter.dev/app-architecture/case-study#package-structure) with a slight modification, put each `<FEATURE NAME>/`s in `features/` sub-directory under `ui/`.
+* support multiple platforms (windows, linux, android, web)
+* only FOSS libs can use
+* recommend no more than 300 lines of code per file

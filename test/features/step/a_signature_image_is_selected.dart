@@ -17,4 +17,11 @@ Future<void> aSignatureImageIsSelected(WidgetTester tester) async {
       .setImageBytes(Uint8List.fromList([1, 2, 3]));
   // Allow provider scheduler to process queued updates fully
   await tester.pumpAndSettle();
+  // Extra pump with a non-zero duration to flush zero-delay timers
+  await tester.pump(const Duration(milliseconds: 1));
+  // Teardown to avoid pending timers from Riverpod's scheduler
+  addTearDown(() {
+    TestWorld.container?.dispose();
+    TestWorld.container = null;
+  });
 }

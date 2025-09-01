@@ -10,4 +10,7 @@ Feature: internationalizing
     Then the language falls back to the device locale
 
   Scenario: Supported languages are available
-    Then the app supports languages {en, zh-TW, es}
+    Then the app supports languages
+      | 'en'    |
+      | 'zh-TW' |
+      | 'es'    |
