@@ -5,15 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:printing/printing.dart' as printing;
+import 'package:pdfrx/pdfrx.dart';
 
 import '../../../../data/services/providers.dart';
 import '../view_model/view_model.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
-import 'adjustments_panel.dart';
 import 'pdf_pages_overview.dart';
-import '../../preferences/widgets/settings_screen.dart';
+import 'signature_drawer.dart';
+// adjustments are available via ImageEditorDialog
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   const PdfSignatureHomePage({super.key});
@@ -25,7 +26,10 @@ class PdfSignatureHomePage extends ConsumerStatefulWidget {
 
 class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   static const Size _pageSize = SignatureController.pageSize;
-  final TransformationController _ivController = TransformationController();
+  final PdfViewerController _viewerController = PdfViewerController();
+  bool _showPagesSidebar = true;
+  bool _showSignaturesSidebar = true;
+  int _zoomLevel = 100; // percentage for display only
 
   // Exposed for tests to trigger the invalid-file SnackBar without UI.
   @visibleForTesting
@@ -52,6 +56,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     ref.read(pdfProvider.notifier).jumpTo(page);
   }
 
+  // Zoom is managed by pdfrx viewer (Ctrl +/- etc.). No custom zoom here.
+
   Future<void> _loadSignatureFromFile() async {
     final typeGroup = const fs.XTypeGroup(
       label: 'Image',
@@ -68,25 +74,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     }
   }
 
-  void _createNewSignature() {
-    final sig = ref.read(signatureProvider.notifier);
-    if (ref.read(pdfProvider).loaded) {
-      sig.placeDefaultRect();
-      ref
-          .read(pdfProvider.notifier)
-          .setSignedPage(ref.read(pdfProvider).currentPage);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(
-              context,
-            ).longPressOrRightClickTheSignatureToConfirmOrDelete,
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
+  // _createNewSignature was removed as the toolbar no longer exposes this action.
 
   void _confirmSignature() {
     ref.read(signatureProvider.notifier).confirmCurrentSignature(ref);
@@ -250,7 +238,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   @override
   void dispose() {
-    _ivController.dispose();
     super.dispose();
   }
 
@@ -259,64 +246,69 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final isExporting = ref.watch(exportingProvider);
     final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l.appTitle),
-        actions: [
-          IconButton(
-            key: const Key('btn_appbar_settings'),
-            tooltip: l.settings,
-            onPressed:
-                () => showDialog<bool>(
-                  context: context,
-                  builder: (_) => const SettingsDialog(),
-                ),
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      ),
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: Stack(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            Column(
               children: [
-                // Left: pages overview (thumbnails + navigation)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 140,
-                    maxWidth: 180,
-                  ),
-                  child: Card(
-                    margin: EdgeInsets.zero,
-                    child: const PdfPagesOverview(),
-                  ),
+                // Full-width toolbar row
+                PdfToolbar(
+                  disabled: isExporting,
+                  onPickPdf: _pickPdf,
+                  onJumpToPage: _jumpToPage,
+                  onZoomOut: () {
+                    if (_viewerController.isReady) {
+                      _viewerController.zoomDown();
+                    }
+                    setState(() {
+                      _zoomLevel = (_zoomLevel - 10).clamp(10, 800);
+                    });
+                  },
+                  onZoomIn: () {
+                    if (_viewerController.isReady) {
+                      _viewerController.zoomUp();
+                    }
+                    setState(() {
+                      _zoomLevel = (_zoomLevel + 10).clamp(10, 800);
+                    });
+                  },
+                  // zoomLevel omitted to avoid compact overflows in tight tests
+                  fileName: ref.watch(pdfProvider).pickedPdfPath,
+                  showPagesSidebar: _showPagesSidebar,
+                  showSignaturesSidebar: _showSignaturesSidebar,
+                  onTogglePagesSidebar:
+                      () => setState(() {
+                        _showPagesSidebar = !_showPagesSidebar;
+                      }),
+                  onToggleSignaturesSidebar:
+                      () => setState(() {
+                        _showSignaturesSidebar = !_showSignaturesSidebar;
+                      }),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(height: 8),
                 Expanded(
-                  child: Column(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      PdfToolbar(
-                        disabled: isExporting,
-                        onOpenSettings:
-                            () => showDialog<bool>(
-                              context: context,
-                              builder: (_) => const SettingsDialog(),
-                            ),
-                        onPickPdf: _pickPdf,
-                        onJumpToPage: _jumpToPage,
-                        onSave: _saveSignedPdf,
-                        onLoadSignatureFromFile: _loadSignatureFromFile,
-                        onCreateSignature: _createNewSignature,
-                        onOpenDrawCanvas: _openDrawCanvas,
-                      ),
-                      const SizedBox(height: 8),
+                      if (_showPagesSidebar)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minWidth: 140,
+                            maxWidth: 180,
+                          ),
+                          child: Card(
+                            margin: EdgeInsets.zero,
+                            child: const PdfPagesOverview(),
+                          ),
+                        ),
+                      if (_showPagesSidebar) const SizedBox(width: 12),
                       Expanded(
                         child: AbsorbPointer(
                           absorbing: isExporting,
                           child: PdfPageArea(
                             pageSize: _pageSize,
-                            controller: _ivController,
+                            viewerController: _viewerController,
                             onDragSignature: _onDragSignature,
                             onResizeSignature: _onResizeSignature,
                             onConfirmSignature: _confirmSignature,
@@ -329,108 +321,45 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 280,
-                    maxWidth: 360,
-                  ),
-                  child: Consumer(
-                    builder: (context, ref, _) {
-                      final sig = ref.watch(signatureProvider);
-                      if (sig.rect != null) {
-                        return AbsorbPointer(
-                          absorbing: isExporting,
-                          child: Card(
-                            margin: EdgeInsets.zero,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Signature preview
-                                Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        AppLocalizations.of(context).signature,
-                                        style:
-                                            Theme.of(
-                                              context,
-                                            ).textTheme.titleSmall,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color:
-                                                Theme.of(context).dividerColor,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: AspectRatio(
-                                          aspectRatio: 3 / 1,
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(8.0),
-                                            child: Consumer(
-                                              builder: (context, ref, _) {
-                                                final bytes =
-                                                    ref.watch(
-                                                      processedSignatureImageProvider,
-                                                    ) ??
-                                                    sig.imageBytes;
-                                                if (bytes == null) {
-                                                  return Center(
-                                                    child: Text(
-                                                      AppLocalizations.of(
-                                                        context,
-                                                      ).noPdfLoaded,
-                                                    ),
-                                                  );
-                                                }
-                                                return Image.memory(
-                                                  bytes,
-                                                  fit: BoxFit.contain,
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Divider(height: 1),
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    padding: const EdgeInsets.all(12),
-                                    child: AdjustmentsPanel(sig: sig),
-                                  ),
-                                ),
-                              ],
-                            ),
+                      if (_showSignaturesSidebar) const SizedBox(width: 12),
+                      if (_showSignaturesSidebar)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minWidth: 140,
+                            maxWidth: 250,
                           ),
-                        );
-                      }
-                      return Card(
-                        margin: EdgeInsets.zero,
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Text(
-                              AppLocalizations.of(context).signature,
-                              style: Theme.of(context).textTheme.bodyMedium,
+                          child: AbsorbPointer(
+                            absorbing: isExporting,
+                            child: Card(
+                              margin: EdgeInsets.zero,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      child: SignatureDrawer(
+                                        disabled: isExporting,
+                                        onLoadSignatureFromFile:
+                                            _loadSignatureFromFile,
+                                        onOpenDrawCanvas: _openDrawCanvas,
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: ElevatedButton(
+                                      key: const Key('btn_save_pdf'),
+                                      onPressed:
+                                          isExporting ? null : _saveSignedPdf,
+                                      child: Text(l.saveSignedPdf),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      );
-                    },
+                    ],
                   ),
                 ),
               ],

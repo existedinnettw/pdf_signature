@@ -26,6 +26,7 @@
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "长按或右键单击签名以确认或删除。",
   "next": "下一步",
   "noPdfLoaded": "未加载 PDF",
+  "noSignatureLoaded": "未加载签名",
   "nothingToSaveYet": "尚无内容保存",
   "openPdf": "打开 PDF...",
   "pageInfo": "第 {current} 页 / 共 {total} 页",

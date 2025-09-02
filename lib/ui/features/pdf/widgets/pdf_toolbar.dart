@@ -10,23 +10,30 @@ class PdfToolbar extends ConsumerStatefulWidget {
   const PdfToolbar({
     super.key,
     required this.disabled,
-    required this.onOpenSettings,
     required this.onPickPdf,
     required this.onJumpToPage,
-    required this.onSave,
-    required this.onLoadSignatureFromFile,
-    required this.onCreateSignature,
-    required this.onOpenDrawCanvas,
+    required this.onZoomOut,
+    required this.onZoomIn,
+    this.zoomLevel,
+    this.fileName,
+    required this.showPagesSidebar,
+    required this.showSignaturesSidebar,
+    required this.onTogglePagesSidebar,
+    required this.onToggleSignaturesSidebar,
   });
 
   final bool disabled;
-  final VoidCallback onOpenSettings;
   final VoidCallback onPickPdf;
   final ValueChanged<int> onJumpToPage;
-  final VoidCallback onSave;
-  final VoidCallback onLoadSignatureFromFile;
-  final VoidCallback onCreateSignature;
-  final VoidCallback onOpenDrawCanvas;
+  final String? fileName;
+  final VoidCallback onZoomOut;
+  final VoidCallback onZoomIn;
+  // Current zoom level as a percentage (e.g., 100 for 100%)
+  final int? zoomLevel;
+  final bool showPagesSidebar;
+  final bool showSignaturesSidebar;
+  final VoidCallback onTogglePagesSidebar;
+  final VoidCallback onToggleSignaturesSidebar;
 
   @override
   ConsumerState<PdfToolbar> createState() => _PdfToolbarState();
@@ -57,21 +64,34 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool compact = constraints.maxWidth < 260;
-        final double gotoWidth = compact ? 60 : 100;
-        return Wrap(
+        final double gotoWidth = 50;
+
+        // Center content of the toolbar
+        final center = Wrap(
           spacing: 8,
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             OutlinedButton(
-              key: const Key('btn_open_settings'),
-              onPressed: widget.disabled ? null : widget.onOpenSettings,
-              child: Text(l.settings),
-            ),
-            OutlinedButton(
               key: const Key('btn_open_pdf_picker'),
               onPressed: widget.disabled ? null : widget.onPickPdf,
-              child: Text(l.openPdf),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.insert_drive_file, size: 18),
+                  const SizedBox(width: 6),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Text(
+                      // if filename not null
+                      widget.fileName != null
+                          ? widget.fileName!
+                          : 'No file selected',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
             if (pdf.loaded) ...[
               Row(
@@ -86,6 +106,7 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                     icon: const Icon(Icons.chevron_left),
                     tooltip: l.prev,
                   ),
+                  // Current page label
                   Text(pageInfo, key: const Key('lbl_page_info')),
                   IconButton(
                     key: const Key('btn_next'),
@@ -96,36 +117,59 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                     icon: const Icon(Icons.chevron_right),
                     tooltip: l.next,
                   ),
-                ],
-              ),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(l.goTo),
-                  SizedBox(
-                    width: gotoWidth,
-                    child: TextField(
-                      key: const Key('txt_goto'),
-                      controller: _goToController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      enabled: !widget.disabled,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: '1..${pdf.pageCount}',
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(l.goTo),
+                      SizedBox(
+                        width: gotoWidth,
+                        child: TextField(
+                          key: const Key('txt_goto'),
+                          controller: _goToController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          enabled: !widget.disabled,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: '1..${pdf.pageCount}',
+                          ),
+                          onSubmitted: (_) => _submitGoTo(),
+                        ),
                       ),
-                      onSubmitted: (_) => _submitGoTo(),
-                    ),
+                      if (!compact)
+                        IconButton(
+                          key: const Key('btn_goto_apply'),
+                          tooltip: l.goTo,
+                          icon: const Icon(Icons.arrow_forward),
+                          onPressed: widget.disabled ? null : _submitGoTo,
+                        ),
+                    ],
                   ),
-                  if (!compact)
-                    IconButton(
-                      key: const Key('btn_goto_apply'),
-                      tooltip: l.goTo,
-                      icon: const Icon(Icons.arrow_forward),
-                      onPressed: widget.disabled ? null : _submitGoTo,
+                  const SizedBox(width: 8),
+                  IconButton(
+                    key: const Key('btn_zoom_out'),
+                    tooltip: 'Zoom out',
+                    onPressed: widget.disabled ? null : widget.onZoomOut,
+                    icon: const Icon(Icons.zoom_out),
+                  ),
+                  IconButton(
+                    key: const Key('btn_zoom_in'),
+                    tooltip: 'Zoom in',
+                    onPressed: widget.disabled ? null : widget.onZoomIn,
+                    icon: const Icon(Icons.zoom_in),
+                  ),
+                  if (!compact && widget.zoomLevel != null) ...[
+                    const SizedBox(width: 6),
+                    // show zoom ratio
+                    Text(
+                      '${widget.zoomLevel}%',
+                      style: const TextStyle(fontSize: 12),
                     ),
+                  ],
                 ],
               ),
               Row(
@@ -156,36 +200,40 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                   ),
                 ],
               ),
-              ElevatedButton(
-                key: const Key('btn_save_pdf'),
-                onPressed: widget.disabled ? null : widget.onSave,
-                child: Text(l.saveSignedPdf),
-              ),
-              OutlinedButton(
-                key: const Key('btn_load_signature_picker'),
-                onPressed:
-                    widget.disabled || !pdf.loaded
-                        ? null
-                        : widget.onLoadSignatureFromFile,
-                child: Text(l.loadSignatureFromFile),
-              ),
-              OutlinedButton(
-                key: const Key('btn_create_signature'),
-                onPressed:
-                    widget.disabled || !pdf.loaded
-                        ? null
-                        : widget.onCreateSignature,
-                child: Text(l.createNewSignature),
-              ),
-              ElevatedButton(
-                key: const Key('btn_draw_signature'),
-                onPressed:
-                    widget.disabled || !pdf.loaded
-                        ? null
-                        : widget.onOpenDrawCanvas,
-                child: Text(l.drawSignature),
-              ),
             ],
+          ],
+        );
+
+        return Row(
+          children: [
+            IconButton(
+              key: const Key('btn_toggle_pages_sidebar'),
+              tooltip: 'Toggle pages overview',
+              onPressed: widget.disabled ? null : widget.onTogglePagesSidebar,
+              icon: Icon(
+                Icons.view_sidebar,
+                color:
+                    widget.showPagesSidebar
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: center),
+            const SizedBox(width: 8),
+            IconButton(
+              key: const Key('btn_toggle_signatures_sidebar'),
+              tooltip: 'Toggle signatures drawer',
+              onPressed:
+                  widget.disabled ? null : widget.onToggleSignaturesSidebar,
+              icon: Icon(
+                Icons.view_sidebar,
+                color:
+                    widget.showSignaturesSidebar
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+              ),
+            ),
           ],
         );
       },

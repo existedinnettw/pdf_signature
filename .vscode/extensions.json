@@ -6,7 +6,8 @@
         "dart-code.flutter",
         "lsaudon.l10nization",  // quick translation gen
         "oke331.flutter-l10n-helper", // show arb string
-        "gabbygreat.flutter-l10n-checker", // detect hard-coded strings
+        "gabbygreat.flutter-l10n-checker",
+        "pomdtr.excalidraw-editor", // detect hard-coded strings
         // "joaopinacio.translate-me"
     ]
 }

@@ -26,6 +26,7 @@
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "署名を長押しまたは右クリックして、確認または削除します。",
   "next": "次へ",
   "noPdfLoaded": "PDFが読み込まれていません",
+  "noSignatureLoaded": "署名は読み込まれていません",
   "nothingToSaveYet": "まだ保存するものがありません",
   "openPdf": "PDFを開く…",
   "pageInfo": "ページ {current}/{total}",

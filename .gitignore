@@ -133,3 +133,4 @@ AppDir/.DirIcon
 AppDir/bundle/
 appimage-build/
 /*.AppImage
+.vscode/settings.json

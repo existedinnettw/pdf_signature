@@ -13,7 +13,7 @@ class SettingsDialog extends ConsumerStatefulWidget {
 class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   String? _theme;
   String? _language;
-  String? _pageView; // 'single' | 'continuous'
+  // Page view removed; continuous-only
 
   @override
   void initState() {
@@ -21,7 +21,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     final prefs = ref.read(preferencesProvider);
     _theme = prefs.theme;
     _language = prefs.language;
-    _pageView = prefs.pageView;
+    // pageView no longer configurable (continuous-only)
   }
 
   @override
@@ -149,31 +149,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  SizedBox(width: 140, child: Text('${l.pageView}:')),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButton<String>(
-                      key: const Key('ddl_page_view'),
-                      isExpanded: true,
-                      value: _pageView,
-                      items: [
-                        DropdownMenuItem(
-                          value: 'single',
-                          child: Text(l.pageViewSingle),
-                        ),
-                        DropdownMenuItem(
-                          value: 'continuous',
-                          child: Text(l.pageViewContinuous),
-                        ),
-                      ],
-                      onChanged: (v) => setState(() => _pageView = v),
-                    ),
-                  ),
-                ],
-              ),
+              // Page view setting removed (continuous-only)
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -188,7 +164,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                       final n = ref.read(preferencesProvider.notifier);
                       if (_theme != null) await n.setTheme(_theme!);
                       if (_language != null) await n.setLanguage(_language!);
-                      if (_pageView != null) await n.setPageView(_pageView!);
+                      // pageView not configurable anymore
                       if (mounted) Navigator.of(context).pop(true);
                     },
                     child: Text(l.save),

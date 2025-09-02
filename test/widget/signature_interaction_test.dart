@@ -1,9 +1,31 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
 
 void main() {
+  Future<void> openEditorViaContextMenu(WidgetTester tester) async {
+    // Prefer right-click on the signature card area to open the context menu
+    final cardArea = find.byKey(const Key('gd_signature_card_area'));
+    expect(cardArea, findsOneWidget);
+    final center = tester.getCenter(cardArea);
+    final TestGesture mouse = await tester.createGesture(
+      kind: ui.PointerDeviceKind.mouse,
+      buttons: kSecondaryMouseButton,
+    );
+    await mouse.addPointer(location: center);
+    addTearDown(mouse.removePointer);
+    await tester.pump();
+    await mouse.down(center);
+    await tester.pump(const Duration(milliseconds: 50));
+    await mouse.up();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('mi_signature_adjust')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('Resize and move signature within page bounds', (tester) async {
     await pumpWithOpenPdfAndSig(tester);
 
@@ -35,6 +57,8 @@ void main() {
     final overlay = find.byKey(const Key('signature_overlay'));
     final sizeBefore = tester.getSize(overlay);
     final aspect = sizeBefore.width / sizeBefore.height;
+    // Open image editor via right-click context menu and toggle aspect lock there
+    await openEditorViaContextMenu(tester);
     await tester.tap(find.byKey(const Key('chk_aspect_lock')));
     await tester.pump();
     await tester.drag(
@@ -52,6 +76,17 @@ void main() {
   ) async {
     await pumpWithOpenPdfAndSig(tester);
 
+    // Open image editor via right-click context menu
+    await openEditorViaContextMenu(tester);
+    // Ensure sliders are visible by scrolling if needed
+    final dialogScrollable = find.descendant(
+      of: find.byType(Dialog),
+      matching: find.byType(Scrollable),
+    );
+    if (dialogScrollable.evaluate().isNotEmpty) {
+      await tester.drag(dialogScrollable, const Offset(0, -120));
+      await tester.pumpAndSettle();
+    }
     // toggle bg removal
     await tester.tap(find.byKey(const Key('swt_bg_removal')));
     await tester.pump();

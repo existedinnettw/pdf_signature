@@ -26,6 +26,7 @@
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "Pulse prolongadamente o haga clic derecho en la firma para confirmar o eliminar.",
   "next": "Siguiente",
   "noPdfLoaded": "No se ha cargado ningún PDF",
+  "noSignatureLoaded": "No se ha cargado ninguna firma",
   "nothingToSaveYet": "Aún no hay nada que guardar",
   "openPdf": "Abrir PDF...",
   "pageInfo": "Página {current}/{total}",

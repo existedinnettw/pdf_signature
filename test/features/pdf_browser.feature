@@ -36,12 +36,7 @@ Feature: PDF browser
     Then page {5} becomes visible in the scroll area
     And the left pages overview highlights page {5}
 
-  Scenario: Single-page mode renders only the selected page
-    Given the document is open
-    And the Page view mode is set to Single
-    When the user jumps to page {2}
-    Then only page {2} is rendered in the canvas
-    And the page label shows "Page {2} of {5}"
+
 
   Scenario: Go to clamps out-of-range inputs to valid bounds
     Given the document is open

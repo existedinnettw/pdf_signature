@@ -61,6 +61,8 @@
   "@next": {},
   "noPdfLoaded": "No PDF loaded",
   "@noPdfLoaded": {},
+  "noSignatureLoaded": "No signature loaded",
+  "@noSignatureLoaded": {},
   "nothingToSaveYet": "Nothing to save yet",
   "@nothingToSaveYet": {},
   "openPdf": "Open PDF...",

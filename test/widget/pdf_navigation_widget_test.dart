@@ -38,23 +38,23 @@ void main() {
       ),
     );
 
-    // Initial label and page view key
+    // Initial label and page list exists (continuous mock)
     expect(find.byKey(const Key('lbl_page_info')), findsOneWidget);
     Text label() => tester.widget<Text>(find.byKey(const Key('lbl_page_info')));
     expect(label().data, equals('Page 1/5'));
-    expect(find.byKey(const ValueKey('pdf_page_view_1')), findsOneWidget);
+    expect(find.byKey(const Key('pdf_continuous_mock_list')), findsOneWidget);
 
     // Next
     await tester.tap(find.byKey(const Key('btn_next')));
     await tester.pumpAndSettle();
     expect(label().data, equals('Page 2/5'));
-    expect(find.byKey(const ValueKey('pdf_page_view_2')), findsOneWidget);
+    expect(find.byKey(const Key('pdf_continuous_mock_list')), findsOneWidget);
 
     // Prev
     await tester.tap(find.byKey(const Key('btn_prev')));
     await tester.pumpAndSettle();
     expect(label().data, equals('Page 1/5'));
-    expect(find.byKey(const ValueKey('pdf_page_view_1')), findsOneWidget);
+    expect(find.byKey(const Key('pdf_continuous_mock_list')), findsOneWidget);
 
     // Goto specific page
     await tester.tap(find.byKey(const Key('txt_goto')));
@@ -63,7 +63,7 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
     expect(label().data, equals('Page 4/5'));
-    expect(find.byKey(const ValueKey('pdf_page_view_4')), findsOneWidget);
+    expect(find.byKey(const Key('pdf_continuous_mock_list')), findsOneWidget);
 
     // Goto beyond upper bound -> clamp to 5
     await tester.tap(find.byKey(const Key('txt_goto')));
@@ -72,7 +72,7 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
     expect(label().data, equals('Page 5/5'));
-    expect(find.byKey(const ValueKey('pdf_page_view_5')), findsOneWidget);
+    expect(find.byKey(const Key('pdf_continuous_mock_list')), findsOneWidget);
 
     // Goto below 1 -> clamp to 1
     await tester.tap(find.byKey(const Key('txt_goto')));
@@ -81,6 +81,6 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
     expect(label().data, equals('Page 1/5'));
-    expect(find.byKey(const ValueKey('pdf_page_view_1')), findsOneWidget);
+    expect(find.byKey(const Key('pdf_continuous_mock_list')), findsOneWidget);
   });
 }
