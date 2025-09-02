@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import '../providers.dart';
+import '../../../../data/services/preferences_providers.dart';
 
 class SettingsDialog extends ConsumerStatefulWidget {
   const SettingsDialog({super.key});

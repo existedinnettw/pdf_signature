@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../../../data/services/providers.dart';
+import '../../../../data/services/export_providers.dart';
 import '../view_model/view_model.dart';
 
 class PdfToolbar extends ConsumerStatefulWidget {
@@ -94,8 +94,8 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
               ),
             ),
             if (pdf.loaded) ...[
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 8,
                 children: [
                   IconButton(
                     key: const Key('btn_prev'),
@@ -156,25 +156,19 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                     onPressed: widget.disabled ? null : widget.onZoomOut,
                     icon: const Icon(Icons.zoom_out),
                   ),
+                  Text(
+                    //if not null
+                    widget.zoomLevel != null ? '${widget.zoomLevel}%' : '',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   IconButton(
                     key: const Key('btn_zoom_in'),
                     tooltip: 'Zoom in',
                     onPressed: widget.disabled ? null : widget.onZoomIn,
                     icon: const Icon(Icons.zoom_in),
                   ),
-                  if (!compact && widget.zoomLevel != null) ...[
-                    const SizedBox(width: 6),
-                    // show zoom ratio
-                    Text(
-                      '${widget.zoomLevel}%',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+                  SizedBox(width: 6),
+                  // show zoom ratio
                   Text(l.dpi),
                   const SizedBox(width: 8),
                   DropdownButton<double>(

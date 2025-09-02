@@ -33,6 +33,8 @@ class ExportService {
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
     Map<int, List<Rect>>? placementsByPage,
+    Map<int, List<String>>? placementImageByPage,
+    Map<String, Uint8List>? libraryBytes,
     double targetDpi = 144.0,
   }) async {
     // print(
@@ -53,6 +55,8 @@ class ExportService {
       uiPageSize: uiPageSize,
       signatureImageBytes: signatureImageBytes,
       placementsByPage: placementsByPage,
+      placementImageByPage: placementImageByPage,
+      libraryBytes: libraryBytes,
       targetDpi: targetDpi,
     );
     if (bytes == null) return false;
@@ -73,6 +77,8 @@ class ExportService {
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
     Map<int, List<Rect>>? placementsByPage,
+    Map<int, List<String>>? placementImageByPage,
+    Map<String, Uint8List>? libraryBytes,
     double targetDpi = 144.0,
   }) async {
     final out = pw.Document(version: pdf.PdfVersion.pdf_1_4, compress: false);
@@ -100,6 +106,10 @@ class ExportService {
             hasMulti
                 ? (placementsByPage[pageIndex] ?? const <Rect>[])
                 : const <Rect>[];
+        final pageImageIds =
+            hasMulti
+                ? (placementImageByPage?[pageIndex] ?? const <String>[])
+                : const <String>[];
         final shouldStampSingle =
             !hasMulti &&
             signedPage != null &&
@@ -107,12 +117,7 @@ class ExportService {
             signatureRectUi != null &&
             signatureImageBytes != null &&
             signatureImageBytes.isNotEmpty;
-        final shouldStampMulti =
-            hasMulti &&
-            pagePlacements.isNotEmpty &&
-            signatureImageBytes != null &&
-            signatureImageBytes.isNotEmpty;
-        if (shouldStampSingle || shouldStampMulti) {
+        if (shouldStampSingle) {
           try {
             sigImgObj = pw.MemoryImage(signatureImageBytes);
           } catch (_) {
@@ -139,35 +144,52 @@ class ExportService {
                   ),
                 ),
               ];
-              if (sigImgObj != null) {
-                if (hasMulti && pagePlacements.isNotEmpty) {
-                  for (final r in pagePlacements) {
-                    final left = r.left / uiPageSize.width * widthPts;
-                    final top = r.top / uiPageSize.height * heightPts;
-                    final w = r.width / uiPageSize.width * widthPts;
-                    final h = r.height / uiPageSize.height * heightPts;
-                    children.add(
-                      pw.Positioned(
-                        left: left,
-                        top: top,
-                        child: pw.Image(sigImgObj, width: w, height: h),
-                      ),
-                    );
-                  }
-                } else if (shouldStampSingle) {
-                  final r = signatureRectUi;
+              // Multi-placement stamping: per-placement image from libraryBytes
+              if (hasMulti && pagePlacements.isNotEmpty) {
+                for (var i = 0; i < pagePlacements.length; i++) {
+                  final r = pagePlacements[i];
                   final left = r.left / uiPageSize.width * widthPts;
                   final top = r.top / uiPageSize.height * heightPts;
                   final w = r.width / uiPageSize.width * widthPts;
                   final h = r.height / uiPageSize.height * heightPts;
-                  children.add(
-                    pw.Positioned(
-                      left: left,
-                      top: top,
-                      child: pw.Image(sigImgObj, width: w, height: h),
-                    ),
-                  );
+                  Uint8List? bytes;
+                  if (i < pageImageIds.length) {
+                    final id = pageImageIds[i];
+                    bytes = libraryBytes?[id];
+                  }
+                  bytes ??=
+                      signatureImageBytes; // fallback to single image if provided
+                  if (bytes != null && bytes.isNotEmpty) {
+                    pw.MemoryImage? imgObj;
+                    try {
+                      imgObj = pw.MemoryImage(bytes);
+                    } catch (_) {
+                      imgObj = null;
+                    }
+                    if (imgObj != null) {
+                      children.add(
+                        pw.Positioned(
+                          left: left,
+                          top: top,
+                          child: pw.Image(imgObj, width: w, height: h),
+                        ),
+                      );
+                    }
+                  }
                 }
+              } else if (shouldStampSingle && sigImgObj != null) {
+                final r = signatureRectUi;
+                final left = r.left / uiPageSize.width * widthPts;
+                final top = r.top / uiPageSize.height * heightPts;
+                final w = r.width / uiPageSize.width * widthPts;
+                final h = r.height / uiPageSize.height * heightPts;
+                children.add(
+                  pw.Positioned(
+                    left: left,
+                    top: top,
+                    child: pw.Image(sigImgObj, width: w, height: h),
+                  ),
+                );
               }
               return pw.Stack(children: children);
             },
@@ -187,6 +209,10 @@ class ExportService {
           (placementsByPage != null && placementsByPage.isNotEmpty);
       final pagePlacements =
           hasMulti ? (placementsByPage[1] ?? const <Rect>[]) : const <Rect>[];
+      final pageImageIds =
+          hasMulti
+              ? (placementImageByPage?[1] ?? const <String>[])
+              : const <String>[];
       final shouldStampSingle =
           !hasMulti &&
           signedPage != null &&
@@ -194,12 +220,7 @@ class ExportService {
           signatureRectUi != null &&
           signatureImageBytes != null &&
           signatureImageBytes.isNotEmpty;
-      final shouldStampMulti =
-          hasMulti &&
-          pagePlacements.isNotEmpty &&
-          signatureImageBytes != null &&
-          signatureImageBytes.isNotEmpty;
-      if (shouldStampSingle || shouldStampMulti) {
+      if (shouldStampSingle) {
         try {
           // If it's already PNG, keep as-is to preserve alpha; otherwise decode/encode PNG
           final asStr = String.fromCharCodes(signatureImageBytes.take(8));
@@ -232,35 +253,66 @@ class ExportService {
                 color: pdf.PdfColors.white,
               ),
             ];
-            if (sigImgObj != null) {
-              if (hasMulti && pagePlacements.isNotEmpty) {
-                for (final r in pagePlacements) {
-                  final left = r.left / uiPageSize.width * widthPts;
-                  final top = r.top / uiPageSize.height * heightPts;
-                  final w = r.width / uiPageSize.width * widthPts;
-                  final h = r.height / uiPageSize.height * heightPts;
-                  children.add(
-                    pw.Positioned(
-                      left: left,
-                      top: top,
-                      child: pw.Image(sigImgObj, width: w, height: h),
-                    ),
-                  );
-                }
-              } else if (shouldStampSingle) {
-                final r = signatureRectUi;
+            // Multi-placement stamping on fallback page
+            if (hasMulti && pagePlacements.isNotEmpty) {
+              for (var i = 0; i < pagePlacements.length; i++) {
+                final r = pagePlacements[i];
                 final left = r.left / uiPageSize.width * widthPts;
                 final top = r.top / uiPageSize.height * heightPts;
                 final w = r.width / uiPageSize.width * widthPts;
                 final h = r.height / uiPageSize.height * heightPts;
-                children.add(
-                  pw.Positioned(
-                    left: left,
-                    top: top,
-                    child: pw.Image(sigImgObj, width: w, height: h),
-                  ),
-                );
+                Uint8List? bytes;
+                if (i < pageImageIds.length) {
+                  final id = pageImageIds[i];
+                  bytes = libraryBytes?[id];
+                }
+                bytes ??=
+                    signatureImageBytes; // fallback to single image if provided
+                if (bytes != null && bytes.isNotEmpty) {
+                  pw.MemoryImage? imgObj;
+                  try {
+                    // Ensure PNG for transparency if not already
+                    final asStr = String.fromCharCodes(bytes.take(8));
+                    final isPng =
+                        bytes.length > 8 &&
+                        bytes[0] == 0x89 &&
+                        asStr.startsWith('\u0089PNG');
+                    if (isPng) {
+                      imgObj = pw.MemoryImage(bytes);
+                    } else {
+                      final decoded = img.decodeImage(bytes);
+                      if (decoded != null) {
+                        final png = img.encodePng(decoded, level: 6);
+                        imgObj = pw.MemoryImage(Uint8List.fromList(png));
+                      }
+                    }
+                  } catch (_) {
+                    imgObj = null;
+                  }
+                  if (imgObj != null) {
+                    children.add(
+                      pw.Positioned(
+                        left: left,
+                        top: top,
+                        child: pw.Image(imgObj, width: w, height: h),
+                      ),
+                    );
+                  }
+                }
               }
+            } else if (shouldStampSingle && sigImgObj != null) {
+              final r = signatureRectUi;
+              final left = r.left / uiPageSize.width * widthPts;
+              final top = r.top / uiPageSize.height * heightPts;
+              final w = r.width / uiPageSize.width * widthPts;
+              final h = r.height / uiPageSize.height * heightPts;
+              children.add(
+                pw.Positioned(
+                  left: left,
+                  top: top,
+                  child: pw.Image(sigImgObj, width: w, height: h),
+                ),
+              );
             }
             return pw.Stack(children: children);
           },

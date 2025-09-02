@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import '../../../../data/services/providers.dart';
+import '../../../../data/services/export_providers.dart';
 import '../view_model/view_model.dart';
 
 class PdfPagesOverview extends ConsumerWidget {

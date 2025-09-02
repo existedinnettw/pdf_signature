@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'package:pdf_signature/data/services/export_service.dart';
-import 'package:pdf_signature/data/services/providers.dart';
+import 'package:pdf_signature/data/services/export_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';

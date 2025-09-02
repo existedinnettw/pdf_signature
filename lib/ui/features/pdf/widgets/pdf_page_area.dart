@@ -1,15 +1,16 @@
 import 'dart:math' as math;
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import '../../../../data/services/providers.dart';
+import '../../../../data/services/export_providers.dart';
 import '../../../../data/model/model.dart';
 import '../view_model/view_model.dart';
-import '../../preferences/providers.dart';
-import 'signature_drawer.dart';
+import '../../../../data/services/preferences_providers.dart';
+import 'signature_drag_data.dart';
 import 'image_editor_dialog.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
@@ -332,25 +333,10 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
             final target = _pendingPage ?? pdf.currentPage;
             _pendingPage = null;
             _scrollRetryCount = 0;
-            _programmaticTargetPage = target;
-            controller.goToPage(pageNumber: target, anchor: PdfPageAnchor.top);
-            // Fallback: if the viewer doesn't emit onPageChanged (e.g., already at target),
-            // ensure we don't keep blocking provider-driven jumps.
+            // Defer navigation to the next frame to ensure controller state is fully ready.
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (_programmaticTargetPage == target) {
-                  _programmaticTargetPage = null;
-                }
-              });
-            });
-            // Also ensure a scroll attempt is queued in case current state suppressed earlier.
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              if (_visiblePage != ref.read(pdfProvider).currentPage) {
-                _scrollToPage(ref.read(pdfProvider).currentPage);
-              }
+              _scrollToPage(target);
             });
           },
           onPageChanged: (n) {
@@ -393,6 +379,13 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
           // Assume drop targets the current visible page; compute relative center
           final cx = (local.dx / size.width) * widget.pageSize.width;
           final cy = (local.dy / size.height) * widget.pageSize.height;
+          final data = details.data;
+          if (data is SignatureDragData && data.assetId != null) {
+            // Set current overlay to use this asset
+            ref
+                .read(signatureProvider.notifier)
+                .setImageFromLibrary(assetId: data.assetId!);
+          }
           ref.read(signatureProvider.notifier).placeAtCenter(Offset(cx, cy));
           ref
               .read(pdfProvider.notifier)
@@ -558,10 +551,32 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
                       children: [
                         Consumer(
                           builder: (context, ref, _) {
-                            final processed = ref.watch(
-                              processedSignatureImageProvider,
-                            );
-                            final bytes = processed ?? sig.imageBytes;
+                            Uint8List? bytes;
+                            if (interactive) {
+                              final processed = ref.watch(
+                                processedSignatureImageProvider,
+                              );
+                              bytes = processed ?? sig.imageBytes;
+                            } else if (placedIndex != null) {
+                              // Use the image assigned to this placement
+                              final imgId = ref
+                                  .read(pdfProvider)
+                                  .placementImageByPage[pageNumber]
+                                  ?.elementAt(placedIndex);
+                              if (imgId != null) {
+                                final lib = ref.watch(signatureLibraryProvider);
+                                for (final a in lib) {
+                                  if (a.id == imgId) {
+                                    bytes = a.bytes;
+                                    break;
+                                  }
+                                }
+                              }
+                              // Fallback to current processed
+                              bytes ??=
+                                  ref.read(processedSignatureImageProvider) ??
+                                  sig.imageBytes;
+                            }
                             if (bytes == null) {
                               return Center(
                                 child: Text(

@@ -7,13 +7,13 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:printing/printing.dart' as printing;
 import 'package:pdfrx/pdfrx.dart';
 
-import '../../../../data/services/providers.dart';
+import '../../../../data/services/export_providers.dart';
 import '../view_model/view_model.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
-import 'pdf_pages_overview.dart';
-import 'signature_drawer.dart';
+import 'pages_sidebar.dart';
+import 'signatures_sidebar.dart';
 // adjustments are available via ImageEditorDialog
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
@@ -30,6 +30,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   bool _showPagesSidebar = true;
   bool _showSignaturesSidebar = true;
   int _zoomLevel = 100; // percentage for display only
+  // No split view controller; using a simple Row layout.
 
   // Exposed for tests to trigger the invalid-file SnackBar without UI.
   @visibleForTesting
@@ -58,13 +59,13 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   // Zoom is managed by pdfrx viewer (Ctrl +/- etc.). No custom zoom here.
 
-  Future<void> _loadSignatureFromFile() async {
+  Future<Uint8List?> _loadSignatureFromFile() async {
     final typeGroup = const fs.XTypeGroup(
       label: 'Image',
       extensions: ['png', 'jpg', 'jpeg', 'webp'],
     );
     final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
-    if (file == null) return;
+    if (file == null) return null;
     final bytes = await file.readAsBytes();
     final sig = ref.read(signatureProvider.notifier);
     sig.setImageBytes(bytes);
@@ -72,6 +73,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     if (p.loaded) {
       ref.read(pdfProvider.notifier).setSignedPage(p.currentPage);
     }
+    return bytes;
   }
 
   // _createNewSignature was removed as the toolbar no longer exposes this action.
@@ -92,7 +94,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     ref.read(pdfProvider.notifier).selectPlacement(index);
   }
 
-  Future<void> _openDrawCanvas() async {
+  Future<Uint8List?> _openDrawCanvas() async {
     final result = await showModalBottomSheet<Uint8List>(
       context: context,
       isScrollControlled: true,
@@ -106,6 +108,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         ref.read(pdfProvider.notifier).setSignedPage(p.currentPage);
       }
     }
+    return result;
   }
 
   Future<void> _saveSignedPdf() async {
@@ -138,6 +141,10 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             uiPageSize: SignatureController.pageSize,
             signatureImageBytes: processed ?? sig.imageBytes,
             placementsByPage: pdf.placementsByPage,
+            placementImageByPage: pdf.placementImageByPage,
+            libraryBytes: {
+              for (final a in ref.read(signatureLibraryProvider)) a.id: a.bytes,
+            },
             targetDpi: targetDpi,
           );
           if (bytes != null) {
@@ -167,6 +174,10 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             uiPageSize: SignatureController.pageSize,
             signatureImageBytes: processed ?? sig.imageBytes,
             placementsByPage: pdf.placementsByPage,
+            placementImageByPage: pdf.placementImageByPage,
+            libraryBytes: {
+              for (final a in ref.read(signatureLibraryProvider)) a.id: a.bytes,
+            },
             targetDpi: targetDpi,
           );
           if (useMock) {
@@ -190,6 +201,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               uiPageSize: SignatureController.pageSize,
               signatureImageBytes: processed ?? sig.imageBytes,
               placementsByPage: pdf.placementsByPage,
+              placementImageByPage: pdf.placementImageByPage,
+              libraryBytes: {
+                for (final a in ref.read(signatureLibraryProvider))
+                  a.id: a.bytes,
+              },
               targetDpi: targetDpi,
             );
           }
@@ -236,10 +252,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     return name;
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  // No initState/dispose needed for a controller.
 
   @override
   Widget build(BuildContext context) {
@@ -273,7 +286,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                       _zoomLevel = (_zoomLevel + 10).clamp(10, 800);
                     });
                   },
-                  // zoomLevel omitted to avoid compact overflows in tight tests
+                  zoomLevel: _zoomLevel,
                   fileName: ref.watch(pdfProvider).pickedPdfPath,
                   showPagesSidebar: _showPagesSidebar,
                   showSignaturesSidebar: _showSignaturesSidebar,
@@ -289,74 +302,37 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                 const SizedBox(height: 8),
                 Expanded(
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (_showPagesSidebar)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            minWidth: 140,
-                            maxWidth: 180,
-                          ),
-                          child: Card(
-                            margin: EdgeInsets.zero,
-                            child: const PdfPagesOverview(),
-                          ),
-                        ),
-                      if (_showPagesSidebar) const SizedBox(width: 12),
+                        const SizedBox(width: 160, child: PagesSidebar()),
                       Expanded(
                         child: AbsorbPointer(
                           absorbing: isExporting,
-                          child: PdfPageArea(
-                            pageSize: _pageSize,
-                            viewerController: _viewerController,
-                            onDragSignature: _onDragSignature,
-                            onResizeSignature: _onResizeSignature,
-                            onConfirmSignature: _confirmSignature,
-                            onClearActiveOverlay:
-                                () =>
-                                    ref
-                                        .read(signatureProvider.notifier)
-                                        .clearActiveOverlay(),
-                            onSelectPlaced: _onSelectPlaced,
+                          child: RepaintBoundary(
+                            child: PdfPageArea(
+                              key: const ValueKey('pdf_page_area'),
+                              pageSize: _pageSize,
+                              viewerController: _viewerController,
+                              onDragSignature: _onDragSignature,
+                              onResizeSignature: _onResizeSignature,
+                              onConfirmSignature: _confirmSignature,
+                              onClearActiveOverlay:
+                                  () =>
+                                      ref
+                                          .read(signatureProvider.notifier)
+                                          .clearActiveOverlay(),
+                              onSelectPlaced: _onSelectPlaced,
+                            ),
                           ),
                         ),
                       ),
-                      if (_showSignaturesSidebar) const SizedBox(width: 12),
                       if (_showSignaturesSidebar)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            minWidth: 140,
-                            maxWidth: 250,
-                          ),
-                          child: AbsorbPointer(
-                            absorbing: isExporting,
-                            child: Card(
-                              margin: EdgeInsets.zero,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(
-                                    child: SingleChildScrollView(
-                                      child: SignatureDrawer(
-                                        disabled: isExporting,
-                                        onLoadSignatureFromFile:
-                                            _loadSignatureFromFile,
-                                        onOpenDrawCanvas: _openDrawCanvas,
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: ElevatedButton(
-                                      key: const Key('btn_save_pdf'),
-                                      onPressed:
-                                          isExporting ? null : _saveSignedPdf,
-                                      child: Text(l.saveSignedPdf),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                        SizedBox(
+                          width: 220,
+                          child: SignaturesSidebar(
+                            onLoadSignatureFromFile: _loadSignatureFromFile,
+                            onOpenDrawCanvas: _openDrawCanvas,
+                            onSave: _saveSignedPdf,
                           ),
                         ),
                     ],

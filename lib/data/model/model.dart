@@ -69,6 +69,8 @@ class SignatureState {
   final double rotation;
   final List<List<Offset>> strokes;
   final Uint8List? imageBytes;
+  // The ID of the signature asset the current overlay is based on (from library)
+  final String? assetId;
   // When true, the active signature overlay is movable/resizable and should not be exported.
   // When false, the overlay is confirmed (unmovable) and eligible for export.
   final bool editingEnabled;
@@ -81,6 +83,7 @@ class SignatureState {
     this.rotation = 0.0,
     required this.strokes,
     this.imageBytes,
+    this.assetId,
     this.editingEnabled = false,
   });
   factory SignatureState.initial() => const SignatureState(
@@ -92,6 +95,7 @@ class SignatureState {
     rotation: 0.0,
     strokes: [],
     imageBytes: null,
+    assetId: null,
     editingEnabled: false,
   );
   SignatureState copyWith({
@@ -103,6 +107,7 @@ class SignatureState {
     double? rotation,
     List<List<Offset>>? strokes,
     Uint8List? imageBytes,
+    String? assetId,
     bool? editingEnabled,
   }) => SignatureState(
     rect: rect ?? this.rect,
@@ -113,6 +118,7 @@ class SignatureState {
     rotation: rotation ?? this.rotation,
     strokes: strokes ?? this.strokes,
     imageBytes: imageBytes ?? this.imageBytes,
+    assetId: assetId ?? this.assetId,
     editingEnabled: editingEnabled ?? this.editingEnabled,
   );
 }

@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../../../data/services/providers.dart';
+import '../../../../data/services/export_providers.dart';
 import '../view_model/view_model.dart';
 import 'image_editor_dialog.dart';
+import 'signature_card.dart';
 
-/// Data passed when dragging a signature card.
-class SignatureDragData {
-  const SignatureDragData();
-}
+/// Data for drag-and-drop is in signature_drag_data.dart
 
 class SignatureDrawer extends ConsumerStatefulWidget {
   const SignatureDrawer({
@@ -21,121 +19,107 @@ class SignatureDrawer extends ConsumerStatefulWidget {
   });
 
   final bool disabled;
-  final VoidCallback onLoadSignatureFromFile;
-  final VoidCallback onOpenDrawCanvas;
+  // Return the loaded bytes (if any) so we can add the exact image to the library immediately.
+  final Future<Uint8List?> Function() onLoadSignatureFromFile;
+  // Return the drawn bytes (if any) so we can add it to the library immediately.
+  final Future<Uint8List?> Function() onOpenDrawCanvas;
 
   @override
   ConsumerState<SignatureDrawer> createState() => _SignatureDrawerState();
 }
 
 class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
-  Future<void> _openSignatureMenuAt(Offset globalPosition) async {
-    final l = AppLocalizations.of(context);
-    final selected = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        globalPosition.dx,
-        globalPosition.dy,
-        globalPosition.dx,
-        globalPosition.dy,
-      ),
-      items: [
-        PopupMenuItem(
-          key: const Key('mi_signature_delete'),
-          value: 'delete',
-          child: Text(l.delete),
-        ),
-        PopupMenuItem(
-          key: const Key('mi_signature_adjust'),
-          value: 'adjust',
-          child: const Text('Adjust graphic'),
-        ),
-      ],
-    );
-
-    switch (selected) {
-      case 'delete':
-        ref.read(signatureProvider.notifier).clearActiveOverlay();
-        ref.read(signatureProvider.notifier).clearImage();
-        break;
-      case 'adjust':
-        if (!mounted) return;
-        // Open ImageEditorDialog
-        await showDialog(
-          context: context,
-          builder: (_) => const ImageEditorDialog(),
-        );
-        break;
-      default:
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final sig = ref.watch(signatureProvider);
     final processed = ref.watch(processedSignatureImageProvider);
     final bytes = processed ?? sig.imageBytes;
+    final library = ref.watch(signatureLibraryProvider);
     final isExporting = ref.watch(exportingProvider);
     final disabled = widget.disabled || isExporting;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-            child: Text(
-              l.signature,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-          // Existing signature card (draggable when bytes available)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border.all(color: Theme.of(context).dividerColor),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: GestureDetector(
-                key: const Key('gd_signature_card_area'),
-                behavior: HitTestBehavior.opaque,
-                onSecondaryTapDown: (details) {
-                  if (bytes != null && !disabled) {
-                    _openSignatureMenuAt(details.globalPosition);
-                  }
-                },
-                onLongPressStart: (details) {
-                  if (bytes != null && !disabled) {
-                    _openSignatureMenuAt(details.globalPosition);
-                  }
-                },
-                child: SizedBox(
-                  height: 120,
-                  child:
-                      bytes == null
-                          ? Center(
-                            child: Text(
-                              l.noPdfLoaded,
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                          : _DraggableSignaturePreview(
-                            bytes: bytes,
-                            disabled: disabled,
-                          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (library.isNotEmpty) ...[
+          for (final a in library) ...[
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: SignatureCard(
+                  key: ValueKey('sig_card_${a.id}'),
+                  asset: a,
+                  disabled: disabled,
+                  onDelete:
+                      () => ref
+                          .read(signatureLibraryProvider.notifier)
+                          .remove(a.id),
+                  onAdjust: () async {
+                    ref
+                        .read(signatureProvider.notifier)
+                        .setImageFromLibrary(assetId: a.id);
+                    if (!mounted) return;
+                    await showDialog(
+                      context: context,
+                      builder: (_) => const ImageEditorDialog(),
+                    );
+                  },
+                  onTap: () {
+                    final sel = ref.read(pdfProvider).selectedPlacementIndex;
+                    final page = ref.read(pdfProvider).currentPage;
+                    if (sel != null) {
+                      ref
+                          .read(pdfProvider.notifier)
+                          .assignImageToPlacement(
+                            page: page,
+                            index: sel,
+                            image: a.id,
+                          );
+                    } else {
+                      ref
+                          .read(signatureProvider.notifier)
+                          .setImageFromLibrary(assetId: a.id);
+                    }
+                  },
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+          ],
+        ],
+        if (library.isEmpty)
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child:
+                  bytes == null
+                      ? Text(l.noSignatureLoaded)
+                      : SignatureCard(
+                        asset: SignatureAsset(id: '', bytes: bytes, name: ''),
+                        disabled: disabled,
+                        useCurrentBytesForDrag: true,
+                        onDelete: () {
+                          ref
+                              .read(signatureProvider.notifier)
+                              .clearActiveOverlay();
+                          ref.read(signatureProvider.notifier).clearImage();
+                        },
+                        onAdjust: () async {
+                          if (!mounted) return;
+                          await showDialog(
+                            context: context,
+                            builder: (_) => const ImageEditorDialog(),
+                          );
+                        },
+                      ),
+            ),
           ),
-          const SizedBox(height: 12),
-          const Divider(height: 1),
-          // New signature card
-          Padding(
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,13 +136,41 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                     OutlinedButton.icon(
                       key: const Key('btn_drawer_load_signature'),
                       onPressed:
-                          disabled ? null : widget.onLoadSignatureFromFile,
+                          disabled
+                              ? null
+                              : () async {
+                                final loaded =
+                                    await widget.onLoadSignatureFromFile();
+                                final b =
+                                    loaded ??
+                                    ref.read(processedSignatureImageProvider) ??
+                                    ref.read(signatureProvider).imageBytes;
+                                if (b != null) {
+                                  ref
+                                      .read(signatureLibraryProvider.notifier)
+                                      .add(b, name: 'image');
+                                }
+                              },
                       icon: const Icon(Icons.image_outlined),
                       label: Text(l.loadSignatureFromFile),
                     ),
                     OutlinedButton.icon(
                       key: const Key('btn_drawer_draw_signature'),
-                      onPressed: disabled ? null : widget.onOpenDrawCanvas,
+                      onPressed:
+                          disabled
+                              ? null
+                              : () async {
+                                final drawn = await widget.onOpenDrawCanvas();
+                                final b =
+                                    drawn ??
+                                    ref.read(processedSignatureImageProvider) ??
+                                    ref.read(signatureProvider).imageBytes;
+                                if (b != null) {
+                                  ref
+                                      .read(signatureLibraryProvider.notifier)
+                                      .add(b, name: 'drawing');
+                                }
+                              },
                       icon: const Icon(Icons.gesture),
                       label: Text(l.drawSignature),
                     ),
@@ -167,51 +179,8 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
               ],
             ),
           ),
-          // Adjustments are accessed via "Adjust graphic" in the popup menu
-        ],
-      ),
-    );
-  }
-}
-
-class _DraggableSignaturePreview extends StatelessWidget {
-  const _DraggableSignaturePreview({
-    required this.bytes,
-    required this.disabled,
-  });
-  final Uint8List bytes;
-  final bool disabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final child = Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Image.memory(bytes, fit: BoxFit.contain),
-    );
-    if (disabled) return child;
-    return Draggable<SignatureDragData>(
-      data: const SignatureDragData(),
-      feedback: Opacity(
-        opacity: 0.8,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints.tightFor(width: 160, height: 80),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
-              boxShadow: const [
-                BoxShadow(blurRadius: 8, color: Colors.black26),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(6.0),
-              child: Image.memory(bytes, fit: BoxFit.contain),
-            ),
-          ),
         ),
-      ),
-      childWhenDragging: Opacity(opacity: 0.5, child: child),
-      child: child,
+      ],
     );
   }
 }

@@ -169,6 +169,44 @@ final pdfProvider = StateNotifierProvider<PdfController, PdfState>(
   (ref) => PdfController(),
 );
 
+/// A simple library of signature images available to the user in the sidebar.
+class SignatureAsset {
+  final String id; // unique id
+  final Uint8List bytes;
+  final String? name; // optional display name (e.g., filename)
+  const SignatureAsset({required this.id, required this.bytes, this.name});
+}
+
+class SignatureLibraryController extends StateNotifier<List<SignatureAsset>> {
+  SignatureLibraryController() : super(const []);
+
+  String add(Uint8List bytes, {String? name}) {
+    // Always add a new asset (allow duplicates). This lets users create multiple cards
+    // even when loading the same image repeatedly for different adjustments/usages.
+    if (bytes.isEmpty) return '';
+    final id = DateTime.now().microsecondsSinceEpoch.toString();
+    state = List.of(state)
+      ..add(SignatureAsset(id: id, bytes: bytes, name: name));
+    return id;
+  }
+
+  void remove(String id) {
+    state = state.where((a) => a.id != id).toList(growable: false);
+  }
+
+  SignatureAsset? byId(String id) {
+    for (final a in state) {
+      if (a.id == id) return a;
+    }
+    return null;
+  }
+}
+
+final signatureLibraryProvider =
+    StateNotifierProvider<SignatureLibraryController, List<SignatureAsset>>(
+      (ref) => SignatureLibraryController(),
+    );
+
 class SignatureController extends StateNotifier<SignatureState> {
   SignatureController() : super(SignatureState.initial());
   static const Size pageSize = Size(400, 560);
@@ -291,11 +329,20 @@ class SignatureController extends StateNotifier<SignatureState> {
   }
 
   void setImageBytes(Uint8List bytes) {
-    state = state.copyWith(imageBytes: bytes);
+    state = state.copyWith(imageBytes: bytes, assetId: null);
     if (state.rect == null) {
       placeDefaultRect();
     }
     // Mark as draft/editable when user just loaded image
+    state = state.copyWith(editingEnabled: true);
+  }
+
+  // Select image from the shared signature library
+  void setImageFromLibrary({required String assetId}) {
+    state = state.copyWith(assetId: assetId);
+    if (state.rect == null) {
+      placeDefaultRect();
+    }
     state = state.copyWith(editingEnabled: true);
   }
 
@@ -318,6 +365,25 @@ class SignatureController extends StateNotifier<SignatureState> {
     final pdf = ref.read(pdfProvider);
     if (!pdf.loaded) return null;
     ref.read(pdfProvider.notifier).addPlacement(page: pdf.currentPage, rect: r);
+    // Assign image id to this placement (last index)
+    final idx =
+        (ref.read(pdfProvider).placementsByPage[pdf.currentPage]?.length ?? 1) -
+        1;
+    String? id = state.assetId;
+    if (id == null) {
+      final bytes =
+          ref.read(processedSignatureImageProvider) ?? state.imageBytes;
+      if (bytes != null) {
+        id = ref
+            .read(signatureLibraryProvider.notifier)
+            .add(bytes, name: 'image');
+      }
+    }
+    if (id != null && id.isNotEmpty && idx >= 0) {
+      ref
+          .read(pdfProvider.notifier)
+          .assignImageToPlacement(page: pdf.currentPage, index: idx, image: id);
+    }
     // Freeze editing: keep rect for preview but disable interaction
     state = state.copyWith(editingEnabled: false);
     return r;
@@ -339,7 +405,19 @@ final signatureProvider =
 /// Returns null if no image is loaded. The output is a PNG to preserve alpha.
 final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
   final s = ref.watch(signatureProvider);
-  final bytes = s.imageBytes;
+  // If active overlay is based on a library asset, pull its bytes
+  Uint8List? bytes;
+  if (s.assetId != null) {
+    final lib = ref.watch(signatureLibraryProvider);
+    for (final a in lib) {
+      if (a.id == s.assetId) {
+        bytes = a.bytes;
+        break;
+      }
+    }
+  } else {
+    bytes = s.imageBytes;
+  }
   if (bytes == null || bytes.isEmpty) return null;
 
   // Decode (supports PNG/JPEG, etc.)
