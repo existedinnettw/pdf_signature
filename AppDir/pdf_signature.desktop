@@ -1,0 +1,7 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=pdf_signature
+Exec=AppRun %U
+Icon=pdf_signature-icon
+Categories=Utility
