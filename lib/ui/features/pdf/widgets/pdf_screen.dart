@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:printing/printing.dart' as printing;
 import 'package:pdfrx/pdfrx.dart';
+import 'package:multi_split_view/multi_split_view.dart';
 
 import '../../../../data/services/export_providers.dart';
 import '../view_model/view_model.dart';
@@ -14,7 +15,6 @@ import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
 import 'pages_sidebar.dart';
 import 'signatures_sidebar.dart';
-// adjustments are available via ImageEditorDialog
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   const PdfSignatureHomePage({super.key});
@@ -30,7 +30,17 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   bool _showPagesSidebar = true;
   bool _showSignaturesSidebar = true;
   int _zoomLevel = 100; // percentage for display only
-  // No split view controller; using a simple Row layout.
+
+  // Split view controller to manage resizable sidebars without remounting the center area.
+  late final MultiSplitViewController _splitController;
+  late final List<Area> _areas;
+  double _lastPagesWidth = 160;
+  double _lastSignaturesWidth = 220;
+  // Configurable sidebar constraints
+  final double _pagesMin = 100;
+  final double _pagesMax = 250;
+  final double _signaturesMin = 140;
+  final double _signaturesMax = 250;
 
   // Exposed for tests to trigger the invalid-file SnackBar without UI.
   @visibleForTesting
@@ -57,8 +67,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     ref.read(pdfProvider.notifier).jumpTo(page);
   }
 
-  // Zoom is managed by pdfrx viewer (Ctrl +/- etc.). No custom zoom here.
-
   Future<Uint8List?> _loadSignatureFromFile() async {
     final typeGroup = const fs.XTypeGroup(
       label: 'Image',
@@ -75,8 +83,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     }
     return bytes;
   }
-
-  // _createNewSignature was removed as the toolbar no longer exposes this action.
 
   void _confirmSignature() {
     ref.read(signatureProvider.notifier).confirmCurrentSignature(ref);
@@ -252,7 +258,93 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     return name;
   }
 
-  // No initState/dispose needed for a controller.
+  @override
+  void initState() {
+    super.initState();
+    // Build areas once with builders; keep these instances stable.
+    _areas = [
+      Area(
+        size: _lastPagesWidth,
+        min: _pagesMin,
+        max: _pagesMax,
+        builder:
+            (context, area) => Offstage(
+              offstage: !_showPagesSidebar,
+              child: const PagesSidebar(),
+            ),
+      ),
+      Area(
+        flex: 1,
+        builder:
+            (context, area) => RepaintBoundary(
+              child: PdfPageArea(
+                key: const ValueKey('pdf_page_area'),
+                pageSize: _pageSize,
+                viewerController: _viewerController,
+                onDragSignature: _onDragSignature,
+                onResizeSignature: _onResizeSignature,
+                onConfirmSignature: _confirmSignature,
+                onClearActiveOverlay:
+                    () =>
+                        ref
+                            .read(signatureProvider.notifier)
+                            .clearActiveOverlay(),
+                onSelectPlaced: _onSelectPlaced,
+              ),
+            ),
+      ),
+      Area(
+        size: _lastSignaturesWidth,
+        min: _signaturesMin,
+        max: _signaturesMax,
+        builder:
+            (context, area) => Offstage(
+              offstage: !_showSignaturesSidebar,
+              child: SignaturesSidebar(
+                onLoadSignatureFromFile: _loadSignatureFromFile,
+                onOpenDrawCanvas: _openDrawCanvas,
+                onSave: _saveSignedPdf,
+              ),
+            ),
+      ),
+    ];
+    _splitController = MultiSplitViewController(areas: _areas);
+    // Apply initial collapse if needed
+    _applySidebarVisibility();
+  }
+
+  @override
+  void dispose() {
+    _splitController.dispose();
+    super.dispose();
+  }
+
+  void _applySidebarVisibility() {
+    // Left pages sidebar
+    final left = _splitController.areas[0];
+    if (_showPagesSidebar) {
+      left.max = _pagesMax;
+      left.min = _pagesMin;
+      left.size = _lastPagesWidth.clamp(_pagesMin, _pagesMax);
+    } else {
+      _lastPagesWidth = left.size ?? _lastPagesWidth;
+      left.min = 0;
+      left.max = 1;
+      left.size = 1; // effectively hidden
+    }
+    // Right signatures sidebar
+    final right = _splitController.areas[2];
+    if (_showSignaturesSidebar) {
+      right.max = _signaturesMax;
+      right.min = _signaturesMin;
+      right.size = _lastSignaturesWidth.clamp(_signaturesMin, _signaturesMax);
+    } else {
+      _lastSignaturesWidth = right.size ?? _lastSignaturesWidth;
+      right.min = 0;
+      right.max = 1;
+      right.size = 1;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -293,49 +385,19 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                   onTogglePagesSidebar:
                       () => setState(() {
                         _showPagesSidebar = !_showPagesSidebar;
+                        _applySidebarVisibility();
                       }),
                   onToggleSignaturesSidebar:
                       () => setState(() {
                         _showSignaturesSidebar = !_showSignaturesSidebar;
+                        _applySidebarVisibility();
                       }),
                 ),
                 const SizedBox(height: 8),
                 Expanded(
-                  child: Row(
-                    children: [
-                      if (_showPagesSidebar)
-                        const SizedBox(width: 160, child: PagesSidebar()),
-                      Expanded(
-                        child: AbsorbPointer(
-                          absorbing: isExporting,
-                          child: RepaintBoundary(
-                            child: PdfPageArea(
-                              key: const ValueKey('pdf_page_area'),
-                              pageSize: _pageSize,
-                              viewerController: _viewerController,
-                              onDragSignature: _onDragSignature,
-                              onResizeSignature: _onResizeSignature,
-                              onConfirmSignature: _confirmSignature,
-                              onClearActiveOverlay:
-                                  () =>
-                                      ref
-                                          .read(signatureProvider.notifier)
-                                          .clearActiveOverlay(),
-                              onSelectPlaced: _onSelectPlaced,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_showSignaturesSidebar)
-                        SizedBox(
-                          width: 220,
-                          child: SignaturesSidebar(
-                            onLoadSignatureFromFile: _loadSignatureFromFile,
-                            onOpenDrawCanvas: _openDrawCanvas,
-                            onSave: _saveSignedPdf,
-                          ),
-                        ),
-                    ],
+                  child: MultiSplitView(
+                    controller: _splitController,
+                    axis: Axis.horizontal,
                   ),
                 ),
               ],
