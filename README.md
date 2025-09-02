@@ -6,7 +6,7 @@ A GUI app to create signatures on PDF pages interactively.
 
 checkout [`docs/FRs.md`](docs/FRs.md)
 
-## Build
+## run
 
 ```bash
 # flutter clean
@@ -22,8 +22,26 @@ flutter run
 
 # run unit tests and widget tests
 flutter test
+```
 
-flutter build
+### build
+
+For Windows
+```bash
+flutter build windows
 # create windows installer
 flutter pub run msix:create
+```
+
+For web
+```bash
+flutter build web
+```
+Open the `index.html` file in the `build/web` directory. Remove the `<base href="/">` to ensure proper routing on GitHub Pages.
+
+For Linux
+```bash
+flutter build linux
+cp -r build/linux/x64/release/bundle/ AppDir
+appimagetool-x86_64.AppImage AppDir
 ```

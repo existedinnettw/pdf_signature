@@ -11,8 +11,12 @@ Future<void> theSignatureOnPageIsShownOnPage(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final srcList = container.read(pdfProvider.notifier).placementsOn(sourcePage.toInt());
-  final tgtList = container.read(pdfProvider.notifier).placementsOn(targetPage.toInt());
+  final srcList = container
+      .read(pdfProvider.notifier)
+      .placementsOn(sourcePage.toInt());
+  final tgtList = container
+      .read(pdfProvider.notifier)
+      .placementsOn(targetPage.toInt());
   // At least one exists on both
   expect(srcList, isNotEmpty);
   expect(tgtList, isNotEmpty);
