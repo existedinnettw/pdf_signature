@@ -16,7 +16,7 @@ Route: root
 
 Design notes:
 - Central drop zone with hint text: “Drag a PDF here or click to select”.
-- Minimal top bar with app name and a gear icon for settings.
+- Minimal top bar with app name and a "Configure" button with a gear icon for settings.
 - Clean layout encouraging first action.
 
 Illustration:
@@ -29,7 +29,7 @@ Purpose: provide basic configuration before/after opening a PDF.
 Route: root --> settings
 
 Design notes:
-- Opened via gear icon in the top bar.
+- Opened via "Configure" button in the top bar.
 - Modal with simple sections (e.g., General, Display).
 - Primary action to save, secondary to cancel.
 
@@ -39,13 +39,32 @@ Illustration:
 
 ## PDF opened
 
-Purpose: view and navigate the PDF; prepare for signature placement.
+Purpose: view and navigate the PDF; for signature placement.
 Route: root --> opened
 
 Design notes:
-- Main canvas shows the current page.
-- Navigation: previous/next page, zoom controls are placed in toolbar which is at top of main PDF canvas.
-- Drag signature onto page.
+- Top: A small toolbar sits at the top edge with file name text, open pdf file button, previous/next page widgets and zoom controls.
+   - Navigation: Previous page, Next page, and a page number input (e.g., “2 / 10”) with jump-on-Enter.
+   - Zoom: Zoom out, Zoom level dropdown (percent), Zoom in, Fit width, Fit page, Reset zoom.
+   - Optional: Find/search within PDF (if supported by engine).
+- Left pane: vertical strip of page thumbnails (e.g., page1, page2, page3). Clicking a thumbnail navigates to that page; the current page is visually indicated.
+- Center: main PDF viewer shows the active page. 
+  - Ctrl/Cmd + wheel to zoom.
+- Right pane: signatures drawer displaying saved signatures as cards.
+  - able to drag and drop signature cards onto the PDF as placed signatures.
+  - Each signature card shows a preview.
+    - long tap/right-click will show menu with options to delete, adjust graphic of image.
+      - "adjust graphic" opens a simple image editor, which can remove backgrounds.
+  - There is an empty card with "new signature" prompt and 2 buttons: "from file" and "draw".
+    - "from file" opens a file picker to select an image as a signature card.
+    - "draw" opens a simple drawing interface (draw canvas) to create a signature card.
+- Interaction: drag a signature card from the right drawer onto the currently visible page to place it.
+
+Signature controls (after placing on page):
+- Select to show bounding box with resize handles and a small inline action bar.
+- Actions: Move (drag), Resize (corner/side handles), Rotate (rotation handle), Duplicate, Delete (trash icon or Delete key).
+- Lock: Lock/Unlock position.
+- Keyboard: Arrow keys to nudge (Shift for 10px); Shift-resize to keep aspect; Esc to cancel; Ctrl/Cmd+D to duplicate; Del/Backspace to delete.
 
 Illustration:
 
