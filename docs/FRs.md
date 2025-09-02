@@ -42,3 +42,7 @@
   * role: user
   * functionality: the ability to sign multiple locations within a PDF document
   * benefit: documents requiring multiple signatures can be signed simultaneously
+* name: [support multiple signature pictures](../test/features/support_multiple_signature_pictures.feature)
+  * role: user
+  * functionality: the ability to use different signature pictures for different signing locations
+  * benefit: close to real-world signing scenarios where every signature is not the same

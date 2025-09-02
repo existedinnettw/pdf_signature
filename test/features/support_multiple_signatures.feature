@@ -2,8 +2,8 @@ Feature: support multiple signatures
 
 	Scenario: Place signatures on different pages
 		Given a multi-page PDF is open
-		When the user places a signature on page 1
-		And the user navigates to page 3 and places another signature
+		When the user places a signature on page {1}
+		And the user navigates to page {3} and places another signature
 		Then both signatures are shown on their respective pages
 
 	Scenario: Place multiple signatures on the same page independently
@@ -25,10 +25,10 @@ Feature: support multiple signatures
 		And the other signatures remain unchanged
 
 	Scenario: Keep earlier signatures while navigating between pages
-		Given a signature is placed on page 2
-		When the user navigates to page 5 and places another signature
-		Then the signature on page 2 remains
-		And the signature on page 5 is shown on page 5
+		Given a signature is placed on page {2}
+		When the user navigates to page {5} and places another signature
+		Then the signature on page {2} remains
+		And the signature on page {5} is shown on page {5}
 
 	Scenario: Save a document with multiple signatures across pages
 		Given a PDF is open and contains multiple placed signatures across pages
