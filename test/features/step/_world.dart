@@ -31,6 +31,10 @@ class TestWorld {
   static String? currentTheme; // actual UI theme applied: 'light' | 'dark'
   static String? currentLanguage; // 'en' | 'zh-TW' | 'es'
   static bool settingsOpen = false;
+  // Signature image name loaded via steps (e.g., 'alice.png')
+  static String? currentImageName;
+  // Counters for steps that are called multiple times without params
+  static int placeFromPictureCallCount = 0;
 
   static void reset() {
     prevCenter = null;
@@ -52,5 +56,7 @@ class TestWorld {
     currentTheme = null;
     currentLanguage = null;
     settingsOpen = false;
+    currentImageName = null;
+    placeFromPictureCallCount = 0;
   }
 }

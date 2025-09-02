@@ -10,6 +10,8 @@ class PdfState {
   final int? signedPage;
   // Multiple signature placements per page, stored as UI-space rects (e.g., 400x560)
   final Map<int, List<Rect>> placementsByPage;
+  // For each placement, store the assigned image identifier (e.g., filename) in the same index order.
+  final Map<int, List<String>> placementImageByPage;
   // UI state: selected placement index on the current page (if any)
   final int? selectedPlacementIndex;
   const PdfState({
@@ -20,6 +22,7 @@ class PdfState {
     this.pickedPdfBytes,
     this.signedPage,
     this.placementsByPage = const {},
+    this.placementImageByPage = const {},
     this.selectedPlacementIndex,
   });
   factory PdfState.initial() => const PdfState(
@@ -29,6 +32,7 @@ class PdfState {
     pickedPdfBytes: null,
     signedPage: null,
     placementsByPage: {},
+    placementImageByPage: {},
     selectedPlacementIndex: null,
   );
   PdfState copyWith({
@@ -39,6 +43,7 @@ class PdfState {
     Uint8List? pickedPdfBytes,
     int? signedPage,
     Map<int, List<Rect>>? placementsByPage,
+    Map<int, List<String>>? placementImageByPage,
     int? selectedPlacementIndex,
   }) => PdfState(
     loaded: loaded ?? this.loaded,
@@ -48,6 +53,7 @@ class PdfState {
     pickedPdfBytes: pickedPdfBytes ?? this.pickedPdfBytes,
     signedPage: signedPage ?? this.signedPage,
     placementsByPage: placementsByPage ?? this.placementsByPage,
+    placementImageByPage: placementImageByPage ?? this.placementImageByPage,
     selectedPlacementIndex:
         selectedPlacementIndex ?? this.selectedPlacementIndex,
   );

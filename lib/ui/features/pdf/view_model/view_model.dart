@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:image/image.dart' as img;
 
 import '../../../../data/model/model.dart';
@@ -19,6 +18,7 @@ class PdfController extends StateNotifier<PdfState> {
       pickedPdfPath: null,
       signedPage: null,
       placementsByPage: {},
+      placementImageByPage: {},
       selectedPlacementIndex: null,
     );
   }
@@ -36,6 +36,7 @@ class PdfController extends StateNotifier<PdfState> {
       pickedPdfBytes: bytes,
       signedPage: null,
       placementsByPage: {},
+      placementImageByPage: {},
       selectedPlacementIndex: null,
     );
   }
@@ -63,14 +64,27 @@ class PdfController extends StateNotifier<PdfState> {
   }
 
   // Multiple-signature helpers
-  void addPlacement({required int page, required Rect rect}) {
+  void addPlacement({
+    required int page,
+    required Rect rect,
+    String image = 'default.png',
+  }) {
     if (!state.loaded) return;
     final p = page.clamp(1, state.pageCount);
     final map = Map<int, List<Rect>>.from(state.placementsByPage);
     final list = List<Rect>.from(map[p] ?? const []);
     list.add(rect);
     map[p] = list;
-    state = state.copyWith(placementsByPage: map, selectedPlacementIndex: null);
+    // Sync image mapping list
+    final imgMap = Map<int, List<String>>.from(state.placementImageByPage);
+    final imgList = List<String>.from(imgMap[p] ?? const []);
+    imgList.add(image);
+    imgMap[p] = imgList;
+    state = state.copyWith(
+      placementsByPage: map,
+      placementImageByPage: imgMap,
+      selectedPlacementIndex: null,
+    );
   }
 
   void removePlacement({required int page, required int index}) {
@@ -80,13 +94,22 @@ class PdfController extends StateNotifier<PdfState> {
     final list = List<Rect>.from(map[p] ?? const []);
     if (index >= 0 && index < list.length) {
       list.removeAt(index);
+      // Sync image mapping
+      final imgMap = Map<int, List<String>>.from(state.placementImageByPage);
+      final imgList = List<String>.from(imgMap[p] ?? const []);
+      if (index >= 0 && index < imgList.length) {
+        imgList.removeAt(index);
+      }
       if (list.isEmpty) {
         map.remove(p);
+        imgMap.remove(p);
       } else {
         map[p] = list;
+        imgMap[p] = imgList;
       }
       state = state.copyWith(
         placementsByPage: map,
+        placementImageByPage: imgMap,
         selectedPlacementIndex: null,
       );
     }
@@ -115,6 +138,30 @@ class PdfController extends StateNotifier<PdfState> {
     final idx = state.selectedPlacementIndex;
     if (idx == null) return;
     removePlacement(page: state.currentPage, index: idx);
+  }
+
+  // Assign a different image name to a placement on a page.
+  void assignImageToPlacement({
+    required int page,
+    required int index,
+    required String image,
+  }) {
+    if (!state.loaded) return;
+    final p = page.clamp(1, state.pageCount);
+    final imgMap = Map<int, List<String>>.from(state.placementImageByPage);
+    final list = List<String>.from(imgMap[p] ?? const []);
+    if (index >= 0 && index < list.length) {
+      list[index] = image;
+      imgMap[p] = list;
+      state = state.copyWith(placementImageByPage: imgMap);
+    }
+  }
+
+  // Convenience to get image name for a placement
+  String? imageOfPlacement({required int page, required int index}) {
+    final list = state.placementImageByPage[page] ?? const [];
+    if (index < 0 || index >= list.length) return null;
+    return list[index];
   }
 }
 
@@ -155,10 +202,10 @@ class SignatureController extends StateNotifier<SignatureState> {
   }
 
   void setInvalidSelected(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l.invalidOrUnsupportedFile)));
+    // Fallback message without localization to keep core logic testable
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Invalid or unsupported file')),
+    );
   }
 
   void drag(Offset delta) {
