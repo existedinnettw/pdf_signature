@@ -28,7 +28,7 @@ Set<String> _supportedTags() {
 // Keys
 const _kTheme = 'theme'; // 'light'|'dark'|'system'
 const _kLanguage = 'language'; // BCP-47 tag like 'en', 'zh-TW', 'es'
-const _kPageView = 'page_view'; // 'single' | 'continuous'
+const _kPageView = 'page_view'; // now only 'continuous'
 
 String _normalizeLanguageTag(String tag) {
   final tags = _supportedTags();
@@ -65,7 +65,7 @@ String _normalizeLanguageTag(String tag) {
 class PreferencesState {
   final String theme; // 'light' | 'dark' | 'system'
   final String language; // 'en' | 'zh-TW' | 'es'
-  final String pageView; // 'single' | 'continuous'
+  final String pageView; // only 'continuous'
   const PreferencesState({
     required this.theme,
     required this.language,
@@ -94,7 +94,7 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
                 WidgetsBinding.instance.platformDispatcher.locale
                     .toLanguageTag(),
           ),
-          pageView: prefs.getString(_kPageView) ?? 'single',
+          pageView: prefs.getString(_kPageView) ?? 'continuous',
         ),
       ) {
     // normalize language to supported/fallback
@@ -112,10 +112,10 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
       state = state.copyWith(language: normalized);
       prefs.setString(_kLanguage, normalized);
     }
-    final pageViewValid = {'single', 'continuous'};
+    final pageViewValid = {'continuous'};
     if (!pageViewValid.contains(state.pageView)) {
-      state = state.copyWith(pageView: 'single');
-      prefs.setString(_kPageView, 'single');
+      state = state.copyWith(pageView: 'continuous');
+      prefs.setString(_kPageView, 'continuous');
     }
   }
 
@@ -139,15 +139,15 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
     state = PreferencesState(
       theme: 'system',
       language: normalized,
-      pageView: 'single',
+      pageView: 'continuous',
     );
     await prefs.setString(_kTheme, 'system');
     await prefs.setString(_kLanguage, normalized);
-    await prefs.setString(_kPageView, 'single');
+    await prefs.setString(_kPageView, 'continuous');
   }
 
   Future<void> setPageView(String pageView) async {
-    final valid = {'single', 'continuous'};
+    final valid = {'continuous'};
     if (!valid.contains(pageView)) return;
     state = state.copyWith(pageView: pageView);
     await prefs.setString(_kPageView, pageView);
@@ -173,13 +173,13 @@ final preferencesProvider =
       return PreferencesNotifier(prefs);
     });
 
-/// Safe accessor for page view mode that falls back to 'single' until
+/// Safe accessor for page view mode that falls back to 'continuous' until
 /// SharedPreferences is available (useful for lightweight widget tests).
 final pageViewModeProvider = Provider<String>((ref) {
   final sp = ref.watch(sharedPreferencesProvider);
   return sp.maybeWhen(
     data: (_) => ref.watch(preferencesProvider).pageView,
-    orElse: () => 'single',
+    orElse: () => 'continuous',
   );
 });
 

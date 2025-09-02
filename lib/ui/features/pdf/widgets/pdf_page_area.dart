@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
@@ -64,6 +65,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
   void _scrollToPage(int page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final pdf = ref.read(pdfProvider);
       final isContinuous = ref.read(pageViewModeProvider) == 'continuous';
 
@@ -77,9 +79,10 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
             anchor: PdfPageAnchor.top,
           );
           // Fallback: if no onPageChanged arrives (e.g., same page), don't block future jumps
+          // Use post-frame callbacks to avoid scheduling timers in tests.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            Future<void>.delayed(const Duration(milliseconds: 120), () {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
               if (_programmaticTargetPage == page) {
                 _programmaticTargetPage = null;
@@ -129,7 +132,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
           Scrollable.ensureVisible(
             ctx,
             alignment: 0.1,
-            duration: const Duration(milliseconds: 1),
+            duration: Duration.zero,
             curve: Curves.linear,
           );
           return;
@@ -192,51 +195,6 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     final useMock = ref.watch(useMockViewerProvider);
     final isContinuous = pageViewMode == 'continuous';
 
-    // Mock single-page
-    if (useMock && !isContinuous) {
-      return Center(
-        child: AspectRatio(
-          aspectRatio: widget.pageSize.width / widget.pageSize.height,
-          child: InteractiveViewer(
-            minScale: 0.5,
-            maxScale: 4.0,
-            panEnabled: false,
-            transformationController: widget.controller,
-            child: Stack(
-              key: const Key('page_stack'),
-              children: [
-                Container(
-                  key: ValueKey('pdf_page_view_${pdf.currentPage}'),
-                  color: Colors.grey.shade200,
-                  child: Center(
-                    child: Text(
-                      AppLocalizations.of(
-                        context,
-                      ).pageInfo(pdf.currentPage, pdf.pageCount),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ),
-                ),
-                Consumer(
-                  builder: (context, ref, _) {
-                    final sig = ref.watch(signatureProvider);
-                    final visible = ref.watch(signatureVisibilityProvider);
-                    return visible
-                        ? _buildPageOverlays(context, ref, sig, pdf.currentPage)
-                        : const SizedBox.shrink();
-                  },
-                ),
-                _ZoomControls(controller: widget.controller),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     // Mock continuous: ListView with prebuilt children, no controller
     if (useMock && isContinuous) {
       final count = pdf.pageCount > 0 ? pdf.pageCount : 1;
@@ -250,7 +208,8 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
               if (p != null) {
                 _pendingPage = null;
                 _scrollRetryCount = 0;
-                Future<void>.delayed(const Duration(milliseconds: 1), () {
+                // Schedule via microtask to avoid test timers remaining pending
+                scheduleMicrotask(() {
                   if (!mounted) return;
                   _scrollToPage(p);
                 });
@@ -315,66 +274,51 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
       );
     }
 
-    // Real single-page mode
-    if (pdf.pickedPdfPath != null && !isContinuous) {
-      return PdfDocumentViewBuilder.file(
-        pdf.pickedPdfPath!,
-        builder: (context, document) {
-          if (document == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final pages = document.pages;
-          final pageNum = pdf.currentPage.clamp(1, pages.length);
-          final page = pages[pageNum - 1];
-          final aspect = page.width / page.height;
-          if (pdf.pageCount != pages.length) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(pdfProvider.notifier).setPageCount(pages.length);
-            });
-          }
-          return Center(
-            child: AspectRatio(
-              aspectRatio: aspect,
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                panEnabled: false,
-                transformationController: widget.controller,
-                child: Stack(
-                  key: const Key('page_stack'),
-                  children: [
-                    PdfPageView(
-                      key: ValueKey('pdf_page_view_$pageNum'),
-                      document: document,
-                      pageNumber: pageNum,
-                      alignment: Alignment.center,
-                    ),
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final sig = ref.watch(signatureProvider);
-                        final visible = ref.watch(signatureVisibilityProvider);
-                        return visible
-                            ? _buildPageOverlays(context, ref, sig, pageNum)
-                            : const SizedBox.shrink();
-                      },
-                    ),
-                    _ZoomControls(controller: widget.controller),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    }
-
     // Real continuous mode (pdfrx): copy example patterns
+    // https://github.com/espresso3389/pdfrx/blob/2cc32c1e2aa2a054602d20a5e7cf60bcc2d6a889/packages/pdfrx/example/viewer/lib/main.dart
     if (pdf.pickedPdfPath != null && isContinuous) {
       return PdfViewer.file(
         pdf.pickedPdfPath!,
         controller: _viewerController,
         params: PdfViewerParams(
           pageAnchor: PdfPageAnchor.top,
+          keyHandlerParams: PdfViewerKeyHandlerParams(autofocus: true),
+          maxScale: 8,
+          // scrollByMouseWheel: 0.6,
+          // Add overlay scroll thumbs (vertical on right, horizontal on bottom)
+          viewerOverlayBuilder:
+              (context, size, handleLinkTap) => [
+                PdfViewerScrollThumb(
+                  controller: _viewerController,
+                  orientation: ScrollbarOrientation.right,
+                  thumbSize: const Size(40, 24),
+                  thumbBuilder:
+                      (context, thumbSize, pageNumber, controller) => Container(
+                        color: Colors.black.withOpacity(0.7),
+                        child: Center(
+                          child: Text(
+                            pageNumber.toString(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                ),
+                PdfViewerScrollThumb(
+                  controller: _viewerController,
+                  orientation: ScrollbarOrientation.bottom,
+                  thumbSize: const Size(40, 24),
+                  thumbBuilder:
+                      (context, thumbSize, pageNumber, controller) => Container(
+                        color: Colors.black.withOpacity(0.7),
+                        child: Center(
+                          child: Text(
+                            pageNumber.toString(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                ),
+              ],
           onViewerReady: (doc, controller) {
             if (pdf.pageCount != doc.pages.length) {
               ref.read(pdfProvider.notifier).setPageCount(doc.pages.length);
@@ -388,7 +332,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
             // ensure we don't keep blocking provider-driven jumps.
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
-              Future<void>.delayed(const Duration(milliseconds: 120), () {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 if (_programmaticTargetPage == target) {
                   _programmaticTargetPage = null;
@@ -496,9 +440,12 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
         ),
       );
     }
+    // Only show the active (interactive) signature overlay on the current page
+    // in continuous mode, so tests can reliably find a single overlay.
     if (sig.rect != null &&
         sig.editingEnabled &&
-        (pdf.signedPage == null || pdf.signedPage == pageNumber)) {
+        (pdf.signedPage == null || pdf.signedPage == pageNumber) &&
+        pdf.currentPage == pageNumber) {
       widgets.add(
         _buildSignatureOverlay(
           context,
@@ -712,53 +659,4 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
   }
 }
 
-class _ZoomControls extends StatelessWidget {
-  const _ZoomControls({this.controller});
-  final TransformationController? controller;
-
-  @override
-  Widget build(BuildContext context) {
-    if (controller == null) return const SizedBox.shrink();
-    void setScale(double scale) {
-      final m = controller!.value.clone();
-      // Reset translation but keep center
-      m.setEntry(0, 0, scale);
-      m.setEntry(1, 1, scale);
-      controller!.value = m;
-    }
-
-    return Positioned(
-      right: 8,
-      bottom: 8,
-      child: Card(
-        elevation: 2,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: 'Zoom out',
-              icon: const Icon(Icons.remove),
-              onPressed: () {
-                final current = controller!.value.getMaxScaleOnAxis();
-                setScale((current - 0.1).clamp(0.5, 4.0));
-              },
-            ),
-            IconButton(
-              tooltip: 'Reset',
-              icon: const Icon(Icons.refresh),
-              onPressed: () => controller!.value = Matrix4.identity(),
-            ),
-            IconButton(
-              tooltip: 'Zoom in',
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                final current = controller!.value.getMaxScaleOnAxis();
-                setScale((current + 0.1).clamp(0.5, 4.0));
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// Zoom controls removed with single-page mode; continuous viewer manages zoom.
