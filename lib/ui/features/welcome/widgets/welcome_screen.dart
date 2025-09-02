@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../pdf/view_model/view_model.dart';
-import '../../preferences/widgets/settings_screen.dart';
+// Settings dialog is provided via global AppBar in MyApp
 
 // Abstraction to make drop handling testable without constructing
 // platform-specific DropItem types in widget tests.
@@ -131,33 +131,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           ),
           color:
               _dragging
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.05)
+                  ? Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.05)
                   : Colors.transparent,
         ),
         child: content,
       ),
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l.appTitle),
-        actions: [
-          IconButton(
-            tooltip: l.settings,
-            onPressed:
-                () => showDialog<bool>(
-                  context: context,
-                  builder: (_) => const SettingsDialog(),
-                ),
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: dropZone,
-        ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: dropZone,
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
 import 'package:pdf_signature/ui/features/welcome/widgets/welcome_screen.dart';
 import 'ui/features/preferences/providers.dart';
+import 'package:pdf_signature/ui/features/preferences/widgets/settings_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -62,7 +63,27 @@ class MyApp extends StatelessWidget {
                   ...AppLocalizations.localizationsDelegates,
                   LocaleNamesLocalizationsDelegate(),
                 ],
-                home: const _RootHomeSwitcher(),
+                home: Builder(
+                  builder:
+                      (ctx) => Scaffold(
+                        appBar: AppBar(
+                          title: Text(AppLocalizations.of(ctx).appTitle),
+                          actions: [
+                            OutlinedButton.icon(
+                              key: const Key('btn_appbar_settings'),
+                              icon: const Icon(Icons.settings),
+                              label: Text(AppLocalizations.of(ctx).settings),
+                              onPressed:
+                                  () => showDialog<bool>(
+                                    context: ctx,
+                                    builder: (_) => const SettingsDialog(),
+                                  ),
+                            ),
+                          ],
+                        ),
+                        body: const _RootHomeSwitcher(),
+                      ),
+                ),
               );
             },
           );

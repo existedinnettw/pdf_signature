@@ -9,21 +9,22 @@ import '../../../../data/services/providers.dart';
 import '../../../../data/model/model.dart';
 import '../view_model/view_model.dart';
 import '../../preferences/providers.dart';
+import 'signature_drawer.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
     super.key,
     required this.pageSize,
-    this.controller,
     required this.onDragSignature,
     required this.onResizeSignature,
     required this.onConfirmSignature,
     required this.onClearActiveOverlay,
     required this.onSelectPlaced,
+    this.viewerController,
   });
 
   final Size pageSize;
-  final TransformationController? controller;
+  final PdfViewerController? viewerController;
   final ValueChanged<Offset> onDragSignature;
   final ValueChanged<Offset> onResizeSignature;
   final VoidCallback onConfirmSignature;
@@ -35,7 +36,8 @@ class PdfPageArea extends ConsumerStatefulWidget {
 
 class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
   final Map<int, GlobalKey> _pageKeys = {};
-  final PdfViewerController _viewerController = PdfViewerController();
+  late final PdfViewerController _viewerController =
+      widget.viewerController ?? PdfViewerController();
   // Guards to avoid scroll feedback between provider and viewer
   int? _programmaticTargetPage;
   bool _suppressProviderListen = false;
@@ -57,6 +59,8 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
       }
     });
   }
+
+  // No dispose required for PdfViewerController (managed by owner if any)
 
   GlobalKey _pageKey(int page) => _pageKeys.putIfAbsent(
     page,
@@ -216,7 +220,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
               }
             });
           }
-          return SingleChildScrollView(
+          final content = SingleChildScrollView(
             key: const Key('pdf_continuous_mock_list'),
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
@@ -270,6 +274,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
               }),
             ),
           );
+          return content;
         },
       );
     }
@@ -277,14 +282,14 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     // Real continuous mode (pdfrx): copy example patterns
     // https://github.com/espresso3389/pdfrx/blob/2cc32c1e2aa2a054602d20a5e7cf60bcc2d6a889/packages/pdfrx/example/viewer/lib/main.dart
     if (pdf.pickedPdfPath != null && isContinuous) {
-      return PdfViewer.file(
+      final viewer = PdfViewer.file(
         pdf.pickedPdfPath!,
         controller: _viewerController,
         params: PdfViewerParams(
           pageAnchor: PdfPageAnchor.top,
           keyHandlerParams: PdfViewerKeyHandlerParams(autofocus: true),
           maxScale: 8,
-          // scrollByMouseWheel: 0.6,
+          scrollByMouseWheel: 0.6,
           // Add overlay scroll thumbs (vertical on right, horizontal on bottom)
           viewerOverlayBuilder:
               (context, size, handleLinkTap) => [
@@ -294,7 +299,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
                   thumbSize: const Size(40, 24),
                   thumbBuilder:
                       (context, thumbSize, pageNumber, controller) => Container(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         child: Center(
                           child: Text(
                             pageNumber.toString(),
@@ -309,7 +314,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
                   thumbSize: const Size(40, 24),
                   thumbBuilder:
                       (context, thumbSize, pageNumber, controller) => Container(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         child: Center(
                           child: Text(
                             pageNumber.toString(),
@@ -375,6 +380,34 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
           },
         ),
       );
+      // Accept drops of signature card over the viewer
+      final drop = DragTarget<Object>(
+        onWillAcceptWithDetails: (details) => details.data is SignatureDragData,
+        onAcceptWithDetails: (details) {
+          // Map the local position to UI page coordinates of the visible page
+          final box = context.findRenderObject() as RenderBox?;
+          if (box == null) return;
+          final local = box.globalToLocal(details.offset);
+          final size = box.size;
+          // Assume drop targets the current visible page; compute relative center
+          final cx = (local.dx / size.width) * widget.pageSize.width;
+          final cy = (local.dy / size.height) * widget.pageSize.height;
+          ref.read(signatureProvider.notifier).placeAtCenter(Offset(cx, cy));
+          ref
+              .read(pdfProvider.notifier)
+              .setSignedPage(ref.read(pdfProvider).currentPage);
+        },
+        builder:
+            (context, candidateData, rejected) => Stack(
+              fit: StackFit.expand,
+              children: [
+                viewer,
+                if (candidateData.isNotEmpty)
+                  Container(color: Colors.blue.withValues(alpha: 0.08)),
+              ],
+            ),
+      );
+      return drop;
     }
 
     return const SizedBox.shrink();

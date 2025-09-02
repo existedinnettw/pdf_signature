@@ -5,15 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:printing/printing.dart' as printing;
+import 'package:pdfrx/pdfrx.dart';
 
 import '../../../../data/services/providers.dart';
 import '../view_model/view_model.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
-import 'adjustments_panel.dart';
 import 'pdf_pages_overview.dart';
-import '../../preferences/widgets/settings_screen.dart';
+import 'signature_drawer.dart';
+import 'adjustments_panel.dart';
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   const PdfSignatureHomePage({super.key});
@@ -25,7 +26,9 @@ class PdfSignatureHomePage extends ConsumerStatefulWidget {
 
 class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   static const Size _pageSize = SignatureController.pageSize;
-  final TransformationController _ivController = TransformationController();
+  final PdfViewerController _viewerController = PdfViewerController();
+  bool _showPagesSidebar = true;
+  bool _showSignaturesSidebar = true;
 
   // Exposed for tests to trigger the invalid-file SnackBar without UI.
   @visibleForTesting
@@ -52,6 +55,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     ref.read(pdfProvider.notifier).jumpTo(page);
   }
 
+  // Zoom is managed by pdfrx viewer (Ctrl +/- etc.). No custom zoom here.
+
   Future<void> _loadSignatureFromFile() async {
     final typeGroup = const fs.XTypeGroup(
       label: 'Image',
@@ -68,25 +73,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     }
   }
 
-  void _createNewSignature() {
-    final sig = ref.read(signatureProvider.notifier);
-    if (ref.read(pdfProvider).loaded) {
-      sig.placeDefaultRect();
-      ref
-          .read(pdfProvider.notifier)
-          .setSignedPage(ref.read(pdfProvider).currentPage);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(
-              context,
-            ).longPressOrRightClickTheSignatureToConfirmOrDelete,
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
+  // _createNewSignature was removed as the toolbar no longer exposes this action.
 
   void _confirmSignature() {
     ref.read(signatureProvider.notifier).confirmCurrentSignature(ref);
@@ -250,7 +237,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   @override
   void dispose() {
-    _ivController.dispose();
     super.dispose();
   }
 
@@ -259,64 +245,62 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final isExporting = ref.watch(exportingProvider);
     final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l.appTitle),
-        actions: [
-          IconButton(
-            key: const Key('btn_appbar_settings'),
-            tooltip: l.settings,
-            onPressed:
-                () => showDialog<bool>(
-                  context: context,
-                  builder: (_) => const SettingsDialog(),
-                ),
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      ),
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: Stack(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            Column(
               children: [
-                // Left: pages overview (thumbnails + navigation)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 140,
-                    maxWidth: 180,
-                  ),
-                  child: Card(
-                    margin: EdgeInsets.zero,
-                    child: const PdfPagesOverview(),
-                  ),
+                // Full-width toolbar row
+                PdfToolbar(
+                  disabled: isExporting,
+                  onPickPdf: _pickPdf,
+                  onJumpToPage: _jumpToPage,
+                  onZoomOut: () {
+                    if (_viewerController.isReady) {
+                      _viewerController.zoomDown();
+                    }
+                  },
+                  onZoomIn: () {
+                    if (_viewerController.isReady) {
+                      _viewerController.zoomUp();
+                    }
+                  },
+                  fileName: ref.watch(pdfProvider).pickedPdfPath,
+                  showPagesSidebar: _showPagesSidebar,
+                  showSignaturesSidebar: _showSignaturesSidebar,
+                  onTogglePagesSidebar:
+                      () => setState(() {
+                        _showPagesSidebar = !_showPagesSidebar;
+                      }),
+                  onToggleSignaturesSidebar:
+                      () => setState(() {
+                        _showSignaturesSidebar = !_showSignaturesSidebar;
+                      }),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(height: 8),
                 Expanded(
-                  child: Column(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      PdfToolbar(
-                        disabled: isExporting,
-                        onOpenSettings:
-                            () => showDialog<bool>(
-                              context: context,
-                              builder: (_) => const SettingsDialog(),
-                            ),
-                        onPickPdf: _pickPdf,
-                        onJumpToPage: _jumpToPage,
-                        onSave: _saveSignedPdf,
-                        onLoadSignatureFromFile: _loadSignatureFromFile,
-                        onCreateSignature: _createNewSignature,
-                        onOpenDrawCanvas: _openDrawCanvas,
-                      ),
-                      const SizedBox(height: 8),
+                      if (_showPagesSidebar)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minWidth: 140,
+                            maxWidth: 180,
+                          ),
+                          child: Card(
+                            margin: EdgeInsets.zero,
+                            child: const PdfPagesOverview(),
+                          ),
+                        ),
+                      if (_showPagesSidebar) const SizedBox(width: 12),
                       Expanded(
                         child: AbsorbPointer(
                           absorbing: isExporting,
                           child: PdfPageArea(
                             pageSize: _pageSize,
-                            controller: _ivController,
+                            viewerController: _viewerController,
                             onDragSignature: _onDragSignature,
                             onResizeSignature: _onResizeSignature,
                             onConfirmSignature: _confirmSignature,
@@ -329,108 +313,243 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 280,
-                    maxWidth: 360,
-                  ),
-                  child: Consumer(
-                    builder: (context, ref, _) {
-                      final sig = ref.watch(signatureProvider);
-                      if (sig.rect != null) {
-                        return AbsorbPointer(
-                          absorbing: isExporting,
-                          child: Card(
-                            margin: EdgeInsets.zero,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Signature preview
-                                Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        AppLocalizations.of(context).signature,
-                                        style:
-                                            Theme.of(
-                                              context,
-                                            ).textTheme.titleSmall,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color:
-                                                Theme.of(context).dividerColor,
+                      if (_showSignaturesSidebar) const SizedBox(width: 12),
+                      if (_showSignaturesSidebar)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minWidth: 280,
+                            maxWidth: 360,
+                          ),
+                          child: Consumer(
+                            builder: (context, ref, _) {
+                              final sig = ref.watch(signatureProvider);
+                              final bytes =
+                                  ref.watch(processedSignatureImageProvider) ??
+                                  sig.imageBytes;
+                              return AbsorbPointer(
+                                absorbing: isExporting,
+                                child: Card(
+                                  margin: EdgeInsets.zero,
+                                  child: LayoutBuilder(
+                                    builder: (context, cons) {
+                                      return SingleChildScrollView(
+                                        padding: EdgeInsets.zero,
+                                        child: ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            minHeight: cons.maxHeight,
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: AspectRatio(
-                                          aspectRatio: 3 / 1,
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(8.0),
-                                            child: Consumer(
-                                              builder: (context, ref, _) {
-                                                final bytes =
-                                                    ref.watch(
-                                                      processedSignatureImageProvider,
-                                                    ) ??
-                                                    sig.imageBytes;
-                                                if (bytes == null) {
-                                                  return Center(
-                                                    child: Text(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
                                                       AppLocalizations.of(
                                                         context,
-                                                      ).noPdfLoaded,
+                                                      ).signature,
+                                                      style:
+                                                          Theme.of(context)
+                                                              .textTheme
+                                                              .titleSmall,
                                                     ),
-                                                  );
-                                                }
-                                                return Image.memory(
-                                                  bytes,
-                                                  fit: BoxFit.contain,
-                                                );
-                                              },
-                                            ),
+                                                    const SizedBox(height: 8),
+                                                    DecoratedBox(
+                                                      decoration: BoxDecoration(
+                                                        border: Border.all(
+                                                          color:
+                                                              Theme.of(
+                                                                context,
+                                                              ).dividerColor,
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
+                                                      child: AspectRatio(
+                                                        aspectRatio: 3 / 1,
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                8.0,
+                                                              ),
+                                                          child: Builder(
+                                                            builder: (context) {
+                                                              final placeholder = Center(
+                                                                child: Text(
+                                                                  AppLocalizations.of(
+                                                                    context,
+                                                                  ).noSignatureLoaded,
+                                                                ),
+                                                              );
+                                                              if (bytes ==
+                                                                      null ||
+                                                                  bytes
+                                                                      .isEmpty) {
+                                                                return placeholder;
+                                                              }
+                                                              final img =
+                                                                  Image.memory(
+                                                                    bytes,
+                                                                    fit:
+                                                                        BoxFit
+                                                                            .contain,
+                                                                  );
+                                                              return Draggable<
+                                                                Object
+                                                              >(
+                                                                data:
+                                                                    const SignatureDragData(),
+                                                                feedback: Opacity(
+                                                                  opacity: 0.85,
+                                                                  child: ConstrainedBox(
+                                                                    constraints:
+                                                                        const BoxConstraints.tightFor(
+                                                                          width:
+                                                                              160,
+                                                                          height:
+                                                                              80,
+                                                                        ),
+                                                                    child: DecoratedBox(
+                                                                      decoration: BoxDecoration(
+                                                                        color:
+                                                                            Colors.white,
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                              6,
+                                                                            ),
+                                                                        boxShadow: const [
+                                                                          BoxShadow(
+                                                                            blurRadius:
+                                                                                8,
+                                                                            color:
+                                                                                Colors.black26,
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                      child: Padding(
+                                                                        padding:
+                                                                            const EdgeInsets.all(
+                                                                              6.0,
+                                                                            ),
+                                                                        child: Image.memory(
+                                                                          bytes,
+                                                                          fit:
+                                                                              BoxFit.contain,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                childWhenDragging:
+                                                                    Opacity(
+                                                                      opacity:
+                                                                          0.5,
+                                                                      child:
+                                                                          img,
+                                                                    ),
+                                                                child: img,
+                                                              );
+                                                            },
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                    ),
+                                                child: Wrap(
+                                                  spacing: 8,
+                                                  runSpacing: 8,
+                                                  children: [
+                                                    OutlinedButton.icon(
+                                                      key: const Key(
+                                                        'btn_load_signature_picker',
+                                                      ),
+                                                      onPressed:
+                                                          !ref
+                                                                  .read(
+                                                                    pdfProvider,
+                                                                  )
+                                                                  .loaded
+                                                              ? null
+                                                              : _loadSignatureFromFile,
+                                                      icon: const Icon(
+                                                        Icons.image_outlined,
+                                                      ),
+                                                      label: Text(
+                                                        AppLocalizations.of(
+                                                          context,
+                                                        ).loadSignatureFromFile,
+                                                      ),
+                                                    ),
+                                                    OutlinedButton.icon(
+                                                      key: const Key(
+                                                        'btn_draw_signature',
+                                                      ),
+                                                      onPressed:
+                                                          !ref
+                                                                  .read(
+                                                                    pdfProvider,
+                                                                  )
+                                                                  .loaded
+                                                              ? null
+                                                              : _openDrawCanvas,
+                                                      icon: const Icon(
+                                                        Icons.gesture,
+                                                      ),
+                                                      label: Text(
+                                                        AppLocalizations.of(
+                                                          context,
+                                                        ).drawSignature,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const Divider(height: 1),
+                                              Padding(
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
+                                                child: AdjustmentsPanel(
+                                                  sig: sig,
+                                                ),
+                                              ),
+                                              const Divider(height: 1),
+                                              ElevatedButton(
+                                                key: const Key('btn_save_pdf'),
+                                                onPressed:
+                                                    isExporting
+                                                        ? null
+                                                        : _saveSignedPdf,
+                                                child: Text(l.saveSignedPdf),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      );
+                                    },
                                   ),
                                 ),
-                                const Divider(height: 1),
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    padding: const EdgeInsets.all(12),
-                                    child: AdjustmentsPanel(sig: sig),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                      return Card(
-                        margin: EdgeInsets.zero,
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Text(
-                              AppLocalizations.of(context).signature,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
+                              );
+                            },
                           ),
                         ),
-                      );
-                    },
+                    ],
                   ),
                 ),
               ],

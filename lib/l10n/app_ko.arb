@@ -26,6 +26,7 @@
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "서명을 길게 누르거나 마우스 오른쪽 버튼을 클릭하여 확인하거나 삭제합니다.",
   "next": "다음",
   "noPdfLoaded": "로드된 PDF 없음",
+  "noSignatureLoaded": "서명이 로드되지 않았습니다",
   "nothingToSaveYet": "아직 저장할 내용이 없습니다.",
   "openPdf": "PDF 열기...",
   "pageInfo": "{current}/{total} 페이지",

@@ -44,17 +44,20 @@ Route: root --> opened
 
 Design notes:
 - Top: A small toolbar sits at the top edge with file name text, open pdf file button, previous/next page widgets and zoom controls.
-   - Navigation: Previous page, Next page, and a page number input (e.g., “2 / 10”) with jump-on-Enter.
-   - Zoom: Zoom out, Zoom level dropdown (percent), Zoom in, Fit width, Fit page, Reset zoom.
-   - Optional: Find/search within PDF (if supported by engine).
+  - On the far left of the toolbar there is a button that can turn the document pages overview sidebar on and off.
+  - On the far right of the toolbar there is a button that can turn the signature cards overview sidebar on and off.
+  - Navigation: Previous page, Next page, and a page number input (e.g., “2 / 10”) with jump-on-Enter.
+  - Zoom: Zoom out, Zoom level dropdown (percent), Zoom in, Fit width, Fit page, Reset zoom.
+  - Optional: Find/search within PDF (if supported by engine).
 - Left pane: vertical strip of page thumbnails (e.g., page1, page2, page3). Clicking a thumbnail navigates to that page; the current page is visually indicated.
 - Center: main PDF viewer shows the active page. 
+  - wheel to scroll pages.
   - Ctrl/Cmd + wheel to zoom.
 - Right pane: signatures drawer displaying saved signatures as cards.
   - able to drag and drop signature cards onto the PDF as placed signatures.
   - Each signature card shows a preview.
     - long tap/right-click will show menu with options to delete, adjust graphic of image.
-      - "adjust graphic" opens a simple image editor, which can remove backgrounds.
+      - "adjust graphic" opens a simple image editor, which can remove backgrounds, Rotate (rotation handle).
   - There is an empty card with "new signature" prompt and 2 buttons: "from file" and "draw".
     - "from file" opens a file picker to select an image as a signature card.
     - "draw" opens a simple drawing interface (draw canvas) to create a signature card.
@@ -62,7 +65,7 @@ Design notes:
 
 Signature controls (after placing on page):
 - Select to show bounding box with resize handles and a small inline action bar.
-- Actions: Move (drag), Resize (corner/side handles), Rotate (rotation handle), Duplicate, Delete (trash icon or Delete key).
+- Actions: Move (drag), Resize (corner/side handles), Delete (trash icon or Delete key).
 - Lock: Lock/Unlock position.
 - Keyboard: Arrow keys to nudge (Shift for 10px); Shift-resize to keep aspect; Esc to cancel; Ctrl/Cmd+D to duplicate; Del/Backspace to delete.
 

@@ -26,6 +26,7 @@
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "Drücken Sie lange oder klicken Sie mit der rechten Maustaste auf die Signatur, um sie zu bestätigen oder zu löschen.",
   "next": "Weiter",
   "noPdfLoaded": "Keine PDF-Datei geladen",
+  "noSignatureLoaded": "Keine Signatur geladen",
   "nothingToSaveYet": "Noch nichts zu speichern",
   "openPdf": "PDF öffnen...",
   "pageInfo": "Seite {current}/{total}",

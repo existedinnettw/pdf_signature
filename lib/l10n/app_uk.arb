@@ -26,6 +26,7 @@
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "Довго натисніть або клацніть правою кнопкою миші на підпис, щоб підтвердити або видалити.",
   "next": "Далі",
   "noPdfLoaded": "PDF не завантажено",
+  "noSignatureLoaded": "Не завантажено жодного підпису",
   "nothingToSaveYet": "Ще нічого не потрібно зберігати",
   "openPdf": "Відкрити PDF...",
   "pageInfo": "Сторінка {current}/{total}",

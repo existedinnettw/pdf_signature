@@ -251,6 +251,16 @@ class SignatureController extends StateNotifier<SignatureState> {
     state = state.copyWith(editingEnabled: true);
   }
 
+  void clearImage() {
+    state = state.copyWith(imageBytes: null, rect: null, editingEnabled: false);
+  }
+
+  void placeAtCenter(Offset center, {double width = 120, double height = 60}) {
+    Rect r = Rect.fromCenter(center: center, width: width, height: height);
+    r = _clampRectToPage(r);
+    state = state.copyWith(rect: r, editingEnabled: true);
+  }
+
   // Confirm current signature: freeze editing and place it on the PDF as an immutable overlay.
   // Returns the Rect placed, or null if no rect to confirm.
   Rect? confirmCurrentSignature(WidgetRef ref) {

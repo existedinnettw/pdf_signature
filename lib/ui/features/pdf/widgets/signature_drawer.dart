@@ -1,0 +1,206 @@
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
+
+import '../../../../data/services/providers.dart';
+import '../view_model/view_model.dart';
+import 'adjustments_panel.dart';
+
+/// Data passed when dragging a signature card.
+class SignatureDragData {
+  const SignatureDragData();
+}
+
+class SignatureDrawer extends ConsumerStatefulWidget {
+  const SignatureDrawer({
+    super.key,
+    required this.disabled,
+    required this.onLoadSignatureFromFile,
+    required this.onOpenDrawCanvas,
+  });
+
+  final bool disabled;
+  final VoidCallback onLoadSignatureFromFile;
+  final VoidCallback onOpenDrawCanvas;
+
+  @override
+  ConsumerState<SignatureDrawer> createState() => _SignatureDrawerState();
+}
+
+class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final sig = ref.watch(signatureProvider);
+    final processed = ref.watch(processedSignatureImageProvider);
+    final bytes = processed ?? sig.imageBytes;
+    final isExporting = ref.watch(exportingProvider);
+    final disabled = widget.disabled || isExporting;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: Text(
+              l.signature,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          // Existing signature card (draggable when bytes available)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SizedBox(
+                height: 120,
+                child:
+                    bytes == null
+                        ? Center(
+                          child: Text(
+                            l.noPdfLoaded,
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                        : _DraggableSignaturePreview(
+                          bytes: bytes,
+                          disabled: disabled,
+                        ),
+              ),
+            ),
+          ),
+          // Actions under the card
+          if (bytes != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  PopupMenuButton<String>(
+                    key: const Key('popup_signature_card'),
+                    tooltip: l.settings,
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'delete':
+                          ref
+                              .read(signatureProvider.notifier)
+                              .clearActiveOverlay();
+                          ref.read(signatureProvider.notifier).clearImage();
+                          break;
+                        default:
+                          break;
+                      }
+                    },
+                    itemBuilder:
+                        (ctx) => [
+                          PopupMenuItem(
+                            key: const Key('mi_signature_delete'),
+                            value: 'delete',
+                            child: Text(l.delete),
+                          ),
+                        ],
+                    child: IconButton(
+                      icon: const Icon(Icons.more_horiz),
+                      onPressed: disabled ? null : () {},
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(AppLocalizations.of(context).createNewSignature),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          // New signature card
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l.createNewSignature,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      key: const Key('btn_drawer_load_signature'),
+                      onPressed:
+                          disabled ? null : widget.onLoadSignatureFromFile,
+                      icon: const Icon(Icons.image_outlined),
+                      label: Text(l.loadSignatureFromFile),
+                    ),
+                    OutlinedButton.icon(
+                      key: const Key('btn_drawer_draw_signature'),
+                      onPressed: disabled ? null : widget.onOpenDrawCanvas,
+                      icon: const Icon(Icons.gesture),
+                      label: Text(l.drawSignature),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(12),
+              child: AdjustmentsPanel(sig: sig),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DraggableSignaturePreview extends StatelessWidget {
+  const _DraggableSignaturePreview({
+    required this.bytes,
+    required this.disabled,
+  });
+  final Uint8List bytes;
+  final bool disabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Image.memory(bytes, fit: BoxFit.contain),
+    );
+    if (disabled) return child;
+    return Draggable<SignatureDragData>(
+      data: const SignatureDragData(),
+      feedback: Opacity(
+        opacity: 0.8,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints.tightFor(width: 160, height: 80),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: const [
+                BoxShadow(blurRadius: 8, color: Colors.black26),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(6.0),
+              child: Image.memory(bytes, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: 0.5, child: child),
+      child: child,
+    );
+  }
+}
