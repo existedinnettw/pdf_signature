@@ -39,37 +39,43 @@ class AdjustmentsPanel extends ConsumerWidget {
             Text(AppLocalizations.of(context).backgroundRemoval),
           ],
         ),
-        Row(
+        const SizedBox(height: 8),
+        // Contrast control
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(AppLocalizations.of(context).contrast),
-            Expanded(
-              child: Slider(
-                key: const Key('sld_contrast'),
-                min: 0.0,
-                max: 2.0,
-                value: sig.contrast,
-                onChanged:
-                    (v) => ref.read(signatureProvider.notifier).setContrast(v),
-              ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(sig.contrast.toStringAsFixed(2)),
             ),
-            Text(sig.contrast.toStringAsFixed(2)),
+            Slider(
+              key: const Key('sld_contrast'),
+              min: 0.0,
+              max: 2.0,
+              value: sig.contrast,
+              onChanged:
+                  (v) => ref.read(signatureProvider.notifier).setContrast(v),
+            ),
           ],
         ),
-        Row(
+        // Brightness control
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(AppLocalizations.of(context).brightness),
-            Expanded(
-              child: Slider(
-                key: const Key('sld_brightness'),
-                min: -1.0,
-                max: 1.0,
-                value: sig.brightness,
-                onChanged:
-                    (v) =>
-                        ref.read(signatureProvider.notifier).setBrightness(v),
-              ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(sig.brightness.toStringAsFixed(2)),
             ),
-            Text(sig.brightness.toStringAsFixed(2)),
+            Slider(
+              key: const Key('sld_brightness'),
+              min: -1.0,
+              max: 1.0,
+              value: sig.brightness,
+              onChanged:
+                  (v) => ref.read(signatureProvider.notifier).setBrightness(v),
+            ),
           ],
         ),
       ],

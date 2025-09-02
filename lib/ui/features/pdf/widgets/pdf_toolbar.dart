@@ -14,6 +14,7 @@ class PdfToolbar extends ConsumerStatefulWidget {
     required this.onJumpToPage,
     required this.onZoomOut,
     required this.onZoomIn,
+    this.zoomLevel,
     this.fileName,
     required this.showPagesSidebar,
     required this.showSignaturesSidebar,
@@ -27,6 +28,8 @@ class PdfToolbar extends ConsumerStatefulWidget {
   final String? fileName;
   final VoidCallback onZoomOut;
   final VoidCallback onZoomIn;
+  // Current zoom level as a percentage (e.g., 100 for 100%)
+  final int? zoomLevel;
   final bool showPagesSidebar;
   final bool showSignaturesSidebar;
   final VoidCallback onTogglePagesSidebar;
@@ -159,6 +162,14 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                     onPressed: widget.disabled ? null : widget.onZoomIn,
                     icon: const Icon(Icons.zoom_in),
                   ),
+                  if (!compact && widget.zoomLevel != null) ...[
+                    const SizedBox(width: 6),
+                    // show zoom ratio
+                    Text(
+                      '${widget.zoomLevel}%',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
                 ],
               ),
               Row(

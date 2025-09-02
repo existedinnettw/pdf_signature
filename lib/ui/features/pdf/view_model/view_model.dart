@@ -226,6 +226,7 @@ class SignatureController extends StateNotifier<SignatureState> {
   void setBgRemoval(bool v) => state = state.copyWith(bgRemoval: v);
   void setContrast(double v) => state = state.copyWith(contrast: v);
   void setBrightness(double v) => state = state.copyWith(brightness: v);
+  void setRotation(double deg) => state = state.copyWith(rotation: deg);
 
   void setStrokes(List<List<Offset>> strokes) =>
       state = state.copyWith(strokes: strokes);
@@ -308,6 +309,7 @@ final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
   // Parameters
   final double contrast = s.contrast; // [0..2], 1 = neutral
   final double brightness = s.brightness; // [-1..1], 0 = neutral
+  final double rotationDeg = s.rotation; // degrees
   const int thrLow = 220; // begin soft transparency from this avg luminance
   const int thrHigh = 245; // fully transparent from this avg luminance
 
@@ -350,6 +352,16 @@ final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
 
       out.setPixelRgba(x, y, r, g, b, newA);
     }
+  }
+
+  // Apply rotation if any (around center) using bilinear interpolation and keep size
+  if (rotationDeg % 360 != 0) {
+    // The image package rotates counter-clockwise; positive degrees rotate CCW
+    out = img.copyRotate(
+      out,
+      angle: rotationDeg,
+      interpolation: img.Interpolation.linear,
+    );
   }
 
   // Encode as PNG to preserve transparency

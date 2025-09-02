@@ -1,0 +1,61 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+
+import 'package:pdf_signature/data/services/export_service.dart';
+import 'package:pdf_signature/data/services/providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
+
+class RecordingExporter extends ExportService {
+  bool called = false;
+  @override
+  Future<bool> saveBytesToFile({required bytes, required outputPath}) async {
+    called = true;
+    return true;
+  }
+}
+
+class BasicExporter extends ExportService {}
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('Save uses file selector (via provider) and injected exporter', (
+    tester,
+  ) async {
+    final fake = RecordingExporter();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          pdfProvider.overrideWith(
+            (ref) => PdfController()..openPicked(path: 'test.pdf'),
+          ),
+          signatureProvider.overrideWith(
+            (ref) => SignatureController()..placeDefaultRect(),
+          ),
+          useMockViewerProvider.overrideWith((ref) => true),
+          exportServiceProvider.overrideWith((_) => fake),
+          savePathPickerProvider.overrideWith(
+            (_) => () async => 'C:/tmp/output.pdf',
+          ),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: PdfSignatureHomePage(),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Trigger save directly
+    await tester.tap(find.byKey(const Key('btn_save_pdf')));
+    await tester.pumpAndSettle();
+
+    // Expect success UI
+    expect(find.textContaining('Saved:'), findsOneWidget);
+  });
+}

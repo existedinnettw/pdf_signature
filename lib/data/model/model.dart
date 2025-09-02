@@ -59,6 +59,8 @@ class SignatureState {
   final bool bgRemoval;
   final double contrast;
   final double brightness;
+  // Rotation in degrees applied to the signature image when rendering/exporting
+  final double rotation;
   final List<List<Offset>> strokes;
   final Uint8List? imageBytes;
   // When true, the active signature overlay is movable/resizable and should not be exported.
@@ -70,6 +72,7 @@ class SignatureState {
     required this.bgRemoval,
     required this.contrast,
     required this.brightness,
+    this.rotation = 0.0,
     required this.strokes,
     this.imageBytes,
     this.editingEnabled = false,
@@ -80,6 +83,7 @@ class SignatureState {
     bgRemoval: false,
     contrast: 1.0,
     brightness: 0.0,
+    rotation: 0.0,
     strokes: [],
     imageBytes: null,
     editingEnabled: false,
@@ -90,6 +94,7 @@ class SignatureState {
     bool? bgRemoval,
     double? contrast,
     double? brightness,
+    double? rotation,
     List<List<Offset>>? strokes,
     Uint8List? imageBytes,
     bool? editingEnabled,
@@ -99,6 +104,7 @@ class SignatureState {
     bgRemoval: bgRemoval ?? this.bgRemoval,
     contrast: contrast ?? this.contrast,
     brightness: brightness ?? this.brightness,
+    rotation: rotation ?? this.rotation,
     strokes: strokes ?? this.strokes,
     imageBytes: imageBytes ?? this.imageBytes,
     editingEnabled: editingEnabled ?? this.editingEnabled,

@@ -10,6 +10,7 @@ import '../../../../data/model/model.dart';
 import '../view_model/view_model.dart';
 import '../../preferences/providers.dart';
 import 'signature_drawer.dart';
+import 'image_editor_dialog.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
@@ -436,6 +437,11 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
           value: 'delete',
           child: Text(l.delete),
         ),
+        const PopupMenuItem<String>(
+          key: Key('ctx_placed_adjust'),
+          value: 'adjust',
+          child: Text('Adjust graphic'),
+        ),
       ],
     ).then((choice) {
       switch (choice) {
@@ -443,6 +449,12 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
           ref
               .read(pdfProvider.notifier)
               .removePlacement(page: page, index: index);
+          break;
+        case 'adjust':
+          showDialog(
+            context: context,
+            builder: (ctx) => const ImageEditorDialog(),
+          );
           break;
         default:
           break;
@@ -557,7 +569,17 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
                                 ),
                               );
                             }
-                            return Image.memory(bytes, fit: BoxFit.contain);
+                            Widget im = Image.memory(
+                              bytes,
+                              fit: BoxFit.contain,
+                            );
+                            if (sig.rotation % 360 != 0) {
+                              im = Transform.rotate(
+                                angle: sig.rotation * math.pi / 180.0,
+                                child: im,
+                              );
+                            }
+                            return im;
                           },
                         ),
                         if (interactive)
@@ -610,12 +632,22 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
                               value: 'delete',
                               child: Text(AppLocalizations.of(context).delete),
                             ),
+                            const PopupMenuItem<String>(
+                              key: Key('ctx_active_adjust'),
+                              value: 'adjust',
+                              child: Text('Adjust graphic'),
+                            ),
                           ],
                         ).then((choice) {
                           if (choice == 'confirm') {
                             widget.onConfirmSignature();
                           } else if (choice == 'delete') {
                             widget.onClearActiveOverlay();
+                          } else if (choice == 'adjust') {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const ImageEditorDialog(),
+                            );
                           }
                         });
                       },
@@ -640,12 +672,22 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
                               value: 'delete',
                               child: Text(AppLocalizations.of(context).delete),
                             ),
+                            const PopupMenuItem<String>(
+                              key: Key('ctx_active_adjust_lp'),
+                              value: 'adjust',
+                              child: Text('Adjust graphic'),
+                            ),
                           ],
                         ).then((choice) {
                           if (choice == 'confirm') {
                             widget.onConfirmSignature();
                           } else if (choice == 'delete') {
                             widget.onClearActiveOverlay();
+                          } else if (choice == 'adjust') {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const ImageEditorDialog(),
+                            );
                           }
                         });
                       },

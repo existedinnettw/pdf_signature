@@ -5,7 +5,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../../../data/services/providers.dart';
 import '../view_model/view_model.dart';
-import 'adjustments_panel.dart';
+import 'image_editor_dialog.dart';
 
 /// Data passed when dragging a signature card.
 class SignatureDragData {
@@ -29,6 +29,48 @@ class SignatureDrawer extends ConsumerStatefulWidget {
 }
 
 class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
+  Future<void> _openSignatureMenuAt(Offset globalPosition) async {
+    final l = AppLocalizations.of(context);
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        globalPosition.dx,
+        globalPosition.dy,
+        globalPosition.dx,
+        globalPosition.dy,
+      ),
+      items: [
+        PopupMenuItem(
+          key: const Key('mi_signature_delete'),
+          value: 'delete',
+          child: Text(l.delete),
+        ),
+        PopupMenuItem(
+          key: const Key('mi_signature_adjust'),
+          value: 'adjust',
+          child: const Text('Adjust graphic'),
+        ),
+      ],
+    );
+
+    switch (selected) {
+      case 'delete':
+        ref.read(signatureProvider.notifier).clearActiveOverlay();
+        ref.read(signatureProvider.notifier).clearImage();
+        break;
+      case 'adjust':
+        if (!mounted) return;
+        // Open ImageEditorDialog
+        await showDialog(
+          context: context,
+          builder: (_) => const ImageEditorDialog(),
+        );
+        break;
+      default:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -59,62 +101,37 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                 border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: SizedBox(
-                height: 120,
-                child:
-                    bytes == null
-                        ? Center(
-                          child: Text(
-                            l.noPdfLoaded,
-                            textAlign: TextAlign.center,
+              child: GestureDetector(
+                key: const Key('gd_signature_card_area'),
+                behavior: HitTestBehavior.opaque,
+                onSecondaryTapDown: (details) {
+                  if (bytes != null && !disabled) {
+                    _openSignatureMenuAt(details.globalPosition);
+                  }
+                },
+                onLongPressStart: (details) {
+                  if (bytes != null && !disabled) {
+                    _openSignatureMenuAt(details.globalPosition);
+                  }
+                },
+                child: SizedBox(
+                  height: 120,
+                  child:
+                      bytes == null
+                          ? Center(
+                            child: Text(
+                              l.noPdfLoaded,
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                          : _DraggableSignaturePreview(
+                            bytes: bytes,
+                            disabled: disabled,
                           ),
-                        )
-                        : _DraggableSignaturePreview(
-                          bytes: bytes,
-                          disabled: disabled,
-                        ),
+                ),
               ),
             ),
           ),
-          // Actions under the card
-          if (bytes != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  PopupMenuButton<String>(
-                    key: const Key('popup_signature_card'),
-                    tooltip: l.settings,
-                    onSelected: (v) {
-                      switch (v) {
-                        case 'delete':
-                          ref
-                              .read(signatureProvider.notifier)
-                              .clearActiveOverlay();
-                          ref.read(signatureProvider.notifier).clearImage();
-                          break;
-                        default:
-                          break;
-                      }
-                    },
-                    itemBuilder:
-                        (ctx) => [
-                          PopupMenuItem(
-                            key: const Key('mi_signature_delete'),
-                            value: 'delete',
-                            child: Text(l.delete),
-                          ),
-                        ],
-                    child: IconButton(
-                      icon: const Icon(Icons.more_horiz),
-                      onPressed: disabled ? null : () {},
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(AppLocalizations.of(context).createNewSignature),
-                ],
-              ),
-            ),
           const SizedBox(height: 12),
           const Divider(height: 1),
           // New signature card
@@ -150,13 +167,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
               ],
             ),
           ),
-          const Divider(height: 1),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
-              child: AdjustmentsPanel(sig: sig),
-            ),
-          ),
+          // Adjustments are accessed via "Adjust graphic" in the popup menu
         ],
       ),
     );
