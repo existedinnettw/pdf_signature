@@ -12,17 +12,20 @@ checkout [`docs/FRs.md`](docs/FRs.md)
 # flutter clean
 # arb_translate
 flutter pub get
-# generate gherkin test
+# > to generate gherkin test
 flutter pub run build_runner build --delete-conflicting-outputs
+# > to remove unused step definitions
 # dart run tool/prune_unused_steps.dart --delete
+# > to static analyze the code
+flutter analyze
+# > run unit tests and widget tests
+flutter test
+
 # dart run tool/gen_view_wireframe_md.dart
 # flutter pub run dead_code_analyzer
 
 # run the app
 flutter run
-
-# run unit tests and widget tests
-flutter test
 ```
 
 ### build

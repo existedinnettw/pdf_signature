@@ -20,3 +20,5 @@ The repo structure follows official [Package structure](https://docs.flutter.dev
     * [How to zoom in PdfPageView #244](https://github.com/espresso3389/pdfrx/issues/244)
   * So does overlay some widgets, they should be placed using the provided overlay builder.
     * [Viewer Customization using Widget Overlay](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams/viewerOverlayBuilder.html)
+    * [Per-page Customization using Widget Overlay](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams/pageOverlaysBuilder.html)
+      * `pageOverlaysBuilder`
