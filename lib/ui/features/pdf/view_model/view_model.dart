@@ -233,11 +233,15 @@ class SignatureController extends StateNotifier<SignatureState> {
     state = SignatureState.initial();
   }
 
+  @visibleForTesting
   void placeDefaultRect() {
     final w = 120.0, h = 60.0;
     state = state.copyWith(
       rect: Rect.fromCenter(
-        center: Offset(pageSize.width / 2, pageSize.height * 0.75),
+        center: Offset(
+          (pageSize.width / 2) * Random().nextDouble() * 2 + 1,
+          (pageSize.height / 2) * Random().nextDouble() * 2 + 1,
+        ),
         width: w,
         height: h,
       ),
