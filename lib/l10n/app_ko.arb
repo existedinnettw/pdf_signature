@@ -32,7 +32,6 @@
   "pageInfo": "{current}/{total} 페이지",
   "pageView": "페이지 보기",
   "pageViewContinuous": "연속",
-  "pageViewSingle": "단일 페이지",
   "prev": "이전",
   "resetToDefaults": "기본값으로 재설정",
   "save": "저장",

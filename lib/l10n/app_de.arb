@@ -32,7 +32,6 @@
   "pageInfo": "Seite {current}/{total}",
   "pageView": "Seitenansicht",
   "pageViewContinuous": "Kontinuierlich",
-  "pageViewSingle": "Einzelne Seite",
   "prev": "Vorherige",
   "resetToDefaults": "Auf Standardwerte zurücksetzen",
   "save": "Speichern",

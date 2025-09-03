@@ -32,7 +32,6 @@
   "pageInfo": "第 {current} 页 / 共 {total} 页",
   "pageView": "分页浏览",
   "pageViewContinuous": "连续",
-  "pageViewSingle": "单页",
   "prev": "上一页",
   "resetToDefaults": "恢复默认值",
   "save": "保存",

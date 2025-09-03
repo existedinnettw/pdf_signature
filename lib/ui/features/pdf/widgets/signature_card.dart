@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../view_model/view_model.dart';
 import 'signature_drag_data.dart';
+import '../../../common/menu_labels.dart';
 
 class SignatureCard extends StatelessWidget {
   const SignatureCard({
@@ -69,16 +70,16 @@ class SignatureCard extends StatelessWidget {
                     details.globalPosition.dx,
                     details.globalPosition.dy,
                   ),
-                  items: const [
+                  items: [
                     PopupMenuItem(
-                      key: Key('mi_signature_adjust'),
+                      key: const Key('mi_signature_adjust'),
                       value: 'adjust',
-                      child: Text('Adjust graphic'),
+                      child: Text(MenuLabels.adjustGraphic(context)),
                     ),
                     PopupMenuItem(
-                      key: Key('mi_signature_delete'),
+                      key: const Key('mi_signature_delete'),
                       value: 'delete',
-                      child: Text('Delete'),
+                      child: Text(MenuLabels.delete(context)),
                     ),
                   ],
                 );
@@ -100,16 +101,16 @@ class SignatureCard extends StatelessWidget {
                     details.globalPosition.dx,
                     details.globalPosition.dy,
                   ),
-                  items: const [
+                  items: [
                     PopupMenuItem(
-                      key: Key('mi_signature_adjust'),
+                      key: const Key('mi_signature_adjust'),
                       value: 'adjust',
-                      child: Text('Adjust graphic'),
+                      child: Text(MenuLabels.adjustGraphic(context)),
                     ),
                     PopupMenuItem(
-                      key: Key('mi_signature_delete'),
+                      key: const Key('mi_signature_delete'),
                       value: 'delete',
-                      child: Text('Delete'),
+                      child: Text(MenuLabels.delete(context)),
                     ),
                   ],
                 );

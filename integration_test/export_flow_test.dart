@@ -18,8 +18,6 @@ class RecordingExporter extends ExportService {
   }
 }
 
-class BasicExporter extends ExportService {}
-
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 

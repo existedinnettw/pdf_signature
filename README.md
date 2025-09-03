@@ -16,6 +16,7 @@ flutter pub get
 flutter pub run build_runner build --delete-conflicting-outputs
 # dart run tool/prune_unused_steps.dart --delete
 # dart run tool/gen_view_wireframe_md.dart
+# flutter pub run dead_code_analyzer
 
 # run the app
 flutter run

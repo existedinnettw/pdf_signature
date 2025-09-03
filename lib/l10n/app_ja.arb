@@ -32,7 +32,6 @@
   "pageInfo": "ページ {current}/{total}",
   "pageView": "ページ表示",
   "pageViewContinuous": "連続",
-  "pageViewSingle": "シングルページ",
   "prev": "前へ",
   "resetToDefaults": "デフォルトに戻す",
   "save": "保存",

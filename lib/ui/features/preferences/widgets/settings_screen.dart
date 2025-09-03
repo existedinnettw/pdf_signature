@@ -70,7 +70,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                                   child: CircularProgressIndicator(),
                                 ),
                               ),
-                          error: (_, __) {
+                          error: (_, _) {
                             final items =
                                 AppLocalizations.supportedLocales
                                     .map((loc) => toLanguageTag(loc))

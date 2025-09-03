@@ -32,7 +32,6 @@
   "pageInfo": "Сторінка {current}/{total}",
   "pageView": "Перегляд сторінки",
   "pageViewContinuous": "Безперервний",
-  "pageViewSingle": "Одна сторінка",
   "prev": "Попередня",
   "resetToDefaults": "Скинути до значень за замовчуванням",
   "save": "Зберегти",

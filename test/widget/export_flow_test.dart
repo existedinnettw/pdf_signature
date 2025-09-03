@@ -17,8 +17,6 @@ class RecordingExporter extends ExportService {
   }
 }
 
-class BasicExporter extends ExportService {}
-
 void main() {
   testWidgets('Save uses file selector (via provider) and injected exporter', (
     tester,

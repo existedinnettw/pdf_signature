@@ -63,7 +63,8 @@ class PdfController extends StateNotifier<PdfState> {
     state = state.copyWith(pageCount: count.clamp(1, 9999));
   }
 
-  // Multiple-signature helpers
+  // Multiple-signature helpers (rects are stored in normalized fractions 0..1
+  // relative to the page size: left/top/width/height are all 0..1)
   void addPlacement({
     required int page,
     required Rect rect,
@@ -112,6 +113,23 @@ class PdfController extends StateNotifier<PdfState> {
         placementImageByPage: imgMap,
         selectedPlacementIndex: null,
       );
+    }
+  }
+
+  // Update the rect of an existing placement on a page.
+  void updatePlacementRect({
+    required int page,
+    required int index,
+    required Rect rect,
+  }) {
+    if (!state.loaded) return;
+    final p = page.clamp(1, state.pageCount);
+    final map = Map<int, List<Rect>>.from(state.placementsByPage);
+    final list = List<Rect>.from(map[p] ?? const []);
+    if (index >= 0 && index < list.length) {
+      list[index] = rect;
+      map[p] = list;
+      state = state.copyWith(placementsByPage: map);
     }
   }
 
@@ -364,7 +382,17 @@ class SignatureController extends StateNotifier<SignatureState> {
     // Place onto the current page
     final pdf = ref.read(pdfProvider);
     if (!pdf.loaded) return null;
-    ref.read(pdfProvider.notifier).addPlacement(page: pdf.currentPage, rect: r);
+    // Convert UI-space rect (400x560) to normalized rect
+    final Size pageSize = SignatureController.pageSize;
+    final normalized = Rect.fromLTWH(
+      (r.left / pageSize.width).clamp(0.0, 1.0),
+      (r.top / pageSize.height).clamp(0.0, 1.0),
+      (r.width / pageSize.width).clamp(0.0, 1.0),
+      (r.height / pageSize.height).clamp(0.0, 1.0),
+    );
+    ref
+        .read(pdfProvider.notifier)
+        .addPlacement(page: pdf.currentPage, rect: normalized);
     // Assign image id to this placement (last index)
     final idx =
         (ref.read(pdfProvider).placementsByPage[pdf.currentPage]?.length ?? 1) -
@@ -383,6 +411,10 @@ class SignatureController extends StateNotifier<SignatureState> {
       ref
           .read(pdfProvider.notifier)
           .assignImageToPlacement(page: pdf.currentPage, index: idx, image: id);
+    }
+    // Auto-select the newly placed item so the red box appears
+    if (idx >= 0) {
+      ref.read(pdfProvider.notifier).selectPlacement(idx);
     }
     // Freeze editing: keep rect for preview but disable interaction
     state = state.copyWith(editingEnabled: false);

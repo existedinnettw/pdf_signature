@@ -33,7 +33,6 @@
   "pageInfo": "第 {current}/{total} 頁",
   "pageView": "頁面檢視",
   "pageViewContinuous": "連續",
-  "pageViewSingle": "單頁",
   "prev": "上一頁",
   "resetToDefaults": "重設為預設值",
   "save": "儲存",
