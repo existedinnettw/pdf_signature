@@ -366,6 +366,7 @@ class SignatureController extends StateNotifier<SignatureState> {
   }
 
   // Confirm current signature: freeze editing and place it on the PDF as an immutable overlay.
+  // Stores the placement rect in UI-space (SignatureController.pageSize units).
   // Returns the Rect placed, or null if no rect to confirm.
   Rect? confirmCurrentSignature(WidgetRef ref) {
     final r = state.rect;
@@ -373,30 +374,29 @@ class SignatureController extends StateNotifier<SignatureState> {
     // Place onto the current page
     final pdf = ref.read(pdfProvider);
     if (!pdf.loaded) return null;
-    // Convert UI-space rect (400x560) to normalized rect
-    final Size pageSize = SignatureController.pageSize;
-    final normalized = Rect.fromLTWH(
-      (r.left / pageSize.width).clamp(0.0, 1.0),
-      (r.top / pageSize.height).clamp(0.0, 1.0),
-      (r.width / pageSize.width).clamp(0.0, 1.0),
-      (r.height / pageSize.height).clamp(0.0, 1.0),
-    );
-    // Determine the image id to bind at placement time
-    String id = state.assetId ?? '';
-    if (id.isEmpty) {
-      final bytes =
-          ref.read(processedSignatureImageProvider) ?? state.imageBytes;
+    // Bind the processed image at placement time (so placed preview matches adjustments).
+    // If processed bytes exist, always create a new asset for this placement.
+    String id = '';
+    final processed = ref.read(processedSignatureImageProvider);
+    if (processed != null && processed.isNotEmpty) {
+      id = ref
+          .read(signatureLibraryProvider.notifier)
+          .add(processed, name: 'image');
+    } else {
+      // Fallback to current image source
+      final bytes = state.imageBytes;
       if (bytes != null && bytes.isNotEmpty) {
         id = ref
             .read(signatureLibraryProvider.notifier)
             .add(bytes, name: 'image');
       } else {
-        id = 'default.png';
+        id = state.assetId ?? 'default.png';
       }
     }
+    // Store as UI-space rect (consistent with export and rendering paths)
     ref
         .read(pdfProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: normalized, image: id);
+        .addPlacement(page: pdf.currentPage, rect: r, image: id);
     // Newly placed index is the last one on the page
     final idx =
         (ref.read(pdfProvider).placementsByPage[pdf.currentPage]?.length ?? 1) -
@@ -406,6 +406,46 @@ class SignatureController extends StateNotifier<SignatureState> {
       ref.read(pdfProvider.notifier).selectPlacement(idx);
     }
     // Freeze editing: keep rect for preview but disable interaction
+    state = state.copyWith(editingEnabled: false);
+    return r;
+  }
+
+  // Test/helper variant: confirm using a ProviderContainer instead of WidgetRef.
+  // Useful in widget tests where obtaining a WidgetRef is not straightforward.
+  Rect? confirmCurrentSignatureWithContainer(ProviderContainer container) {
+    final r = state.rect;
+    if (r == null) return null;
+    final pdf = container.read(pdfProvider);
+    if (!pdf.loaded) return null;
+    String id = '';
+    final processed = container.read(processedSignatureImageProvider);
+    if (processed != null && processed.isNotEmpty) {
+      id = container
+          .read(signatureLibraryProvider.notifier)
+          .add(processed, name: 'image');
+    } else {
+      final bytes = state.imageBytes;
+      if (bytes != null && bytes.isNotEmpty) {
+        id = container
+            .read(signatureLibraryProvider.notifier)
+            .add(bytes, name: 'image');
+      } else {
+        id = state.assetId ?? 'default.png';
+      }
+    }
+    container
+        .read(pdfProvider.notifier)
+        .addPlacement(page: pdf.currentPage, rect: r, image: id);
+    final idx =
+        (container
+                .read(pdfProvider)
+                .placementsByPage[pdf.currentPage]
+                ?.length ??
+            1) -
+        1;
+    if (idx >= 0) {
+      container.read(pdfProvider.notifier).selectPlacement(idx);
+    }
     state = state.copyWith(editingEnabled: false);
     return r;
   }

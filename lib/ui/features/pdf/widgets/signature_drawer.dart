@@ -50,7 +50,14 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                 padding: const EdgeInsets.all(12),
                 child: SignatureCard(
                   key: ValueKey('sig_card_${a.id}'),
-                  asset: a,
+                  asset:
+                      (sig.assetId == a.id)
+                          ? SignatureAsset(
+                            id: a.id,
+                            bytes: (processed ?? a.bytes),
+                            name: a.name,
+                          )
+                          : a,
                   disabled: disabled,
                   onDelete:
                       () => ref

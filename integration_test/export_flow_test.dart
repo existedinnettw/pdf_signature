@@ -117,19 +117,12 @@ void main() {
     final container = ProviderScope.containerOf(ctx);
     final sigState = container.read(signatureProvider);
     final r = sigState.rect!;
-    final Size pageSize = SignatureController.pageSize;
-    final normalized = Rect.fromLTWH(
-      (r.left / pageSize.width).clamp(0.0, 1.0),
-      (r.top / pageSize.height).clamp(0.0, 1.0),
-      (r.width / pageSize.width).clamp(0.0, 1.0),
-      (r.height / pageSize.height).clamp(0.0, 1.0),
-    );
     final lib = container.read(signatureLibraryProvider);
     final imageId = lib.isNotEmpty ? lib.first.id : 'default.png';
     final pdf = container.read(pdfProvider);
     container
         .read(pdfProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: normalized, image: imageId);
+        .addPlacement(page: pdf.currentPage, rect: r, image: imageId);
     container.read(signatureProvider.notifier).clearActiveOverlay();
     await tester.pumpAndSettle();
 

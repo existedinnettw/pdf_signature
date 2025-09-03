@@ -33,13 +33,8 @@ class PdfPageOverlays extends ConsumerWidget {
     final widgets = <Widget>[];
 
     for (int i = 0; i < placed.length; i++) {
-      final r = placed[i]; // stored as normalized 0..1 of page size
-      final uiRect = Rect.fromLTWH(
-        r.left * pageSize.width,
-        r.top * pageSize.height,
-        r.width * pageSize.width,
-        r.height * pageSize.height,
-      );
+      // Stored as UI-space rects (SignatureController.pageSize).
+      final uiRect = placed[i];
       widgets.add(
         SignatureOverlay(
           pageSize: pageSize,
