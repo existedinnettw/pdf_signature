@@ -268,7 +268,13 @@ class _SignatureImage extends ConsumerWidget {
     }
 
     if (bytes == null) {
-      return Center(child: Text(AppLocalizations.of(context).signature));
+      String label;
+      try {
+        label = AppLocalizations.of(context).signature;
+      } catch (_) {
+        label = 'Signature';
+      }
+      return Center(child: Text(label));
     }
 
     Widget im = Image.memory(bytes, fit: BoxFit.contain);

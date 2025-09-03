@@ -66,12 +66,24 @@ class PdfMockContinuousList extends ConsumerWidget {
                     Container(
                       color: Colors.grey.shade200,
                       child: Center(
-                        child: Text(
-                          AppLocalizations.of(context).pageInfo(pageNum, count),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            color: Colors.black54,
-                          ),
+                        child: Builder(
+                          builder: (ctx) {
+                            String label;
+                            try {
+                              label = AppLocalizations.of(
+                                ctx,
+                              ).pageInfo(pageNum, count);
+                            } catch (_) {
+                              label = 'Page $pageNum of $count';
+                            }
+                            return Text(
+                              label,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                color: Colors.black54,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),

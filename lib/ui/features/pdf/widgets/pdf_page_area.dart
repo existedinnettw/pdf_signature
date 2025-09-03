@@ -8,6 +8,7 @@ import '../view_model/view_model.dart';
 import '../../../../data/services/preferences_providers.dart';
 import 'signature_drag_data.dart';
 import 'pdf_mock_continuous_list.dart';
+import 'pdf_page_overlays.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
@@ -191,7 +192,14 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     });
 
     if (!pdf.loaded) {
-      return Center(child: Text(AppLocalizations.of(context).noPdfLoaded));
+      // In tests, AppLocalizations delegate may not be injected; fallback.
+      String text;
+      try {
+        text = AppLocalizations.of(context).noPdfLoaded;
+      } catch (_) {
+        text = 'No PDF loaded';
+      }
+      return Center(child: Text(text));
     }
 
     final useMock = ref.watch(useMockViewerProvider);
@@ -229,6 +237,35 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
           keyHandlerParams: PdfViewerKeyHandlerParams(autofocus: true),
           maxScale: 8,
           scrollByMouseWheel: 0.6,
+          // Render signature overlays on each page via pdfrx pageOverlaysBuilder
+          pageOverlaysBuilder: (context, pageRect, page) {
+            return [
+              Consumer(
+                builder: (context, ref, _) {
+                  final visible = ref.watch(signatureVisibilityProvider);
+                  if (!visible) return const SizedBox.shrink();
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: SizedBox(
+                      width: pageRect.width,
+                      height: pageRect.height,
+                      child: PdfPageOverlays(
+                        pageSize: widget.pageSize,
+                        pageNumber: page.pageNumber,
+                        onDragSignature:
+                            (delta) => widget.onDragSignature(delta),
+                        onResizeSignature:
+                            (delta) => widget.onResizeSignature(delta),
+                        onConfirmSignature: widget.onConfirmSignature,
+                        onClearActiveOverlay: widget.onClearActiveOverlay,
+                        onSelectPlaced: widget.onSelectPlaced,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ];
+          },
           // Add overlay scroll thumbs (vertical on right, horizontal on bottom)
           viewerOverlayBuilder:
               (context, size, handleLinkTap) => [
