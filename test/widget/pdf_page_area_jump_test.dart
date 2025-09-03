@@ -7,7 +7,6 @@ import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
 import 'package:pdf_signature/data/services/export_providers.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/data/model/model.dart';
-import 'package:pdf_signature/data/services/preferences_providers.dart';
 
 class _TestPdfController extends PdfController {
   _TestPdfController() : super() {
@@ -29,8 +28,7 @@ void main() {
         ProviderScope(
           overrides: [
             useMockViewerProvider.overrideWithValue(true),
-            // Force continuous mode without SharedPreferences
-            pageViewModeProvider.overrideWithValue('continuous'),
+            // Continuous mode is always-on; no page view override needed
             pdfProvider.overrideWith((ref) => ctrl),
           ],
           child: MaterialApp(

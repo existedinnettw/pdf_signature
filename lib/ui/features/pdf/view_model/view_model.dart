@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ class PdfController extends StateNotifier<PdfState> {
   PdfController() : super(PdfState.initial());
   static const int samplePageCount = 5;
 
+  @visibleForTesting
   void openSample() {
     state = state.copyWith(
       loaded: true,
@@ -158,22 +160,7 @@ class PdfController extends StateNotifier<PdfState> {
     removePlacement(page: state.currentPage, index: idx);
   }
 
-  // Assign a different image name to a placement on a page.
-  void assignImageToPlacement({
-    required int page,
-    required int index,
-    required String image,
-  }) {
-    if (!state.loaded) return;
-    final p = page.clamp(1, state.pageCount);
-    final imgMap = Map<int, List<String>>.from(state.placementImageByPage);
-    final list = List<String>.from(imgMap[p] ?? const []);
-    if (index >= 0 && index < list.length) {
-      list[index] = image;
-      imgMap[p] = list;
-      state = state.copyWith(placementImageByPage: imgMap);
-    }
-  }
+  // NOTE: Programmatic reassignment of images has been removed.
 
   // Convenience to get image name for a placement
   String? imageOfPlacement({required int page, required int index}) {
@@ -239,8 +226,8 @@ class SignatureController extends StateNotifier<SignatureState> {
     state = state.copyWith(
       rect: Rect.fromCenter(
         center: Offset(
-          (pageSize.width / 2) * Random().nextDouble() * 2 + 1,
-          (pageSize.height / 2) * Random().nextDouble() * 2 + 1,
+          (pageSize.width / 2) * (Random().nextDouble() * 1.5 + 1),
+          (pageSize.height / 2) * (Random().nextDouble() * 1.5 + 1),
         ),
         width: w,
         height: h,
@@ -394,28 +381,26 @@ class SignatureController extends StateNotifier<SignatureState> {
       (r.width / pageSize.width).clamp(0.0, 1.0),
       (r.height / pageSize.height).clamp(0.0, 1.0),
     );
-    ref
-        .read(pdfProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: normalized);
-    // Assign image id to this placement (last index)
-    final idx =
-        (ref.read(pdfProvider).placementsByPage[pdf.currentPage]?.length ?? 1) -
-        1;
-    String? id = state.assetId;
-    if (id == null) {
+    // Determine the image id to bind at placement time
+    String id = state.assetId ?? '';
+    if (id.isEmpty) {
       final bytes =
           ref.read(processedSignatureImageProvider) ?? state.imageBytes;
-      if (bytes != null) {
+      if (bytes != null && bytes.isNotEmpty) {
         id = ref
             .read(signatureLibraryProvider.notifier)
             .add(bytes, name: 'image');
+      } else {
+        id = 'default.png';
       }
     }
-    if (id != null && id.isNotEmpty && idx >= 0) {
-      ref
-          .read(pdfProvider.notifier)
-          .assignImageToPlacement(page: pdf.currentPage, index: idx, image: id);
-    }
+    ref
+        .read(pdfProvider.notifier)
+        .addPlacement(page: pdf.currentPage, rect: normalized, image: id);
+    // Newly placed index is the last one on the page
+    final idx =
+        (ref.read(pdfProvider).placementsByPage[pdf.currentPage]?.length ?? 1) -
+        1;
     // Auto-select the newly placed item so the red box appears
     if (idx >= 0) {
       ref.read(pdfProvider.notifier).selectPlacement(idx);

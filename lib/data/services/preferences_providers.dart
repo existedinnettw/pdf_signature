@@ -173,15 +173,7 @@ final preferencesProvider =
       return PreferencesNotifier(prefs);
     });
 
-/// Safe accessor for page view mode that falls back to 'continuous' until
-/// SharedPreferences is available (useful for lightweight widget tests).
-final pageViewModeProvider = Provider<String>((ref) {
-  final sp = ref.watch(sharedPreferencesProvider);
-  return sp.maybeWhen(
-    data: (_) => ref.watch(preferencesProvider).pageView,
-    orElse: () => 'continuous',
-  );
-});
+// pageViewModeProvider removed; the app always runs in continuous mode.
 
 /// Derive the active ThemeMode based on preference and platform brightness
 final themeModeProvider = Provider<ThemeMode>((ref) {

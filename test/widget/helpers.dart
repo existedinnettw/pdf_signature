@@ -8,7 +8,7 @@ import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
 import 'package:pdf_signature/data/services/export_providers.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/data/services/preferences_providers.dart';
+// preferences_providers.dart no longer exports pageViewModeProvider
 
 Future<void> pumpWithOpenPdf(WidgetTester tester) async {
   await tester.pumpWidget(
@@ -18,8 +18,7 @@ Future<void> pumpWithOpenPdf(WidgetTester tester) async {
           (ref) => PdfController()..openPicked(path: 'test.pdf'),
         ),
         useMockViewerProvider.overrideWith((ref) => true),
-        // Force continuous mode regardless of prefs
-        pageViewModeProvider.overrideWithValue('continuous'),
+        // Continuous mode is always-on; no page view override needed
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -59,7 +58,7 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
                 ..placeDefaultRect(),
         ),
         useMockViewerProvider.overrideWith((ref) => true),
-        pageViewModeProvider.overrideWithValue('continuous'),
+        // Continuous mode is always-on; no page view override needed
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

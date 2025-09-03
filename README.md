@@ -20,6 +20,8 @@ flutter pub run build_runner build --delete-conflicting-outputs
 flutter analyze
 # > run unit tests and widget tests
 flutter test
+# > run integration tests
+flutter test integration_test/ -d linux
 
 # dart run tool/gen_view_wireframe_md.dart
 # flutter pub run dead_code_analyzer

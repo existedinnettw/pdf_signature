@@ -5,7 +5,6 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../../../data/services/export_providers.dart';
 import '../view_model/view_model.dart';
-import '../../../../data/services/preferences_providers.dart';
 import 'signature_drag_data.dart';
 import 'pdf_mock_continuous_list.dart';
 import 'pdf_page_overlays.dart';
@@ -51,9 +50,8 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     // is instructed to align to the provider's current page once ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final mode = ref.read(pageViewModeProvider);
       final pdf = ref.read(pdfProvider);
-      if (mode == 'continuous' && pdf.pickedPdfPath != null && pdf.loaded) {
+      if (pdf.pickedPdfPath != null && pdf.loaded) {
         _scrollToPage(pdf.currentPage);
       }
     });
@@ -70,7 +68,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final pdf = ref.read(pdfProvider);
-      final isContinuous = ref.read(pageViewModeProvider) == 'continuous';
+      const isContinuous = true;
 
       // Real continuous: drive via PdfViewerController
       if (pdf.pickedPdfPath != null && isContinuous) {
@@ -158,13 +156,12 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
   @override
   Widget build(BuildContext context) {
     final pdf = ref.watch(pdfProvider);
-    final pageViewMode = ref.watch(pageViewModeProvider);
+    const pageViewMode = 'continuous';
 
     // React to provider currentPage changes (e.g., user tapped overview)
     ref.listen(pdfProvider, (prev, next) {
-      final mode = ref.read(pageViewModeProvider);
       if (_suppressProviderListen) return;
-      if (mode == 'continuous' && (prev?.currentPage != next.currentPage)) {
+      if ((prev?.currentPage != next.currentPage)) {
         final target = next.currentPage;
         // If we're already navigating to this target, ignore; otherwise allow new target.
         if (_programmaticTargetPage != null &&
@@ -177,19 +174,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
         }
       }
     });
-    // When switching to continuous, bring current page into view
-    ref.listen<String>(pageViewModeProvider, (prev, next) {
-      if (next == 'continuous') {
-        // Skip initial auto-scroll in mock mode to avoid fighting with
-        // early provider-driven jumps during tests.
-        final isMock = ref.read(useMockViewerProvider);
-        if (isMock) return;
-        final p = ref.read(pdfProvider).currentPage;
-        if (_visiblePage != p) {
-          _scrollToPage(p);
-        }
-      }
-    });
+    // No page view mode switching; always continuous.
 
     if (!pdf.loaded) {
       // In tests, AppLocalizations delegate may not be injected; fallback.

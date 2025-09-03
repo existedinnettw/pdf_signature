@@ -67,21 +67,10 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                     );
                   },
                   onTap: () {
-                    final sel = ref.read(pdfProvider).selectedPlacementIndex;
-                    final page = ref.read(pdfProvider).currentPage;
-                    if (sel != null) {
-                      ref
-                          .read(pdfProvider.notifier)
-                          .assignImageToPlacement(
-                            page: page,
-                            index: sel,
-                            image: a.id,
-                          );
-                    } else {
-                      ref
-                          .read(signatureProvider.notifier)
-                          .setImageFromLibrary(assetId: a.id);
-                    }
+                    // Never reassign placed signatures via tap; only set active overlay source
+                    ref
+                        .read(signatureProvider.notifier)
+                        .setImageFromLibrary(assetId: a.id);
                   },
                 ),
               ),
@@ -146,9 +135,12 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                     ref.read(processedSignatureImageProvider) ??
                                     ref.read(signatureProvider).imageBytes;
                                 if (b != null) {
-                                  ref
+                                  final id = ref
                                       .read(signatureLibraryProvider.notifier)
                                       .add(b, name: 'image');
+                                  ref
+                                      .read(signatureProvider.notifier)
+                                      .setImageFromLibrary(assetId: id);
                                 }
                               },
                       icon: const Icon(Icons.image_outlined),
@@ -166,9 +158,12 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                     ref.read(processedSignatureImageProvider) ??
                                     ref.read(signatureProvider).imageBytes;
                                 if (b != null) {
-                                  ref
+                                  final id = ref
                                       .read(signatureLibraryProvider.notifier)
                                       .add(b, name: 'drawing');
+                                  ref
+                                      .read(signatureProvider.notifier)
+                                      .setImageFromLibrary(assetId: id);
                                 }
                               },
                       icon: const Icon(Icons.gesture),
