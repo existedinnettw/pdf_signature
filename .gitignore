@@ -125,6 +125,7 @@ devtools_options.yaml
 test/features/*_test.dart
 **/app_localizations*.dart
 .env
+.secrets
 docs/wireframe.assets/*.excalidraw.svg
 docs/wireframe.assets/*.svg
 docs/wireframe.assets/*.png
