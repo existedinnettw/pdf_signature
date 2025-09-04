@@ -39,13 +39,31 @@ flutter build windows
 flutter pub run msix:create
 ```
 
-For web
+#### web
+
 ```bash
 flutter build web
+# flutter build web --release -O4 --wasm
 ```
 Open the `index.html` file in the `build/web` directory. Remove the `<base href="/">` to ensure proper routing on GitHub Pages.
 
+##### Docker
+
+To build and run a minimal Docker image serving static Flutter web files:
+
+```bash
+# Build the Docker image
+docker build -t pdf_signature .
+
+# Run the container (serves static files on port 8080)
+docker run --rm -p 8080:8080 pdf_signature
+```
+Access your app at [http://localhost:8080](http://localhost:8080)
+
+#### Linux
+
 For Linux
+
 ```bash
 flutter build linux
 cp -r build/linux/x64/release/bundle/ AppDir

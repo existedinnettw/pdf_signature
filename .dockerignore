@@ -1,0 +1,25 @@
+# Prevent leaking host-specific caches/paths into the image
+.dockerignore
+.git
+.gitignore
+.idea
+.vscode
+**/.DS_Store
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock # keep if you want reproducible, comment out to include
+# Flutter/Platform build outputs
+android/
+ios/
+linux/
+macos/
+windows/
+web/.dart_tool/
+# Tests and dev artifacts (optional, not needed in image build stage)
+test/
+integration_test/
+coverage/
+custom_lint.log
