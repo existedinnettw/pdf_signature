@@ -23,3 +23,24 @@ test/
 integration_test/
 coverage/
 custom_lint.log
+test_cache/
+unit_test_assets/
+
+# Docs and repo meta to avoid cache busting
+docs/
+**/*.md
+wireframe.assets/
+AGENTS.md
+README.md
+LICENSE
+
+# Packaging artifacts not needed for web image
+AppDir/
+AppRun
+pdf_signature.desktop
+tool/
+*.iml
+*.ipr
+*.iws
+.github/
+.husky/
