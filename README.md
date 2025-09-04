@@ -21,13 +21,13 @@ flutter analyze
 # > run unit tests and widget tests
 flutter test
 # > run integration tests
-flutter test integration_test/ -d linux
+flutter test integration_test/ -d <device_id>
 
 # dart run tool/gen_view_wireframe_md.dart
 # flutter pub run dead_code_analyzer
 
 # run the app
-flutter run
+flutter run -d <device_id>
 ```
 
 ### build

@@ -29,6 +29,7 @@ Set<String> _supportedTags() {
 const _kTheme = 'theme'; // 'light'|'dark'|'system'
 const _kLanguage = 'language'; // BCP-47 tag like 'en', 'zh-TW', 'es'
 const _kPageView = 'page_view'; // now only 'continuous'
+const _kExportDpi = 'export_dpi'; // double, allowed: 96,144,200,300
 
 String _normalizeLanguageTag(String tag) {
   final tags = _supportedTags();
@@ -66,20 +67,24 @@ class PreferencesState {
   final String theme; // 'light' | 'dark' | 'system'
   final String language; // 'en' | 'zh-TW' | 'es'
   final String pageView; // only 'continuous'
+  final double exportDpi; // 96.0 | 144.0 | 200.0 | 300.0
   const PreferencesState({
     required this.theme,
     required this.language,
     required this.pageView,
+    required this.exportDpi,
   });
 
   PreferencesState copyWith({
     String? theme,
     String? language,
     String? pageView,
+    double? exportDpi,
   }) => PreferencesState(
     theme: theme ?? this.theme,
     language: language ?? this.language,
     pageView: pageView ?? this.pageView,
+    exportDpi: exportDpi ?? this.exportDpi,
   );
 }
 
@@ -95,10 +100,18 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
                     .toLanguageTag(),
           ),
           pageView: prefs.getString(_kPageView) ?? 'continuous',
+          exportDpi: _readDpi(prefs),
         ),
       ) {
     // normalize language to supported/fallback
     _ensureValid();
+  }
+
+  static double _readDpi(SharedPreferences prefs) {
+    final d = prefs.getDouble(_kExportDpi);
+    if (d == null) return 144.0;
+    const allowed = [96.0, 144.0, 200.0, 300.0];
+    return allowed.contains(d) ? d : 144.0;
   }
 
   void _ensureValid() {
@@ -116,6 +129,12 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
     if (!pageViewValid.contains(state.pageView)) {
       state = state.copyWith(pageView: 'continuous');
       prefs.setString(_kPageView, 'continuous');
+    }
+    // Ensure DPI is one of allowed values
+    const allowed = [96.0, 144.0, 200.0, 300.0];
+    if (!allowed.contains(state.exportDpi)) {
+      state = state.copyWith(exportDpi: 144.0);
+      prefs.setDouble(_kExportDpi, 144.0);
     }
   }
 
@@ -140,10 +159,12 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
       theme: 'system',
       language: normalized,
       pageView: 'continuous',
+      exportDpi: 144.0,
     );
     await prefs.setString(_kTheme, 'system');
     await prefs.setString(_kLanguage, normalized);
     await prefs.setString(_kPageView, 'continuous');
+    await prefs.setDouble(_kExportDpi, 144.0);
   }
 
   Future<void> setPageView(String pageView) async {
@@ -151,6 +172,13 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
     if (!valid.contains(pageView)) return;
     state = state.copyWith(pageView: pageView);
     await prefs.setString(_kPageView, pageView);
+  }
+
+  Future<void> setExportDpi(double dpi) async {
+    const allowed = [96.0, 144.0, 200.0, 300.0];
+    if (!allowed.contains(dpi)) return;
+    state = state.copyWith(exportDpi: dpi);
+    await prefs.setDouble(_kExportDpi, dpi);
   }
 }
 

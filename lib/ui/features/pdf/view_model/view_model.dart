@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
+import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../../../data/model/model.dart';
 
@@ -251,7 +252,14 @@ class SignatureController extends StateNotifier<SignatureState> {
   void setInvalidSelected(BuildContext context) {
     // Fallback message without localization to keep core logic testable
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invalid or unsupported file')),
+      SnackBar(
+        content: Text(
+          Localizations.of<AppLocalizations>(
+            context,
+            AppLocalizations,
+          )!.invalidOrUnsupportedFile,
+        ),
+      ),
     );
   }
 

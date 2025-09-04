@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../../../data/services/export_providers.dart';
 import '../view_model/view_model.dart';
 
 class PdfToolbar extends ConsumerStatefulWidget {
@@ -57,7 +56,6 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
   @override
   Widget build(BuildContext context) {
     final pdf = ref.watch(pdfProvider);
-    final dpi = ref.watch(exportDpiProvider);
     final l = AppLocalizations.of(context);
     final pageInfo = l.pageInfo(pdf.currentPage, pdf.pageCount);
 
@@ -97,25 +95,32 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
               Wrap(
                 spacing: 8,
                 children: [
-                  IconButton(
-                    key: const Key('btn_prev'),
-                    onPressed:
-                        widget.disabled
-                            ? null
-                            : () => widget.onJumpToPage(pdf.currentPage - 1),
-                    icon: const Icon(Icons.chevron_left),
-                    tooltip: l.prev,
-                  ),
-                  // Current page label
-                  Text(pageInfo, key: const Key('lbl_page_info')),
-                  IconButton(
-                    key: const Key('btn_next'),
-                    onPressed:
-                        widget.disabled
-                            ? null
-                            : () => widget.onJumpToPage(pdf.currentPage + 1),
-                    icon: const Icon(Icons.chevron_right),
-                    tooltip: l.next,
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      IconButton(
+                        key: const Key('btn_prev'),
+                        onPressed:
+                            widget.disabled
+                                ? null
+                                : () =>
+                                    widget.onJumpToPage(pdf.currentPage - 1),
+                        icon: const Icon(Icons.chevron_left),
+                        tooltip: l.prev,
+                      ),
+                      // Current page label
+                      Text(pageInfo, key: const Key('lbl_page_info')),
+                      IconButton(
+                        key: const Key('btn_next'),
+                        onPressed:
+                            widget.disabled
+                                ? null
+                                : () =>
+                                    widget.onJumpToPage(pdf.currentPage + 1),
+                        icon: const Icon(Icons.chevron_right),
+                        tooltip: l.next,
+                      ),
+                    ],
                   ),
                   Wrap(
                     spacing: 6,
@@ -150,48 +155,29 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                     ],
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    key: const Key('btn_zoom_out'),
-                    tooltip: 'Zoom out',
-                    onPressed: widget.disabled ? null : widget.onZoomOut,
-                    icon: const Icon(Icons.zoom_out),
-                  ),
-                  Text(
-                    //if not null
-                    widget.zoomLevel != null ? '${widget.zoomLevel}%' : '',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  IconButton(
-                    key: const Key('btn_zoom_in'),
-                    tooltip: 'Zoom in',
-                    onPressed: widget.disabled ? null : widget.onZoomIn,
-                    icon: const Icon(Icons.zoom_in),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      IconButton(
+                        key: const Key('btn_zoom_out'),
+                        tooltip: 'Zoom out',
+                        onPressed: widget.disabled ? null : widget.onZoomOut,
+                        icon: const Icon(Icons.zoom_out),
+                      ),
+                      Text(
+                        //if not null
+                        widget.zoomLevel != null ? '${widget.zoomLevel}%' : '',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      IconButton(
+                        key: const Key('btn_zoom_in'),
+                        tooltip: 'Zoom in',
+                        onPressed: widget.disabled ? null : widget.onZoomIn,
+                        icon: const Icon(Icons.zoom_in),
+                      ),
+                    ],
                   ),
                   SizedBox(width: 6),
-                  // show zoom ratio
-                  Text(l.dpi),
-                  const SizedBox(width: 8),
-                  DropdownButton<double>(
-                    key: const Key('ddl_export_dpi'),
-                    value: dpi,
-                    items:
-                        const [96.0, 144.0, 200.0, 300.0]
-                            .map(
-                              (v) => DropdownMenuItem(
-                                value: v,
-                                child: Text(v.toStringAsFixed(0)),
-                              ),
-                            )
-                            .toList(),
-                    onChanged:
-                        widget.disabled
-                            ? null
-                            : (v) {
-                              if (v != null) {
-                                ref.read(exportDpiProvider.notifier).state = v;
-                              }
-                            },
-                  ),
                 ],
               ),
             ],

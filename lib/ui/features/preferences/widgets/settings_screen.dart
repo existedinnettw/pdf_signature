@@ -14,6 +14,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   String? _theme;
   String? _language;
   // Page view removed; continuous-only
+  double? _exportDpi;
 
   @override
   void initState() {
@@ -21,6 +22,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     final prefs = ref.read(preferencesProvider);
     _theme = prefs.theme;
     _language = prefs.language;
+    _exportDpi = prefs.exportDpi;
     // pageView no longer configurable (continuous-only)
   }
 
@@ -118,6 +120,29 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                   ),
                 ],
               ),
+              Row(
+                children: [
+                  SizedBox(width: 140, child: Text('${l.dpi}:')),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButton<double>(
+                      key: const Key('ddl_export_dpi'),
+                      isExpanded: true,
+                      value: _exportDpi,
+                      items:
+                          const [96.0, 144.0, 200.0, 300.0]
+                              .map(
+                                (v) => DropdownMenuItem<double>(
+                                  value: v,
+                                  child: Text(v.toStringAsFixed(0)),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (v) => setState(() => _exportDpi = v),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               Text(l.display, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
@@ -149,7 +174,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                   ),
                 ],
               ),
-              // Page view setting removed (continuous-only)
+
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -164,6 +189,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                       final n = ref.read(preferencesProvider.notifier);
                       if (_theme != null) await n.setTheme(_theme!);
                       if (_language != null) await n.setLanguage(_language!);
+                      if (_exportDpi != null) await n.setExportDpi(_exportDpi!);
                       // pageView not configurable anymore
                       if (mounted) Navigator.of(context).pop(true);
                     },

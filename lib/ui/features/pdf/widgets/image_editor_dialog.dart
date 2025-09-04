@@ -10,6 +10,8 @@ class ImageEditorDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations)!;
+
     final l = AppLocalizations.of(context);
     final sig = ref.watch(signatureProvider);
     return Dialog(
@@ -57,7 +59,7 @@ class ImageEditorDialog extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text('Rotate'),
+                    Text(l10n.rotate),
                     Expanded(
                       child: Slider(
                         key: const Key('sld_rotation'),

@@ -68,8 +68,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   Future<Uint8List?> _loadSignatureFromFile() async {
-    final typeGroup = const fs.XTypeGroup(
-      label: 'Image',
+    final typeGroup = fs.XTypeGroup(
+      label:
+          Localizations.of<AppLocalizations>(context, AppLocalizations)?.image,
       extensions: ['png', 'jpg', 'jpeg', 'webp'],
     );
     final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);

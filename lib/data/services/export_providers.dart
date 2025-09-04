@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart' as pp;
 import 'package:file_selector/file_selector.dart' as fs;
 import 'package:pdf_signature/data/services/export_service.dart';
+import 'package:pdf_signature/data/services/preferences_providers.dart';
 
 // Feature-scoped DI and configuration providers
 
@@ -11,8 +12,19 @@ final useMockViewerProvider = Provider<bool>((_) => false);
 // Export service injection for testability
 final exportServiceProvider = Provider<ExportService>((_) => ExportService());
 
-// Export DPI setting (points per inch mapping), default 144 DPI
-final exportDpiProvider = StateProvider<double>((_) => 144.0);
+// Export DPI setting (points per inch mapping). Reads from SharedPreferences when available,
+// otherwise falls back to 144.0 to keep tests deterministic without bootstrapping prefs.
+final exportDpiProvider = Provider<double>((ref) {
+  final sp = ref.watch(sharedPreferencesProvider);
+  return sp.maybeWhen(
+    data: (prefs) {
+      const allowed = [96.0, 144.0, 200.0, 300.0];
+      final v = prefs.getDouble('export_dpi');
+      return (v != null && allowed.contains(v)) ? v : 144.0;
+    },
+    orElse: () => 144.0,
+  );
+});
 
 // Controls whether signature overlay is visible (used to hide on non-stamped pages during export)
 final signatureVisibilityProvider = StateProvider<bool>((_) => true);

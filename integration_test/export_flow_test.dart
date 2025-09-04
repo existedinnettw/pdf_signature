@@ -45,6 +45,7 @@ void main() {
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
           home: PdfSignatureHomePage(),
         ),
       ),
@@ -96,6 +97,7 @@ void main() {
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
           home: PdfSignatureHomePage(),
         ),
       ),
