@@ -57,6 +57,8 @@ docker build -t pdf_signature .
 
 # Run the container (serves static files on port 8080)
 docker run --rm -p 8080:8080 pdf_signature
+
+# act push -P ubuntu-latest=catthehacker/ubuntu:act-latest --container-options "--privileged" --env-file .env --secret-file .secrets
 ```
 Access your app at [http://localhost:8080](http://localhost:8080)
 
