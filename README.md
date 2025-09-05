@@ -32,7 +32,8 @@ flutter run -d <device_id>
 
 ### build
 
-For Windows
+#### Windows
+
 ```bash
 flutter build windows
 # create windows installer

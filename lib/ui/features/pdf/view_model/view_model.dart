@@ -385,21 +385,31 @@ class SignatureController extends StateNotifier<SignatureState> {
     // Bind the processed image at placement time (so placed preview matches adjustments).
     // If processed bytes exist, always create a new asset for this placement.
     String id = '';
-    final processed = ref.read(processedSignatureImageProvider);
-    if (processed != null && processed.isNotEmpty) {
+    // Compose final bytes for placement: apply adjustments (processed) then rotation.
+    Uint8List? srcBytes = ref.read(processedSignatureImageProvider);
+    srcBytes ??= state.imageBytes;
+    // If still null, fall back to asset reference only.
+    if (srcBytes != null && srcBytes.isNotEmpty) {
+      final rot = state.rotation % 360;
+      Uint8List finalBytes = srcBytes;
+      if (rot != 0) {
+        try {
+          final decoded = img.decodeImage(srcBytes);
+          if (decoded != null) {
+            var out = img.copyRotate(
+              decoded,
+              angle: rot,
+              interpolation: img.Interpolation.linear,
+            );
+            finalBytes = Uint8List.fromList(img.encodePng(out, level: 6));
+          }
+        } catch (_) {}
+      }
       id = ref
           .read(signatureLibraryProvider.notifier)
-          .add(processed, name: 'image');
+          .add(finalBytes, name: 'image');
     } else {
-      // Fallback to current image source
-      final bytes = state.imageBytes;
-      if (bytes != null && bytes.isNotEmpty) {
-        id = ref
-            .read(signatureLibraryProvider.notifier)
-            .add(bytes, name: 'image');
-      } else {
-        id = state.assetId ?? 'default.png';
-      }
+      id = state.assetId ?? 'default.png';
     }
     // Store as UI-space rect (consistent with export and rendering paths)
     ref
@@ -426,20 +436,29 @@ class SignatureController extends StateNotifier<SignatureState> {
     final pdf = container.read(pdfProvider);
     if (!pdf.loaded) return null;
     String id = '';
-    final processed = container.read(processedSignatureImageProvider);
-    if (processed != null && processed.isNotEmpty) {
+    Uint8List? srcBytes = container.read(processedSignatureImageProvider);
+    srcBytes ??= state.imageBytes;
+    if (srcBytes != null && srcBytes.isNotEmpty) {
+      final rot = state.rotation % 360;
+      Uint8List finalBytes = srcBytes;
+      if (rot != 0) {
+        try {
+          final decoded = img.decodeImage(srcBytes);
+          if (decoded != null) {
+            var out = img.copyRotate(
+              decoded,
+              angle: rot,
+              interpolation: img.Interpolation.linear,
+            );
+            finalBytes = Uint8List.fromList(img.encodePng(out, level: 6));
+          }
+        } catch (_) {}
+      }
       id = container
           .read(signatureLibraryProvider.notifier)
-          .add(processed, name: 'image');
+          .add(finalBytes, name: 'image');
     } else {
-      final bytes = state.imageBytes;
-      if (bytes != null && bytes.isNotEmpty) {
-        id = container
-            .read(signatureLibraryProvider.notifier)
-            .add(bytes, name: 'image');
-      } else {
-        id = state.assetId ?? 'default.png';
-      }
+      id = state.assetId ?? 'default.png';
     }
     container
         .read(pdfProvider.notifier)
@@ -473,19 +492,33 @@ final signatureProvider =
 /// current adjustment settings (contrast/brightness) and background removal.
 /// Returns null if no image is loaded. The output is a PNG to preserve alpha.
 final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
-  final s = ref.watch(signatureProvider);
+  // Watch only the fields that affect pixel processing to avoid recompute on rotation.
+  final String? assetId = ref.watch(signatureProvider.select((s) => s.assetId));
+  final Uint8List? directBytes = ref.watch(
+    signatureProvider.select((s) => s.imageBytes),
+  );
+  final double contrast = ref.watch(
+    signatureProvider.select((s) => s.contrast),
+  );
+  final double brightness = ref.watch(
+    signatureProvider.select((s) => s.brightness),
+  );
+  final bool bgRemoval = ref.watch(
+    signatureProvider.select((s) => s.bgRemoval),
+  );
+
   // If active overlay is based on a library asset, pull its bytes
   Uint8List? bytes;
-  if (s.assetId != null) {
+  if (assetId != null) {
     final lib = ref.watch(signatureLibraryProvider);
     for (final a in lib) {
-      if (a.id == s.assetId) {
+      if (a.id == assetId) {
         bytes = a.bytes;
         break;
       }
     }
   } else {
-    bytes = s.imageBytes;
+    bytes = directBytes;
   }
   if (bytes == null || bytes.isEmpty) return null;
 
@@ -501,9 +534,7 @@ final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
   }
 
   // Parameters
-  final double contrast = s.contrast; // [0..2], 1 = neutral
-  final double brightness = s.brightness; // [-1..1], 0 = neutral
-  final double rotationDeg = s.rotation; // degrees
+  // Rotation is not applied here (UI uses Transform; export applies once).
   const int thrLow = 220; // begin soft transparency from this avg luminance
   const int thrHigh = 245; // fully transparent from this avg luminance
 
@@ -529,7 +560,7 @@ final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
       // Near-white background removal (compute average luminance)
       final int avg = ((r + g + b) / 3).round();
       int remAlpha = 255; // 255 = fully opaque, 0 = transparent
-      if (s.bgRemoval) {
+      if (bgRemoval) {
         if (avg >= thrHigh) {
           remAlpha = 0;
         } else if (avg >= thrLow) {
@@ -548,15 +579,9 @@ final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
     }
   }
 
-  // Apply rotation if any (around center) using bilinear interpolation and keep size
-  if (rotationDeg % 360 != 0) {
-    // The image package rotates counter-clockwise; positive degrees rotate CCW
-    out = img.copyRotate(
-      out,
-      angle: rotationDeg,
-      interpolation: img.Interpolation.linear,
-    );
-  }
+  // NOTE: Do not rotate here to keep UI responsive while dragging the slider.
+  // Rotation is applied in the UI using Transform.rotate for preview and
+  // performed once on confirm/export to avoid per-frame recomputation.
 
   // Encode as PNG to preserve transparency
   final png = img.encodePng(out, level: 6);

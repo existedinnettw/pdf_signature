@@ -8,6 +8,7 @@ import '../../../../data/model/model.dart';
 import '../view_model/view_model.dart';
 import 'image_editor_dialog.dart';
 import '../../../common/menu_labels.dart';
+import 'rotated_signature_image.dart';
 
 /// Renders a single signature overlay (either interactive or placed) on a page.
 class SignatureOverlay extends ConsumerWidget {
@@ -90,6 +91,7 @@ class SignatureOverlay extends ConsumerWidget {
         border: Border.all(color: borderColor, width: borderWidth),
       ),
       child: Stack(
+        alignment: Alignment.center,
         children: [
           _SignatureImage(
             interactive: interactive,
@@ -115,7 +117,7 @@ class SignatureOverlay extends ConsumerWidget {
       ),
     );
 
-    if (interactive && sig.editingEnabled) {
+    if (interactive) {
       content = GestureDetector(
         key: const Key('signature_overlay'),
         behavior: HitTestBehavior.opaque,
@@ -277,10 +279,12 @@ class _SignatureImage extends ConsumerWidget {
       return Center(child: Text(label));
     }
 
-    Widget im = Image.memory(bytes, fit: BoxFit.contain);
-    if (sig.rotation % 360 != 0) {
-      im = Transform.rotate(angle: sig.rotation * math.pi / 180.0, child: im);
-    }
-    return im;
+    return RotatedSignatureImage(
+      bytes: bytes,
+      rotationDeg: interactive ? sig.rotation : 0.0,
+      enableAngleAwareScale: interactive,
+      fit: BoxFit.contain,
+      wrapInRepaintBoundary: true,
+    );
   }
 }

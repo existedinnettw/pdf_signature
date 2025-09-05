@@ -4,6 +4,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../view_model/view_model.dart';
 import 'adjustments_panel.dart';
+import 'rotated_signature_image.dart';
 
 class ImageEditorDialog extends ConsumerWidget {
   const ImageEditorDialog({super.key});
@@ -47,7 +48,13 @@ class ImageEditorDialog extends ConsumerWidget {
                           if (bytes == null) {
                             return Text(l.noSignatureLoaded);
                           }
-                          return Image.memory(bytes, fit: BoxFit.contain);
+                          return RotatedSignatureImage(
+                            bytes: bytes,
+                            rotationDeg: sig.rotation,
+                            enableAngleAwareScale: true,
+                            fit: BoxFit.contain,
+                            wrapInRepaintBoundary: true,
+                          );
                         },
                       ),
                     ),

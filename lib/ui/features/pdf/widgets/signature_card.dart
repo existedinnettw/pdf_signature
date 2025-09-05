@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../view_model/view_model.dart';
 import 'signature_drag_data.dart';
 import '../../../common/menu_labels.dart';
+import 'rotated_signature_image.dart';
 
 class SignatureCard extends StatelessWidget {
   const SignatureCard({
@@ -12,6 +13,7 @@ class SignatureCard extends StatelessWidget {
     this.onTap,
     this.onAdjust,
     this.useCurrentBytesForDrag = false,
+    this.rotationDeg = 0.0,
   });
   final SignatureAsset asset;
   final bool disabled;
@@ -19,10 +21,19 @@ class SignatureCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onAdjust;
   final bool useCurrentBytesForDrag;
+  final double rotationDeg;
 
   @override
   Widget build(BuildContext context) {
-    final img = Image.memory(asset.bytes, fit: BoxFit.contain);
+    // Fit inside 96x64 with 6px padding using the shared rotated image widget
+    const boxW = 96.0, boxH = 64.0, pad = 6.0;
+    Widget img = RotatedSignatureImage(
+      bytes: asset.bytes,
+      rotationDeg: rotationDeg,
+      enableAngleAwareScale: true,
+      fit: BoxFit.contain,
+      wrapInRepaintBoundary: true,
+    );
     Widget base = SizedBox(
       width: 96,
       height: 64,
@@ -36,7 +47,14 @@ class SignatureCard extends StatelessWidget {
                   border: Border.all(color: Theme.of(context).dividerColor),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Padding(padding: const EdgeInsets.all(6), child: img),
+                child: Padding(
+                  padding: const EdgeInsets.all(pad),
+                  child: SizedBox(
+                    width: boxW - pad * 2,
+                    height: boxH - pad * 2,
+                    child: img,
+                  ),
+                ),
               ),
             ),
             Positioned(
@@ -142,7 +160,13 @@ class SignatureCard extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(6.0),
-              child: Image.memory(asset.bytes, fit: BoxFit.contain),
+              child: RotatedSignatureImage(
+                bytes: asset.bytes,
+                rotationDeg: rotationDeg,
+                enableAngleAwareScale: true,
+                fit: BoxFit.contain,
+                wrapInRepaintBoundary: true,
+              ),
             ),
           ),
         ),

@@ -171,7 +171,14 @@ class ExportService {
                         pw.Positioned(
                           left: left,
                           top: top,
-                          child: pw.Image(imgObj, width: w, height: h),
+                          child: pw.SizedBox(
+                            width: w,
+                            height: h,
+                            child: pw.FittedBox(
+                              fit: pw.BoxFit.contain,
+                              child: pw.Image(imgObj),
+                            ),
+                          ),
                         ),
                       );
                     }
@@ -187,7 +194,14 @@ class ExportService {
                   pw.Positioned(
                     left: left,
                     top: top,
-                    child: pw.Image(sigImgObj, width: w, height: h),
+                    child: pw.SizedBox(
+                      width: w,
+                      height: h,
+                      child: pw.FittedBox(
+                        fit: pw.BoxFit.contain,
+                        child: pw.Image(sigImgObj),
+                      ),
+                    ),
                   ),
                 );
               }
@@ -294,7 +308,14 @@ class ExportService {
                       pw.Positioned(
                         left: left,
                         top: top,
-                        child: pw.Image(imgObj, width: w, height: h),
+                        child: pw.SizedBox(
+                          width: w,
+                          height: h,
+                          child: pw.FittedBox(
+                            fit: pw.BoxFit.contain,
+                            child: pw.Image(imgObj),
+                          ),
+                        ),
                       ),
                     );
                   }
@@ -310,7 +331,14 @@ class ExportService {
                 pw.Positioned(
                   left: left,
                   top: top,
-                  child: pw.Image(sigImgObj, width: w, height: h),
+                  child: pw.SizedBox(
+                    width: w,
+                    height: h,
+                    child: pw.FittedBox(
+                      fit: pw.BoxFit.contain,
+                      child: pw.Image(sigImgObj),
+                    ),
+                  ),
                 ),
               );
             }

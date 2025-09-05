@@ -58,6 +58,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                             name: a.name,
                           )
                           : a,
+                  rotationDeg: (sig.assetId == a.id) ? sig.rotation : 0.0,
                   disabled: disabled,
                   onDelete:
                       () => ref
@@ -95,6 +96,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                       ? Text(l.noSignatureLoaded)
                       : SignatureCard(
                         asset: SignatureAsset(id: '', bytes: bytes, name: ''),
+                        rotationDeg: sig.rotation,
                         disabled: disabled,
                         useCurrentBytesForDrag: true,
                         onDelete: () {

@@ -9,6 +9,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 
 import '../../../../data/services/export_providers.dart';
+import 'package:image/image.dart' as img;
 import '../view_model/view_model.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
@@ -137,16 +138,39 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       final useMock = ref.read(useMockViewerProvider);
       bool ok = false;
       String? savedPath;
+      // Helper to apply rotation to bytes for export (single-signature path only)
+      Uint8List? _rotatedForExport(Uint8List? src, double deg) {
+        if (src == null || src.isEmpty) return src;
+        final r = deg % 360;
+        if (r == 0) return src;
+        try {
+          final decoded = img.decodeImage(src);
+          if (decoded == null) return src;
+          final out = img.copyRotate(
+            decoded,
+            angle: r,
+            interpolation: img.Interpolation.linear,
+          );
+          return Uint8List.fromList(img.encodePng(out, level: 6));
+        } catch (_) {
+          return src;
+        }
+      }
+
       if (kIsWeb) {
         Uint8List? src = pdf.pickedPdfBytes;
         if (src != null) {
           final processed = ref.read(processedSignatureImageProvider);
+          final rotated = _rotatedForExport(
+            processed ?? sig.imageBytes,
+            sig.rotation,
+          );
           final bytes = await exporter.exportSignedPdfFromBytes(
             srcBytes: src,
             signedPage: pdf.signedPage,
             signatureRectUi: sig.rect,
             uiPageSize: SignatureController.pageSize,
-            signatureImageBytes: processed ?? sig.imageBytes,
+            signatureImageBytes: rotated,
             placementsByPage: pdf.placementsByPage,
             placementImageByPage: pdf.placementImageByPage,
             libraryBytes: {
@@ -174,12 +198,16 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         savedPath = fullPath;
         if (pdf.pickedPdfBytes != null) {
           final processed = ref.read(processedSignatureImageProvider);
+          final rotated = _rotatedForExport(
+            processed ?? sig.imageBytes,
+            sig.rotation,
+          );
           final out = await exporter.exportSignedPdfFromBytes(
             srcBytes: pdf.pickedPdfBytes!,
             signedPage: pdf.signedPage,
             signatureRectUi: sig.rect,
             uiPageSize: SignatureController.pageSize,
-            signatureImageBytes: processed ?? sig.imageBytes,
+            signatureImageBytes: rotated,
             placementsByPage: pdf.placementsByPage,
             placementImageByPage: pdf.placementImageByPage,
             libraryBytes: {
@@ -200,13 +228,17 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             ok = true;
           } else {
             final processed = ref.read(processedSignatureImageProvider);
+            final rotated = _rotatedForExport(
+              processed ?? sig.imageBytes,
+              sig.rotation,
+            );
             ok = await exporter.exportSignedPdfFromFile(
               inputPath: pdf.pickedPdfPath!,
               outputPath: fullPath,
               signedPage: pdf.signedPage,
               signatureRectUi: sig.rect,
               uiPageSize: SignatureController.pageSize,
-              signatureImageBytes: processed ?? sig.imageBytes,
+              signatureImageBytes: rotated,
               placementsByPage: pdf.placementsByPage,
               placementImageByPage: pdf.placementImageByPage,
               libraryBytes: {
