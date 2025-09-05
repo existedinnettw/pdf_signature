@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../view_model/view_model.dart';
+import '../view_model/signature_library.dart';
 import 'signature_drag_data.dart';
 import '../../../common/menu_labels.dart';
 import 'rotated_signature_image.dart';

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/view_model.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
 import 'package:pdf_signature/data/services/export_providers.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/data/model/model.dart';

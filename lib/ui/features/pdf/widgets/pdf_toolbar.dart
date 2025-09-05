@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../view_model/view_model.dart';
+import '../view_model/pdf_controller.dart';
 
 class PdfToolbar extends ConsumerStatefulWidget {
   const PdfToolbar({
