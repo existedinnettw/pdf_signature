@@ -54,5 +54,5 @@ Future<void> theUserPlacesASignatureFromPictureOnPage(
               ((TestWorld.placeFromPictureCallCount <= 1) ? 1 : 3);
   container
       .read(pdfProvider.notifier)
-      .addPlacement(page: page, rect: r, image: name);
+      .addPlacement(page: page, rect: r, imageId: name);
 }

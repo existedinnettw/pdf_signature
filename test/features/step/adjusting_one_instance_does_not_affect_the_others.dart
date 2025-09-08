@@ -10,9 +10,11 @@ Future<void> adjustingOneInstanceDoesNotAffectTheOthers(
   final container = TestWorld.container ?? ProviderContainer();
   final before = container.read(pdfProvider.notifier).placementsOn(2);
   expect(before.length, greaterThanOrEqualTo(2));
-  final modified = before[0].translate(5, 0).inflate(3);
+  final modified = before[0].rect.translate(5, 0).inflate(3);
   container.read(pdfProvider.notifier).removePlacement(page: 2, index: 0);
-  container.read(pdfProvider.notifier).addPlacement(page: 2, rect: modified);
+  container
+      .read(pdfProvider.notifier)
+      .addPlacement(page: 2, rect: modified, imageId: before[0].imageId);
   final after = container.read(pdfProvider.notifier).placementsOn(2);
-  expect(after.any((r) => r == before[1]), isTrue);
+  expect(after.any((p) => p.rect == before[1].rect), isTrue);
 }

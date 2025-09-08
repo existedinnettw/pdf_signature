@@ -11,11 +11,18 @@ Future<void> draggingOrResizingOneDoesNotChangeTheOther(
   final container = TestWorld.container ?? ProviderContainer();
   final list = container.read(pdfProvider.notifier).placementsOn(1);
   expect(list.length, greaterThanOrEqualTo(2));
-  final before = List<Rect>.from(list.take(2));
+  final before = List<Rect>.from(list.take(2).map((p) => p.rect));
   // Simulate changing the first only
   final changed = before[0].inflate(5);
   container.read(pdfProvider.notifier).removePlacement(page: 1, index: 0);
-  container.read(pdfProvider.notifier).addPlacement(page: 1, rect: changed);
+  container
+      .read(pdfProvider.notifier)
+      .addPlacement(
+        page: 1,
+        rect: changed,
+        imageId: list[1].imageId,
+        rotationDeg: list[1].rotationDeg,
+      );
   final after = container.read(pdfProvider.notifier).placementsOn(1);
-  expect(after.any((r) => r == before[1]), isTrue);
+  expect(after.any((p) => p.rect == before[1]), isTrue);
 }

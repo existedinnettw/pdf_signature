@@ -253,11 +253,12 @@ class _SignatureImage extends ConsumerWidget {
       final processed = ref.watch(processedSignatureImageProvider);
       bytes = processed ?? sig.imageBytes;
     } else if (placedIndex != null) {
-      // Use the image assigned to this placement
-      final imgId = ref
-          .read(pdfProvider)
-          .placementImageByPage[pageNumber]
-          ?.elementAt(placedIndex!);
+      final placementList = ref.read(pdfProvider).placementsByPage[pageNumber];
+      final placement =
+          (placementList != null && placedIndex! < placementList.length)
+              ? placementList[placedIndex!]
+              : null;
+      final imgId = placement?.imageId;
       if (imgId != null) {
         final lib = ref.watch(signatureLibraryProvider);
         for (final a in lib) {
@@ -267,7 +268,6 @@ class _SignatureImage extends ConsumerWidget {
           }
         }
       }
-      // Fallback to current processed
       bytes ??= ref.read(processedSignatureImageProvider) ?? sig.imageBytes;
     }
 
@@ -281,9 +281,19 @@ class _SignatureImage extends ConsumerWidget {
       return Center(child: Text(label));
     }
 
+    // Use live rotation for interactive overlay; stored rotation for placed
+    double rotationDeg = 0.0;
+    if (interactive) {
+      rotationDeg = sig.rotation;
+    } else if (placedIndex != null) {
+      final placementList = ref.read(pdfProvider).placementsByPage[pageNumber];
+      if (placementList != null && placedIndex! < placementList.length) {
+        rotationDeg = placementList[placedIndex!].rotationDeg;
+      }
+    }
     return RotatedSignatureImage(
       bytes: bytes,
-      rotationDeg: interactive ? sig.rotation : 0.0,
+      rotationDeg: rotationDeg,
       enableAngleAwareScale: interactive,
       fit: BoxFit.contain,
       wrapInRepaintBoundary: true,

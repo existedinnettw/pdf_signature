@@ -126,7 +126,7 @@ void main() {
     final pdf = container.read(pdfProvider);
     container
         .read(pdfProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: r, image: imageId);
+        .addPlacement(page: pdf.currentPage, rect: r, imageId: imageId);
     container.read(signatureProvider.notifier).clearActiveOverlay();
     await tester.pumpAndSettle();
 

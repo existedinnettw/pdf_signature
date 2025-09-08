@@ -11,9 +11,9 @@ Future<void> eachSignatureCanBeDraggedAndResizedIndependently(
   final list = container.read(pdfProvider.notifier).placementsOn(1);
   expect(list.length, greaterThanOrEqualTo(2));
   // Independence is modeled by distinct rects; ensure not equal and both within page
-  expect(list[0], isNot(equals(list[1])));
-  for (final r in list.take(2)) {
-    expect(r.left, greaterThanOrEqualTo(0));
-    expect(r.top, greaterThanOrEqualTo(0));
+  expect(list[0].rect, isNot(equals(list[1].rect)));
+  for (final p in list.take(2)) {
+    expect(p.rect.left, greaterThanOrEqualTo(0));
+    expect(p.rect.top, greaterThanOrEqualTo(0));
   }
 }

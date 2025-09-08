@@ -1,6 +1,35 @@
 import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 
+/// Represents a single signature placement on a page combining both the
+/// geometric rectangle (UI coordinate space) and the identifier of the
+/// image/signature asset assigned to that placement.
+class SignaturePlacement {
+  final Rect rect;
+
+  /// Rotation in degrees to apply when rendering/exporting this placement.
+  final double rotationDeg;
+
+  /// Identifier of the image (e.g., filename / asset id) assigned to this placement.
+  /// Nullable to allow a placement reserved before an image is chosen.
+  final String? imageId;
+  const SignaturePlacement({
+    required this.rect,
+    this.imageId,
+    this.rotationDeg = 0.0,
+  });
+
+  SignaturePlacement copyWith({
+    Rect? rect,
+    String? imageId,
+    double? rotationDeg,
+  }) => SignaturePlacement(
+    rect: rect ?? this.rect,
+    imageId: imageId ?? this.imageId,
+    rotationDeg: rotationDeg ?? this.rotationDeg,
+  );
+}
+
 class PdfState {
   final bool loaded;
   final int pageCount;
@@ -8,10 +37,8 @@ class PdfState {
   final String? pickedPdfPath;
   final Uint8List? pickedPdfBytes;
   final int? signedPage;
-  // Multiple signature placements per page, stored as UI-space rects (e.g., 400x560)
-  final Map<int, List<Rect>> placementsByPage;
-  // For each placement, store the assigned image identifier (e.g., filename) in the same index order.
-  final Map<int, List<String>> placementImageByPage;
+  // Multiple signature placements per page, each combines geometry and optional image id.
+  final Map<int, List<SignaturePlacement>> placementsByPage;
   // UI state: selected placement index on the current page (if any)
   final int? selectedPlacementIndex;
   const PdfState({
@@ -22,7 +49,6 @@ class PdfState {
     this.pickedPdfBytes,
     this.signedPage,
     this.placementsByPage = const {},
-    this.placementImageByPage = const {},
     this.selectedPlacementIndex,
   });
   factory PdfState.initial() => const PdfState(
@@ -32,7 +58,6 @@ class PdfState {
     pickedPdfBytes: null,
     signedPage: null,
     placementsByPage: {},
-    placementImageByPage: {},
     selectedPlacementIndex: null,
   );
   PdfState copyWith({
@@ -42,8 +67,7 @@ class PdfState {
     String? pickedPdfPath,
     Uint8List? pickedPdfBytes,
     int? signedPage,
-    Map<int, List<Rect>>? placementsByPage,
-    Map<int, List<String>>? placementImageByPage,
+    Map<int, List<SignaturePlacement>>? placementsByPage,
     int? selectedPlacementIndex,
   }) => PdfState(
     loaded: loaded ?? this.loaded,
@@ -53,7 +77,6 @@ class PdfState {
     pickedPdfBytes: pickedPdfBytes ?? this.pickedPdfBytes,
     signedPage: signedPage ?? this.signedPage,
     placementsByPage: placementsByPage ?? this.placementsByPage,
-    placementImageByPage: placementImageByPage ?? this.placementImageByPage,
     selectedPlacementIndex:
         selectedPlacementIndex ?? this.selectedPlacementIndex,
   );

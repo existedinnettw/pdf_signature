@@ -17,7 +17,6 @@ class PdfController extends StateNotifier<PdfState> {
       pickedPdfPath: null,
       signedPage: null,
       placementsByPage: {},
-      placementImageByPage: {},
       selectedPlacementIndex: null,
     );
   }
@@ -35,7 +34,6 @@ class PdfController extends StateNotifier<PdfState> {
       pickedPdfBytes: bytes,
       signedPage: null,
       placementsByPage: {},
-      placementImageByPage: {},
       selectedPlacementIndex: null,
     );
   }
@@ -67,49 +65,54 @@ class PdfController extends StateNotifier<PdfState> {
   void addPlacement({
     required int page,
     required Rect rect,
-    String image = 'default.png',
+    String? imageId = 'default.png',
+    double rotationDeg = 0.0,
   }) {
     if (!state.loaded) return;
     final p = page.clamp(1, state.pageCount);
-    final map = Map<int, List<Rect>>.from(state.placementsByPage);
-    final list = List<Rect>.from(map[p] ?? const []);
-    list.add(rect);
-    map[p] = list;
-    // Sync image mapping list
-    final imgMap = Map<int, List<String>>.from(state.placementImageByPage);
-    final imgList = List<String>.from(imgMap[p] ?? const []);
-    imgList.add(image);
-    imgMap[p] = imgList;
-    state = state.copyWith(
-      placementsByPage: map,
-      placementImageByPage: imgMap,
-      selectedPlacementIndex: null,
+    final map = Map<int, List<SignaturePlacement>>.from(state.placementsByPage);
+    final list = List<SignaturePlacement>.from(map[p] ?? const []);
+    list.add(
+      SignaturePlacement(
+        rect: rect,
+        imageId: imageId,
+        rotationDeg: rotationDeg,
+      ),
     );
+    map[p] = list;
+    state = state.copyWith(placementsByPage: map, selectedPlacementIndex: null);
+  }
+
+  void updatePlacementRotation({
+    required int page,
+    required int index,
+    required double rotationDeg,
+  }) {
+    if (!state.loaded) return;
+    final p = page.clamp(1, state.pageCount);
+    final map = Map<int, List<SignaturePlacement>>.from(state.placementsByPage);
+    final list = List<SignaturePlacement>.from(map[p] ?? const []);
+    if (index >= 0 && index < list.length) {
+      list[index] = list[index].copyWith(rotationDeg: rotationDeg);
+      map[p] = list;
+      state = state.copyWith(placementsByPage: map);
+    }
   }
 
   void removePlacement({required int page, required int index}) {
     if (!state.loaded) return;
     final p = page.clamp(1, state.pageCount);
-    final map = Map<int, List<Rect>>.from(state.placementsByPage);
-    final list = List<Rect>.from(map[p] ?? const []);
+    final map = Map<int, List<SignaturePlacement>>.from(state.placementsByPage);
+    final list = List<SignaturePlacement>.from(map[p] ?? const []);
     if (index >= 0 && index < list.length) {
       list.removeAt(index);
-      // Sync image mapping
-      final imgMap = Map<int, List<String>>.from(state.placementImageByPage);
-      final imgList = List<String>.from(imgMap[p] ?? const []);
-      if (index >= 0 && index < imgList.length) {
-        imgList.removeAt(index);
-      }
       if (list.isEmpty) {
         map.remove(p);
-        imgMap.remove(p);
       } else {
         map[p] = list;
-        imgMap[p] = imgList;
       }
       state = state.copyWith(
         placementsByPage: map,
-        placementImageByPage: imgMap,
         selectedPlacementIndex: null,
       );
     }
@@ -123,17 +126,20 @@ class PdfController extends StateNotifier<PdfState> {
   }) {
     if (!state.loaded) return;
     final p = page.clamp(1, state.pageCount);
-    final map = Map<int, List<Rect>>.from(state.placementsByPage);
-    final list = List<Rect>.from(map[p] ?? const []);
+    final map = Map<int, List<SignaturePlacement>>.from(state.placementsByPage);
+    final list = List<SignaturePlacement>.from(map[p] ?? const []);
     if (index >= 0 && index < list.length) {
-      list[index] = rect;
+      final existing = list[index];
+      list[index] = existing.copyWith(rect: rect);
       map[p] = list;
       state = state.copyWith(placementsByPage: map);
     }
   }
 
-  List<Rect> placementsOn(int page) {
-    return List<Rect>.from(state.placementsByPage[page] ?? const []);
+  List<SignaturePlacement> placementsOn(int page) {
+    return List<SignaturePlacement>.from(
+      state.placementsByPage[page] ?? const [],
+    );
   }
 
   void selectPlacement(int? index) {
@@ -161,9 +167,9 @@ class PdfController extends StateNotifier<PdfState> {
 
   // Convenience to get image name for a placement
   String? imageOfPlacement({required int page, required int index}) {
-    final list = state.placementImageByPage[page] ?? const [];
+    final list = state.placementsByPage[page] ?? const [];
     if (index < 0 || index >= list.length) return null;
-    return list[index];
+    return list[index].imageId;
   }
 }
 

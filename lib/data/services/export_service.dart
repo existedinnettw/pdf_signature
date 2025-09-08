@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart' as pdf;
 import 'package:printing/printing.dart' as printing;
 import 'package:image/image.dart' as img;
+import '../model/model.dart';
 
 // NOTE:
 // - This exporter uses a raster snapshot of the UI (RepaintBoundary) and embeds it into a new PDF.
@@ -32,8 +33,7 @@ class ExportService {
     required Rect? signatureRectUi,
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
-    Map<int, List<Rect>>? placementsByPage,
-    Map<int, List<String>>? placementImageByPage,
+    Map<int, List<SignaturePlacement>>? placementsByPage,
     Map<String, Uint8List>? libraryBytes,
     double targetDpi = 144.0,
   }) async {
@@ -55,7 +55,6 @@ class ExportService {
       uiPageSize: uiPageSize,
       signatureImageBytes: signatureImageBytes,
       placementsByPage: placementsByPage,
-      placementImageByPage: placementImageByPage,
       libraryBytes: libraryBytes,
       targetDpi: targetDpi,
     );
@@ -76,8 +75,7 @@ class ExportService {
     required Rect? signatureRectUi,
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
-    Map<int, List<Rect>>? placementsByPage,
-    Map<int, List<String>>? placementImageByPage,
+    Map<int, List<SignaturePlacement>>? placementsByPage,
     Map<String, Uint8List>? libraryBytes,
     double targetDpi = 144.0,
   }) async {
@@ -104,12 +102,8 @@ class ExportService {
             (placementsByPage != null && placementsByPage.isNotEmpty);
         final pagePlacements =
             hasMulti
-                ? (placementsByPage[pageIndex] ?? const <Rect>[])
-                : const <Rect>[];
-        final pageImageIds =
-            hasMulti
-                ? (placementImageByPage?[pageIndex] ?? const <String>[])
-                : const <String>[];
+                ? (placementsByPage[pageIndex] ?? const <SignaturePlacement>[])
+                : const <SignaturePlacement>[];
         final shouldStampSingle =
             !hasMulti &&
             signedPage != null &&
@@ -147,18 +141,18 @@ class ExportService {
               // Multi-placement stamping: per-placement image from libraryBytes
               if (hasMulti && pagePlacements.isNotEmpty) {
                 for (var i = 0; i < pagePlacements.length; i++) {
-                  final r = pagePlacements[i];
+                  final placement = pagePlacements[i];
+                  final r = placement.rect;
                   final left = r.left / uiPageSize.width * widthPts;
                   final top = r.top / uiPageSize.height * heightPts;
                   final w = r.width / uiPageSize.width * widthPts;
                   final h = r.height / uiPageSize.height * heightPts;
                   Uint8List? bytes;
-                  if (i < pageImageIds.length) {
-                    final id = pageImageIds[i];
+                  final id = placement.imageId;
+                  if (id != null) {
                     bytes = libraryBytes?[id];
                   }
-                  bytes ??=
-                      signatureImageBytes; // fallback to single image if provided
+                  bytes ??= signatureImageBytes; // fallback
                   if (bytes != null && bytes.isNotEmpty) {
                     pw.MemoryImage? imgObj;
                     try {
@@ -176,7 +170,13 @@ class ExportService {
                             height: h,
                             child: pw.FittedBox(
                               fit: pw.BoxFit.contain,
-                              child: pw.Image(imgObj),
+                              child: pw.Transform.rotate(
+                                angle:
+                                    placement.rotationDeg *
+                                    3.1415926535 /
+                                    180.0,
+                                child: pw.Image(imgObj),
+                              ),
                             ),
                           ),
                         ),
@@ -222,11 +222,9 @@ class ExportService {
       final hasMulti =
           (placementsByPage != null && placementsByPage.isNotEmpty);
       final pagePlacements =
-          hasMulti ? (placementsByPage[1] ?? const <Rect>[]) : const <Rect>[];
-      final pageImageIds =
           hasMulti
-              ? (placementImageByPage?[1] ?? const <String>[])
-              : const <String>[];
+              ? (placementsByPage[1] ?? const <SignaturePlacement>[])
+              : const <SignaturePlacement>[];
       final shouldStampSingle =
           !hasMulti &&
           signedPage != null &&
@@ -270,18 +268,18 @@ class ExportService {
             // Multi-placement stamping on fallback page
             if (hasMulti && pagePlacements.isNotEmpty) {
               for (var i = 0; i < pagePlacements.length; i++) {
-                final r = pagePlacements[i];
+                final placement = pagePlacements[i];
+                final r = placement.rect;
                 final left = r.left / uiPageSize.width * widthPts;
                 final top = r.top / uiPageSize.height * heightPts;
                 final w = r.width / uiPageSize.width * widthPts;
                 final h = r.height / uiPageSize.height * heightPts;
                 Uint8List? bytes;
-                if (i < pageImageIds.length) {
-                  final id = pageImageIds[i];
+                final id = placement.imageId;
+                if (id != null) {
                   bytes = libraryBytes?[id];
                 }
-                bytes ??=
-                    signatureImageBytes; // fallback to single image if provided
+                bytes ??= signatureImageBytes; // fallback
                 if (bytes != null && bytes.isNotEmpty) {
                   pw.MemoryImage? imgObj;
                   try {
@@ -313,7 +311,11 @@ class ExportService {
                           height: h,
                           child: pw.FittedBox(
                             fit: pw.BoxFit.contain,
-                            child: pw.Image(imgObj),
+                            child: pw.Transform.rotate(
+                              angle:
+                                  placement.rotationDeg * 3.1415926535 / 180.0,
+                              child: pw.Image(imgObj),
+                            ),
                           ),
                         ),
                       ),

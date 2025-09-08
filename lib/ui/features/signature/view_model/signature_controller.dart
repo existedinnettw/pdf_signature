@@ -21,17 +21,13 @@ class SignatureController extends StateNotifier<SignatureState> {
   @visibleForTesting
   void placeDefaultRect() {
     final w = 120.0, h = 60.0;
-    state = state.copyWith(
-      rect: Rect.fromCenter(
-        center: Offset(
-          (pageSize.width / 2) * (Random().nextDouble() * 1.5 + 1),
-          (pageSize.height / 2) * (Random().nextDouble() * 1.5 + 1),
-        ),
-        width: w,
-        height: h,
-      ),
-      editingEnabled: true,
-    );
+    final rand = Random();
+    // Generate a center within 10%..90% of each axis to reduce off-screen risk
+    final cx = pageSize.width * (0.1 + rand.nextDouble() * 0.8);
+    final cy = pageSize.height * (0.1 + rand.nextDouble() * 0.8);
+    Rect r = Rect.fromCenter(center: Offset(cx, cy), width: w, height: h);
+    r = _clampRectToPage(r);
+    state = state.copyWith(rect: r, editingEnabled: true);
   }
 
   void loadSample() {
@@ -181,37 +177,20 @@ class SignatureController extends StateNotifier<SignatureState> {
     if (!pdf.loaded) return null;
     // Bind the processed image at placement time (so placed preview matches adjustments).
     // If processed bytes exist, always create a new asset for this placement.
-    String id = '';
-    // Compose final bytes for placement: apply adjustments (processed) then rotation.
-    Uint8List? srcBytes = ref.read(processedSignatureImageProvider);
-    srcBytes ??= state.imageBytes;
-    // If still null, fall back to asset reference only.
-    if (srcBytes != null && srcBytes.isNotEmpty) {
-      final rot = state.rotation % 360;
-      Uint8List finalBytes = srcBytes;
-      if (rot != 0) {
-        try {
-          final decoded = img.decodeImage(srcBytes);
-          if (decoded != null) {
-            var out = img.copyRotate(
-              decoded,
-              angle: rot,
-              interpolation: img.Interpolation.linear,
-            );
-            finalBytes = Uint8List.fromList(img.encodePng(out, level: 6));
-          }
-        } catch (_) {}
-      }
-      id = ref
-          .read(signatureLibraryProvider.notifier)
-          .add(finalBytes, name: 'image');
-    } else {
-      id = state.assetId ?? 'default.png';
-    }
+    // Prefer reusing an existing library asset id when the active overlay is
+    // based on a library item. If there is no library asset, do NOT create
+    // a new library card here — keep the placement's image id empty so the
+    // UI and exporter will fall back to using the processed/current bytes.
+    String id = state.assetId ?? '';
     // Store as UI-space rect (consistent with export and rendering paths)
     ref
         .read(pdfProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: r, image: id);
+        .addPlacement(
+          page: pdf.currentPage,
+          rect: r,
+          imageId: id,
+          rotationDeg: state.rotation,
+        );
     // Newly placed index is the last one on the page
     final idx =
         (ref.read(pdfProvider).placementsByPage[pdf.currentPage]?.length ?? 1) -
@@ -227,39 +206,23 @@ class SignatureController extends StateNotifier<SignatureState> {
 
   // Test/helper variant: confirm using a ProviderContainer instead of WidgetRef.
   // Useful in widget tests where obtaining a WidgetRef is not straightforward.
+  @visibleForTesting
   Rect? confirmCurrentSignatureWithContainer(ProviderContainer container) {
     final r = state.rect;
     if (r == null) return null;
     final pdf = container.read(pdfProvider);
     if (!pdf.loaded) return null;
-    String id = '';
-    Uint8List? srcBytes = container.read(processedSignatureImageProvider);
-    srcBytes ??= state.imageBytes;
-    if (srcBytes != null && srcBytes.isNotEmpty) {
-      final rot = state.rotation % 360;
-      Uint8List finalBytes = srcBytes;
-      if (rot != 0) {
-        try {
-          final decoded = img.decodeImage(srcBytes);
-          if (decoded != null) {
-            var out = img.copyRotate(
-              decoded,
-              angle: rot,
-              interpolation: img.Interpolation.linear,
-            );
-            finalBytes = Uint8List.fromList(img.encodePng(out, level: 6));
-          }
-        } catch (_) {}
-      }
-      id = container
-          .read(signatureLibraryProvider.notifier)
-          .add(finalBytes, name: 'image');
-    } else {
-      id = state.assetId ?? 'default.png';
-    }
+    // Reuse existing library id if present; otherwise leave empty so the
+    // placement will reference the current bytes via fallback paths.
+    String id = state.assetId ?? '';
     container
         .read(pdfProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: r, image: id);
+        .addPlacement(
+          page: pdf.currentPage,
+          rect: r,
+          imageId: id,
+          rotationDeg: state.rotation,
+        );
     final idx =
         (container
                 .read(pdfProvider)

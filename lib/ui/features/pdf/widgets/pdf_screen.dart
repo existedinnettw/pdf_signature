@@ -174,7 +174,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             uiPageSize: SignatureController.pageSize,
             signatureImageBytes: rotated,
             placementsByPage: pdf.placementsByPage,
-            placementImageByPage: pdf.placementImageByPage,
             libraryBytes: {
               for (final a in ref.read(signatureLibraryProvider)) a.id: a.bytes,
             },
@@ -211,7 +210,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             uiPageSize: SignatureController.pageSize,
             signatureImageBytes: rotated,
             placementsByPage: pdf.placementsByPage,
-            placementImageByPage: pdf.placementImageByPage,
             libraryBytes: {
               for (final a in ref.read(signatureLibraryProvider)) a.id: a.bytes,
             },
@@ -242,7 +240,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               uiPageSize: SignatureController.pageSize,
               signatureImageBytes: rotated,
               placementsByPage: pdf.placementsByPage,
-              placementImageByPage: pdf.placementImageByPage,
               libraryBytes: {
                 for (final a in ref.read(signatureLibraryProvider))
                   a.id: a.bytes,

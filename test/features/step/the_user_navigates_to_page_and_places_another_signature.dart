@@ -31,5 +31,5 @@ Future<void> theUserNavigatesToPageAndPlacesAnotherSignature(
   final Rect r = container.read(signatureProvider).rect!;
   container
       .read(pdfProvider.notifier)
-      .addPlacement(page: page.toInt(), rect: r, image: 'default.png');
+      .addPlacement(page: page.toInt(), rect: r, imageId: 'default.png');
 }

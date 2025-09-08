@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../signature/view_model/signature_controller.dart';
+import '../../../../data/model/model.dart';
 import '../view_model/pdf_controller.dart';
 import 'signature_overlay.dart';
 
@@ -30,12 +31,13 @@ class PdfPageOverlays extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pdf = ref.watch(pdfProvider);
     final sig = ref.watch(signatureProvider);
-    final placed = pdf.placementsByPage[pageNumber] ?? const <Rect>[];
+    final placed =
+        pdf.placementsByPage[pageNumber] ?? const <SignaturePlacement>[];
     final widgets = <Widget>[];
 
     for (int i = 0; i < placed.length; i++) {
       // Stored as UI-space rects (SignatureController.pageSize).
-      final uiRect = placed[i];
+      final uiRect = placed[i].rect;
       widgets.add(
         SignatureOverlay(
           pageSize: pageSize,
