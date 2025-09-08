@@ -26,14 +26,7 @@ void main() {
             child: SizedBox(
               width: 200,
               height: 150, // same aspect as image bounds (4:3)
-              child: RotatedSignatureImage(
-                bytes: bytes,
-                rotationDeg: -90,
-                enableAngleAwareScale: true,
-                intrinsicAspectRatio: 4 / 3,
-                fit: BoxFit.contain,
-                wrapInRepaintBoundary: false, // make Transform visible
-              ),
+              child: RotatedSignatureImage(bytes: bytes, rotationDeg: -90),
             ),
           ),
         ),

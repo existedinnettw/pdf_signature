@@ -56,8 +56,8 @@ Design notes:
 - Right pane: signatures drawer displaying saved signatures as cards.
   - able to drag and drop signature cards onto the PDF as placed signatures.
   - Each signature card shows a preview.
-    - long tap/right-click will show menu with options to delete, adjust graphic of image.
-      - "adjust graphic" opens a simple image editor, which can remove backgrounds, Rotate (rotation handle).
+    - long tap/right-click will show menu with options to delete, Adjust graphic of image.
+      - "Adjust graphic" opens a simple image editor, which can remove backgrounds, Rotate (rotation handle).
   - There is an empty card with "new signature" prompt and 2 buttons: "from file" and "draw".
     - "from file" opens a file picker to select an image as a signature card.
     - "draw" opens a simple drawing interface (draw canvas) to create a signature card.

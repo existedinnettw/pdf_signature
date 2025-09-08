@@ -9,7 +9,6 @@ import '../../signature/view_model/signature_controller.dart';
 import '../view_model/pdf_controller.dart';
 import '../../signature/view_model/signature_library.dart';
 import 'image_editor_dialog.dart';
-import '../../../common/menu_labels.dart';
 import '../../signature/widgets/rotated_signature_image.dart';
 
 /// Renders a single signature overlay (either interactive or placed) on a page.
@@ -82,41 +81,52 @@ class SignatureOverlay extends ConsumerWidget {
     final Color borderColor = isPlaced ? Colors.red : Colors.indigo;
     final double borderWidth = isPlaced ? (isSelected ? 3.0 : 2.0) : 2.0;
 
-    Widget content = DecoratedBox(
-      decoration: BoxDecoration(
-        color: Color.fromRGBO(
-          0,
-          0,
-          0,
-          0.05 + math.min(0.25, (sig.contrast - 1.0).abs()),
-        ),
-        border: Border.all(color: borderColor, width: borderWidth),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          _SignatureImage(
-            interactive: interactive,
-            placedIndex: placedIndex,
-            pageNumber: pageNumber,
-            sig: sig,
-          ),
-          if (interactive)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: GestureDetector(
-                key: const Key('signature_handle'),
-                behavior: HitTestBehavior.opaque,
-                onPanUpdate:
-                    (d) => onResizeSignature?.call(
-                      Offset(d.delta.dx / scaleX, d.delta.dy / scaleY),
-                    ),
-                child: const Icon(Icons.open_in_full, size: 20),
-              ),
+    // Instead of DecoratedBox, use a Stack to control layering
+    Widget content = Stack(
+      alignment: Alignment.center,
+      children: [
+        // Background layer (semi-transparent color)
+        Positioned.fill(
+          child: Container(
+            color: Color.fromRGBO(
+              0,
+              0,
+              0,
+              0.05 + math.min(0.25, (sig.contrast - 1.0).abs()),
             ),
-        ],
-      ),
+          ),
+        ),
+        // Signature image layer
+        _SignatureImage(
+          interactive: interactive,
+          placedIndex: placedIndex,
+          pageNumber: pageNumber,
+          sig: sig,
+        ),
+        // Border layer (on top, using Positioned.fill with a transparent background)
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: borderColor, width: borderWidth),
+            ),
+          ),
+        ),
+        // Resize handle (only for interactive mode, on top of everything)
+        if (interactive)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: GestureDetector(
+              key: const Key('signature_handle'),
+              behavior: HitTestBehavior.opaque,
+              onPanUpdate:
+                  (d) => onResizeSignature?.call(
+                    Offset(d.delta.dx / scaleX, d.delta.dy / scaleY),
+                  ),
+              child: const Icon(Icons.open_in_full, size: 20),
+            ),
+          ),
+      ],
     );
 
     if (interactive) {
@@ -128,8 +138,10 @@ class SignatureOverlay extends ConsumerWidget {
             (d) => onDragSignature?.call(
               Offset(d.delta.dx / scaleX, d.delta.dy / scaleY),
             ),
-        onSecondaryTapDown: (d) => _showActiveMenu(context, d.globalPosition),
-        onLongPressStart: (d) => _showActiveMenu(context, d.globalPosition),
+        onSecondaryTapDown:
+            (d) => _showActiveMenu(context, d.globalPosition, ref, null),
+        onLongPressStart:
+            (d) => _showActiveMenu(context, d.globalPosition, ref, null),
         child: content,
       );
     } else {
@@ -139,12 +151,12 @@ class SignatureOverlay extends ConsumerWidget {
         onTap: () => onSelectPlaced?.call(placedIndex),
         onSecondaryTapDown: (d) {
           if (placedIndex != null) {
-            _showPlacedMenu(context, ref, d.globalPosition);
+            _showActiveMenu(context, d.globalPosition, ref, placedIndex);
           }
         },
         onLongPressStart: (d) {
           if (placedIndex != null) {
-            _showPlacedMenu(context, ref, d.globalPosition);
+            _showActiveMenu(context, d.globalPosition, ref, placedIndex);
           }
         },
         child: content,
@@ -153,7 +165,12 @@ class SignatureOverlay extends ConsumerWidget {
     return content;
   }
 
-  void _showActiveMenu(BuildContext context, Offset globalPos) {
+  void _showActiveMenu(
+    BuildContext context,
+    Offset globalPos,
+    WidgetRef ref,
+    int? placedIndex,
+  ) {
     showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -163,71 +180,41 @@ class SignatureOverlay extends ConsumerWidget {
         globalPos.dy,
       ),
       items: [
-        PopupMenuItem<String>(
-          key: const Key('ctx_active_confirm'),
-          value: 'confirm',
-          child: Text(MenuLabels.confirm(context)),
-        ),
+        // if not placed, show Adjust and Confirm option
+        if (placedIndex == null) ...[
+          PopupMenuItem<String>(
+            key: const Key('ctx_active_confirm'),
+            value: 'confirm',
+            child: Text(AppLocalizations.of(context).confirm),
+          ),
+          PopupMenuItem<String>(
+            key: const Key('ctx_active_adjust'),
+            value: 'adjust',
+            child: Text(AppLocalizations.of(context).adjustGraphic),
+          ),
+        ],
         PopupMenuItem<String>(
           key: const Key('ctx_active_delete'),
           value: 'delete',
-          child: Text(MenuLabels.delete(context)),
-        ),
-        PopupMenuItem<String>(
-          key: const Key('ctx_active_adjust'),
-          value: 'adjust',
-          child: Text(MenuLabels.adjustGraphic(context)),
+          child: Text(AppLocalizations.of(context).delete),
         ),
       ],
     ).then((choice) {
       if (choice == 'confirm') {
-        onConfirmSignature?.call();
+        if (placedIndex == null) {
+          onConfirmSignature?.call();
+        }
+        // For placed, confirm does nothing
       } else if (choice == 'delete') {
-        onClearActiveOverlay?.call();
+        if (placedIndex == null) {
+          onClearActiveOverlay?.call();
+        } else {
+          ref
+              .read(pdfProvider.notifier)
+              .removePlacement(page: pageNumber, index: placedIndex);
+        }
       } else if (choice == 'adjust') {
         showDialog(context: context, builder: (_) => const ImageEditorDialog());
-      }
-    });
-  }
-
-  void _showPlacedMenu(BuildContext context, WidgetRef ref, Offset globalPos) {
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        globalPos.dx,
-        globalPos.dy,
-        globalPos.dx,
-        globalPos.dy,
-      ),
-      items: [
-        PopupMenuItem<String>(
-          key: const Key('ctx_placed_delete'),
-          value: 'delete',
-          child: Text(MenuLabels.delete(context)),
-        ),
-        PopupMenuItem<String>(
-          key: const Key('ctx_placed_adjust'),
-          value: 'adjust',
-          child: Text(MenuLabels.adjustGraphic(context)),
-        ),
-      ],
-    ).then((choice) {
-      switch (choice) {
-        case 'delete':
-          if (placedIndex != null) {
-            ref
-                .read(pdfProvider.notifier)
-                .removePlacement(page: pageNumber, index: placedIndex!);
-          }
-          break;
-        case 'adjust':
-          showDialog(
-            context: context,
-            builder: (ctx) => const ImageEditorDialog(),
-          );
-          break;
-        default:
-          break;
       }
     });
   }
@@ -291,12 +278,6 @@ class _SignatureImage extends ConsumerWidget {
         rotationDeg = placementList[placedIndex!].rotationDeg;
       }
     }
-    return RotatedSignatureImage(
-      bytes: bytes,
-      rotationDeg: rotationDeg,
-      enableAngleAwareScale: interactive,
-      fit: BoxFit.contain,
-      wrapInRepaintBoundary: true,
-    );
+    return RotatedSignatureImage(bytes: bytes, rotationDeg: rotationDeg);
   }
 }

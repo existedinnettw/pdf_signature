@@ -1,5 +1,6 @@
 {
   "@@locale": "zh_TW",
+  "adjustGraphic": "調整圖形",
   "appTitle": "PDF 簽名",
   "backgroundRemoval": "去除背景",
   "brightness": "亮度",

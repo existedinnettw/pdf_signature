@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 
 /// A lightweight widget to render signature bytes with rotation and an
 /// angle-aware scale-to-fit so the rotated image stays within its bounds.
@@ -9,30 +10,18 @@ class RotatedSignatureImage extends StatefulWidget {
     super.key,
     required this.bytes,
     this.rotationDeg = 0.0,
-    this.enableAngleAwareScale = true,
-    this.fit = BoxFit.contain,
-    this.gaplessPlayback = true,
     this.filterQuality = FilterQuality.low,
-    this.wrapInRepaintBoundary = true,
-    this.alignment = Alignment.center,
     this.semanticLabel,
-    this.intrinsicAspectRatio,
   });
 
   final Uint8List bytes;
   final double rotationDeg;
-  final bool enableAngleAwareScale;
-  final BoxFit fit;
-  final bool gaplessPlayback;
   final FilterQuality filterQuality;
-  final bool wrapInRepaintBoundary;
-  final AlignmentGeometry alignment;
+  final BoxFit fit = BoxFit.contain;
+  final bool gaplessPlayback = true;
+  final Alignment alignment = Alignment.center;
+  final bool wrapInRepaintBoundary = true;
   final String? semanticLabel;
-  // Optional: intrinsic aspect ratio (width / height). If provided, we compute
-  // an angle-aware scale for non-square images to ensure the rotated rectangle
-  // (W,H) fits back into its (W,H) bounds. If null, we attempt to derive it
-  // from the image stream; only fall back to the square heuristic if unknown.
-  final double? intrinsicAspectRatio;
 
   @override
   State<RotatedSignatureImage> createState() => _RotatedSignatureImageState();
@@ -60,20 +49,30 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
     }
   }
 
+  void _setAspectRatio(double ar) {
+    if (mounted && _derivedAspectRatio != ar) {
+      setState(() => _derivedAspectRatio = ar);
+    }
+  }
+
   void _resolveImage() {
     _unlisten();
-    // Only derive AR if not provided
-    if (widget.intrinsicAspectRatio != null) return;
+    // Decode synchronously to get aspect ratio
+    final decoded = img.decodePng(widget.bytes);
+    if (decoded != null) {
+      final w = decoded.width;
+      final h = decoded.height;
+      if (w > 0 && h > 0) {
+        _setAspectRatio(w / h);
+      }
+    }
     final stream = _provider.resolve(createLocalImageConfiguration(context));
     _stream = stream;
     _listener = ImageStreamListener((ImageInfo info, bool sync) {
       final w = info.image.width;
       final h = info.image.height;
       if (w > 0 && h > 0) {
-        final ar = w / h;
-        if (mounted && _derivedAspectRatio != ar) {
-          setState(() => _derivedAspectRatio = ar);
-        }
+        _setAspectRatio(w / h);
       }
     });
     stream.addListener(_listener!);
@@ -106,24 +105,20 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
     );
 
     if (angle != 0.0) {
-      if (widget.enableAngleAwareScale) {
-        final double c = math.cos(angle).abs();
-        final double s = math.sin(angle).abs();
-        final ar = widget.intrinsicAspectRatio ?? _derivedAspectRatio;
-        double scaleToFit;
-        if (ar != null && ar > 0) {
-          scaleToFit = math.min(ar / (ar * c + s), 1.0 / (ar * s + c));
-        } else {
-          // Fallback: square approximation
-          scaleToFit = 1.0 / (c + s).clamp(1.0, double.infinity);
-        }
-        img = Transform.scale(
-          scale: scaleToFit,
-          child: Transform.rotate(angle: angle, child: img),
-        );
+      final double c = math.cos(angle).abs();
+      final double s = math.sin(angle).abs();
+      final ar = _derivedAspectRatio;
+      double scaleToFit;
+      if (ar != null && ar > 0) {
+        scaleToFit = math.min(ar / (ar * c + s), 1.0 / (ar * s + c));
       } else {
-        img = Transform.rotate(angle: angle, child: img);
+        // Fallback: square approximation
+        scaleToFit = 1.0 / (c + s).clamp(1.0, double.infinity);
       }
+      img = Transform.scale(
+        scale: scaleToFit,
+        child: Transform.rotate(angle: angle, child: img),
+      );
     }
 
     if (!widget.wrapInRepaintBoundary) return img;

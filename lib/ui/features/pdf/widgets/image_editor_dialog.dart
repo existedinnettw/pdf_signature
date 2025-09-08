@@ -51,9 +51,6 @@ class ImageEditorDialog extends ConsumerWidget {
                           return RotatedSignatureImage(
                             bytes: bytes,
                             rotationDeg: sig.rotation,
-                            enableAngleAwareScale: true,
-                            fit: BoxFit.contain,
-                            wrapInRepaintBoundary: true,
                           );
                         },
                       ),

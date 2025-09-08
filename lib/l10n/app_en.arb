@@ -1,5 +1,7 @@
 {
   "@@locale": "en",
+  "adjustGraphic": "Adjust graphic",
+  "@adjustGraphic": {},
   "appTitle": "PDF Signature",
   "@appTitle": {},
   "backgroundRemoval": "Background removal",

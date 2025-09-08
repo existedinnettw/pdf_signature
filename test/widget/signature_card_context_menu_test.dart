@@ -46,6 +46,11 @@ void main() {
 
       // Verify the context menu shows "Adjust graphic"
       expect(find.byKey(const Key('mi_signature_adjust')), findsOneWidget);
+
+      // before confirm, adjust must be visible
+      expect(find.text('Adjust graphic'), findsOneWidget);
+
+      // after confirm, adjust must be visible
       expect(find.text('Adjust graphic'), findsOneWidget);
 
       // Do not proceed to open the dialog here; the goal is just to verify menu content.

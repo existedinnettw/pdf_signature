@@ -10,8 +10,9 @@ checkout [`docs/FRs.md`](docs/FRs.md)
 
 ```bash
 # flutter clean
-# arb_translate
 flutter pub get
+# arb_translate
+# flutter gen-l10n
 # > to generate gherkin test
 flutter pub run build_runner build --delete-conflicting-outputs
 # > to remove unused step definitions

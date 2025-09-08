@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../view_model/signature_library.dart';
 import 'signature_drag_data.dart';
-import '../../../common/menu_labels.dart';
 import 'rotated_signature_image.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
 
 class SignatureCard extends StatelessWidget {
   const SignatureCard({
@@ -30,9 +30,6 @@ class SignatureCard extends StatelessWidget {
     Widget img = RotatedSignatureImage(
       bytes: asset.bytes,
       rotationDeg: rotationDeg,
-      enableAngleAwareScale: true,
-      fit: BoxFit.contain,
-      wrapInRepaintBoundary: true,
     );
     Widget base = SizedBox(
       width: 96,
@@ -92,12 +89,12 @@ class SignatureCard extends StatelessWidget {
                     PopupMenuItem(
                       key: const Key('mi_signature_adjust'),
                       value: 'adjust',
-                      child: Text(MenuLabels.adjustGraphic(context)),
+                      child: Text(AppLocalizations.of(context).adjustGraphic),
                     ),
                     PopupMenuItem(
                       key: const Key('mi_signature_delete'),
                       value: 'delete',
-                      child: Text(MenuLabels.delete(context)),
+                      child: Text(AppLocalizations.of(context).delete),
                     ),
                   ],
                 );
@@ -123,12 +120,12 @@ class SignatureCard extends StatelessWidget {
                     PopupMenuItem(
                       key: const Key('mi_signature_adjust'),
                       value: 'adjust',
-                      child: Text(MenuLabels.adjustGraphic(context)),
+                      child: Text(AppLocalizations.of(context).adjustGraphic),
                     ),
                     PopupMenuItem(
                       key: const Key('mi_signature_delete'),
                       value: 'delete',
-                      child: Text(MenuLabels.delete(context)),
+                      child: Text(AppLocalizations.of(context).delete),
                     ),
                   ],
                 );
@@ -163,9 +160,6 @@ class SignatureCard extends StatelessWidget {
               child: RotatedSignatureImage(
                 bytes: asset.bytes,
                 rotationDeg: rotationDeg,
-                enableAngleAwareScale: true,
-                fit: BoxFit.contain,
-                wrapInRepaintBoundary: true,
               ),
             ),
           ),
