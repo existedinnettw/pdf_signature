@@ -4,9 +4,9 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../../data/services/export_providers.dart';
-import '../view_model/signature_controller.dart';
+import '../../signature/view_model/signature_controller.dart';
 import '../view_model/pdf_controller.dart';
-import 'signature_drag_data.dart';
+import '../../signature/widgets/signature_drag_data.dart';
 import 'pdf_mock_continuous_list.dart';
 import 'pdf_page_overlays.dart';
 

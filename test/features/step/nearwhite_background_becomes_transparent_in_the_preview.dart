@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
-import 'package:pdf_signature/ui/features/pdf/view_model/signature_controller.dart';
+import 'package:pdf_signature/ui/features/signature/view_model/signature_controller.dart';
 import '_world.dart';
 
 /// Usage: near-white background becomes transparent in the preview

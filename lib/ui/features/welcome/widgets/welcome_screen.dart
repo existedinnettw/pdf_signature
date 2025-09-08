@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../pdf/view_model/signature_controller.dart';
+import '../../signature/view_model/signature_controller.dart';
 import '../../pdf/view_model/pdf_controller.dart';
 // Settings dialog is provided via global AppBar in MyApp
 

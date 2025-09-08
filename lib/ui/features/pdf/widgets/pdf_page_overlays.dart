@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../view_model/signature_controller.dart';
+import '../../signature/view_model/signature_controller.dart';
 import '../view_model/pdf_controller.dart';
 import 'signature_overlay.dart';
 

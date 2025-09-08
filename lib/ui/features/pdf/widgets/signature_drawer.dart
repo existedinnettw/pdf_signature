@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../../../data/services/export_providers.dart';
-import '../view_model/signature_controller.dart';
-import '../view_model/signature_library.dart';
+import '../../signature/view_model/signature_controller.dart';
+import '../../signature/view_model/signature_library.dart';
 import 'image_editor_dialog.dart';
-import 'signature_card.dart';
+import '../../signature/widgets/signature_card.dart';
 
 /// Data for drag-and-drop is in signature_drag_data.dart
 

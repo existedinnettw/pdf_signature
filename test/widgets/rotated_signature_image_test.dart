@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
-import 'package:pdf_signature/ui/features/pdf/widgets/rotated_signature_image.dart';
+import 'package:pdf_signature/ui/features/signature/widgets/rotated_signature_image.dart';
 
 /// Generates a simple solid-color PNG with given width/height.
 Uint8List makePng({required int w, required int h}) {
