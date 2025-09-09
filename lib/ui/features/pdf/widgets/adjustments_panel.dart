@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../../../data/model/model.dart';
-import '../../signature/view_model/signature_controller.dart';
+import 'package:pdf_signature/data/repositories/signature_repository.dart';
 
 class AdjustmentsPanel extends ConsumerWidget {
   const AdjustmentsPanel({super.key, required this.sig});

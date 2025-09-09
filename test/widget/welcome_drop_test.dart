@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/ui/features/welcome/widgets/welcome_screen.dart';
-import 'package:pdf_signature/ui/features/signature/view_model/signature_controller.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/repositories/signature_repository.dart';
+import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 
 class _FakeDropReadable implements DropReadable {
   final String _name;

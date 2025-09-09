@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 import '_world.dart';
 
 /// Usage: the other signature placements remain unchanged

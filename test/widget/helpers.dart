@@ -5,8 +5,8 @@ import 'package:image/image.dart' as img;
 import 'dart:typed_data';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/ui/features/signature/view_model/signature_controller.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/repositories/signature_repository.dart';
+import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 import 'package:pdf_signature/data/services/export_providers.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 // preferences_providers.dart no longer exports pageViewModeProvider

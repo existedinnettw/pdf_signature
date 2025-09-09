@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../signature/view_model/signature_controller.dart';
+import 'package:pdf_signature/data/repositories/signature_repository.dart';
 import '../../../../data/model/model.dart';
-import '../view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 import 'signature_overlay.dart';
 
 /// Builds all overlays for a given page: placed signatures and the active one.

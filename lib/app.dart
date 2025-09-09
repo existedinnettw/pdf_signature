@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localized_locales/flutter_localized_locales.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 import 'package:pdf_signature/ui/features/welcome/widgets/welcome_screen.dart';
 import 'data/services/preferences_providers.dart';
 import 'package:pdf_signature/ui/features/preferences/widgets/settings_screen.dart';

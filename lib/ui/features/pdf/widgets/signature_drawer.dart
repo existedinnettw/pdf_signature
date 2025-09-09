@@ -5,8 +5,8 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/data/model/model.dart' as model;
 
 import '../../../../data/services/export_providers.dart';
-import '../../signature/view_model/signature_controller.dart';
-import '../../signature/view_model/signature_library.dart';
+import 'package:pdf_signature/data/repositories/signature_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_library_repository.dart';
 import 'image_editor_dialog.dart';
 import '../../signature/widgets/signature_card.dart';
 

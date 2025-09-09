@@ -7,7 +7,7 @@ import 'package:image/image.dart' as img;
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../../../data/model/model.dart';
-import '../../pdf/view_model/pdf_controller.dart';
+import 'pdf_repository.dart';
 
 class SignatureController extends StateNotifier<SignatureState> {
   SignatureController() : super(SignatureState.initial());

@@ -1,6 +1,9 @@
 # meta archietecture
 
 * [MVVM](https://docs.flutter.dev/app-architecture/guide)
+  * [Data layer](https://docs.flutter.dev/app-architecture/case-study/data-layer)
+    * View ⇆ ViewModel ⇆ Repository ⇆ Service
+      * Model is used across.
 
 ## Package structure
 
@@ -10,6 +13,9 @@ The repo structure follows official [Package structure](https://docs.flutter.dev
 * `test/features/` contains BDD unit tests for each feature. It focuses on pure logic, therefore will not access `View` but `ViewModel` and `Model`.
 * `test/widget/` contains UI widget(component) tests which focus on `View` from MVVM of each component.
 * `integration_test/` for integration tests. They should be volatile to follow UI layout changes.
+
+Some rule of thumb:
+* `<object>Provider` only placed at `/lib/data/repositories/` or `/lib/data/services/` to provide data source.
 
 ## Abstraction
 
