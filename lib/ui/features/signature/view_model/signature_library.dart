@@ -1,13 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-/// A simple library of signature images available to the user in the sidebar.
-class SignatureAsset {
-  final String id; // unique id
-  final Uint8List bytes;
-  final String? name; // optional display name (e.g., filename)
-  const SignatureAsset({required this.id, required this.bytes, this.name});
-}
+import 'package:pdf_signature/data/model/model.dart';
 
 class SignatureLibraryController extends StateNotifier<List<SignatureAsset>> {
   SignatureLibraryController() : super(const []);

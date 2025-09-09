@@ -1,32 +1,80 @@
 import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 
+/// A simple library of signature images available to the user in the sidebar.
+class SignatureAsset {
+  final String id; // unique id
+  final Uint8List bytes;
+  // List<List<Offset>>? strokes;
+  final String? name; // optional display name (e.g., filename)
+  const SignatureAsset({required this.id, required this.bytes, this.name});
+}
+
+class GraphicAdjust {
+  final double contrast;
+  final double brightness;
+  final bool bgRemoval;
+
+  const GraphicAdjust({
+    this.contrast = 1.0,
+    this.brightness = 0.0,
+    this.bgRemoval = false,
+  });
+
+  GraphicAdjust copyWith({
+    double? contrast,
+    double? brightness,
+    bool? bgRemoval,
+  }) => GraphicAdjust(
+    contrast: contrast ?? this.contrast,
+    brightness: brightness ?? this.brightness,
+    bgRemoval: bgRemoval ?? this.bgRemoval,
+  );
+}
+
+/**
+ * signature card is template of signature placement
+ */
+class SignatureCard {
+  final double rotationDeg;
+  final SignatureAsset asset;
+
+  GraphicAdjust graphicAdjust;
+
+  SignatureCard({required this.rotationDeg, required this.asset})
+    : graphicAdjust = GraphicAdjust();
+}
+
 /// Represents a single signature placement on a page combining both the
 /// geometric rectangle (UI coordinate space) and the identifier of the
 /// image/signature asset assigned to that placement.
 class SignaturePlacement {
+  // The bounding box of this placement in UI coordinate space, implies scaling and position.
   final Rect rect;
 
+  /// from `SignatureCard`
   /// Rotation in degrees to apply when rendering/exporting this placement.
   final double rotationDeg;
+  GraphicAdjust graphicAdjust;
+  final SignatureAsset asset;
 
-  /// Identifier of the image (e.g., filename / asset id) assigned to this placement.
-  /// Nullable to allow a placement reserved before an image is chosen.
-  final String? imageId;
-  const SignaturePlacement({
+  SignaturePlacement({
     required this.rect,
-    this.imageId,
+    required this.asset,
     this.rotationDeg = 0.0,
-  });
+    GraphicAdjust graphicAdjust = const GraphicAdjust(),
+  }) : graphicAdjust = graphicAdjust;
 
   SignaturePlacement copyWith({
-    Rect? rect,
-    String? imageId,
-    double? rotationDeg,
+    required Rect rect,
+    required SignatureAsset asset,
+    double rotationDeg = 0.0,
+    GraphicAdjust graphicAdjust = const GraphicAdjust(),
   }) => SignaturePlacement(
-    rect: rect ?? this.rect,
-    imageId: imageId ?? this.imageId,
-    rotationDeg: rotationDeg ?? this.rotationDeg,
+    rect: rect,
+    asset: asset,
+    rotationDeg: rotationDeg,
+    graphicAdjust: graphicAdjust,
   );
 }
 

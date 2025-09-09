@@ -11,6 +11,21 @@ The repo structure follows official [Package structure](https://docs.flutter.dev
 * `test/widget/` contains UI widget(component) tests which focus on `View` from MVVM of each component.
 * `integration_test/` for integration tests. They should be volatile to follow UI layout changes.
 
+## Abstraction
+
+### terminology
+
+* signature asset
+  * image file of a signature, stored in the device or cloud storage
+    * can drawing from canvas
+* signature card
+  * template of signature placement
+  * It will include modifications such as brightness, contrast, background removal, rotation of the signature asset.
+* signature placement
+  * placed modified signature asset from signature card on a specific position on a specific page of a specific PDF document
+* document
+  * PDF document to be signed
+
 ## key dependencies
 
 * [pdfrx](https://pub.dev/packages/pdfrx)

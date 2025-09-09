@@ -1,9 +1,9 @@
-Feature: PDF browser
+Feature: document browser
 
   Background:
-    Given a sample multi-page PDF (5 pages) is available
+    Given a sample multi-page document (5 pages) is available
 
-  Scenario: Open a PDF and navigate pages
+  Scenario: Open a document and navigate pages
     When the user opens the document
     Then the first page is displayed
     And the user can move to the next or previous page
@@ -47,6 +47,6 @@ Feature: PDF browser
     Then the last page is displayed (page {5})
     And the page label shows "Page {5} of {5}"
 
-  Scenario: Go to is disabled when no PDF is loaded
+  Scenario: Go to is disabled when no document is loaded
     Given no document is open
     Then the Go to input cannot be used

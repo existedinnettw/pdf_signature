@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
+import 'package:pdf_signature/data/model/model.dart';
 
 import '../../../../data/services/export_providers.dart';
 import '../../signature/view_model/signature_controller.dart';

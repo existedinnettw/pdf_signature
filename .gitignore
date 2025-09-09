@@ -135,3 +135,5 @@ AppDir/bundle/
 appimage-build/
 /*.AppImage
 .vscode/settings.json
+
+*.patch
