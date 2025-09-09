@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/model/model.dart';
 import '_world.dart';
 
 /// Usage: dragging or resizing one does not change the other
@@ -20,7 +21,7 @@ Future<void> draggingOrResizingOneDoesNotChangeTheOther(
       .addPlacement(
         page: 1,
         rect: changed,
-        assetId: list[1].assetId,
+        asset: list[1].asset,
         rotationDeg: list[1].rotationDeg,
       );
   final after = container.read(pdfProvider.notifier).placementsOn(1);

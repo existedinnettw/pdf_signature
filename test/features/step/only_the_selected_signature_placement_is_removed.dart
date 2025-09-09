@@ -10,5 +10,5 @@ Future<void> onlyTheSelectedSignaturePlacementIsRemoved(
   final container = TestWorld.container ?? ProviderContainer();
   final pdf = container.read(pdfProvider);
   final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
-  expect(placements.length, lessThan(3)); // Assuming started with 3, removed 1
+  expect(placements.length, 2); // Started with 3, removed 1, should have 2
 }

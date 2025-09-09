@@ -8,7 +8,6 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../../../data/model/model.dart';
 import '../../pdf/view_model/pdf_controller.dart';
-import 'signature_library.dart';
 
 class SignatureController extends StateNotifier<SignatureState> {
   SignatureController() : super(SignatureState.initial());
@@ -139,7 +138,7 @@ class SignatureController extends StateNotifier<SignatureState> {
   }
 
   void setImageBytes(Uint8List bytes) {
-    state = state.copyWith(imageBytes: bytes, assetId: null);
+    state = state.copyWith(imageBytes: bytes, asset: null);
     if (state.rect == null) {
       placeDefaultRect();
     }
@@ -148,8 +147,8 @@ class SignatureController extends StateNotifier<SignatureState> {
   }
 
   // Select image from the shared signature library
-  void setImageFromLibrary({required String assetId}) {
-    state = state.copyWith(assetId: assetId);
+  void setImageFromLibrary({required SignatureAsset asset}) {
+    state = state.copyWith(asset: asset);
     if (state.rect == null) {
       placeDefaultRect();
     }
@@ -177,18 +176,17 @@ class SignatureController extends StateNotifier<SignatureState> {
     if (!pdf.loaded) return null;
     // Bind the processed image at placement time (so placed preview matches adjustments).
     // If processed bytes exist, always create a new asset for this placement.
-    // Prefer reusing an existing library asset id when the active overlay is
+    // Prefer reusing an existing library asset when the active overlay is
     // based on a library item. If there is no library asset, do NOT create
-    // a new library card here — keep the placement's image id empty so the
+    // a new library card here — keep the placement's asset empty so the
     // UI and exporter will fall back to using the processed/current bytes.
-    String id = state.assetId ?? '';
     // Store as UI-space rect (consistent with export and rendering paths)
     ref
         .read(pdfProvider.notifier)
         .addPlacement(
           page: pdf.currentPage,
           rect: r,
-          assetId: id,
+          asset: state.asset,
           rotationDeg: state.rotation,
         );
     // Newly placed index is the last one on the page
@@ -212,15 +210,14 @@ class SignatureController extends StateNotifier<SignatureState> {
     if (r == null) return null;
     final pdf = container.read(pdfProvider);
     if (!pdf.loaded) return null;
-    // Reuse existing library id if present; otherwise leave empty so the
+    // Reuse existing library asset if present; otherwise leave empty so the
     // placement will reference the current bytes via fallback paths.
-    String id = state.assetId ?? '';
     container
         .read(pdfProvider.notifier)
         .addPlacement(
           page: pdf.currentPage,
           rect: r,
-          assetId: id,
+          asset: state.asset,
           rotationDeg: state.rotation,
         );
     final idx =
@@ -230,9 +227,11 @@ class SignatureController extends StateNotifier<SignatureState> {
                 ?.length ??
             1) -
         1;
+    // Auto-select the newly placed item so the red box appears
     if (idx >= 0) {
       container.read(pdfProvider.notifier).selectPlacement(idx);
     }
+    // Freeze editing: keep rect for preview but disable interaction
     state = state.copyWith(editingEnabled: false);
     return r;
   }
@@ -253,7 +252,9 @@ final signatureProvider =
 /// Returns null if no image is loaded. The output is a PNG to preserve alpha.
 final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
   // Watch only the fields that affect pixel processing to avoid recompute on rotation.
-  final String? assetId = ref.watch(signatureProvider.select((s) => s.assetId));
+  final SignatureAsset? asset = ref.watch(
+    signatureProvider.select((s) => s.asset),
+  );
   final Uint8List? directBytes = ref.watch(
     signatureProvider.select((s) => s.imageBytes),
   );
@@ -269,14 +270,8 @@ final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
 
   // If active overlay is based on a library asset, pull its bytes
   Uint8List? bytes;
-  if (assetId != null) {
-    final lib = ref.watch(signatureLibraryProvider);
-    for (final a in lib) {
-      if (a.id == assetId) {
-        bytes = a.bytes;
-        break;
-      }
-    }
+  if (asset != null) {
+    bytes = asset.bytes;
   } else {
     bytes = directBytes;
   }

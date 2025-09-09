@@ -53,14 +53,14 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                 child: SignatureCard(
                   key: ValueKey('sig_card_${a.id}'),
                   asset:
-                      (sig.assetId == a.id)
+                      (sig.asset?.id == a.id)
                           ? model.SignatureAsset(
                             id: a.id,
                             bytes: (processed ?? a.bytes),
                             name: a.name,
                           )
                           : a,
-                  rotationDeg: (sig.assetId == a.id) ? sig.rotation : 0.0,
+                  rotationDeg: (sig.asset?.id == a.id) ? sig.rotation : 0.0,
                   disabled: disabled,
                   onDelete:
                       () => ref
@@ -69,7 +69,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                   onAdjust: () async {
                     ref
                         .read(signatureProvider.notifier)
-                        .setImageFromLibrary(assetId: a.id);
+                        .setImageFromLibrary(asset: a);
                     if (!mounted) return;
                     await showDialog(
                       context: context,
@@ -80,7 +80,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                     // Never reassign placed signatures via tap; only set active overlay source
                     ref
                         .read(signatureProvider.notifier)
-                        .setImageFromLibrary(assetId: a.id);
+                        .setImageFromLibrary(asset: a);
                   },
                 ),
               ),
@@ -153,9 +153,14 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                   final id = ref
                                       .read(signatureLibraryProvider.notifier)
                                       .add(b, name: 'image');
-                                  ref
-                                      .read(signatureProvider.notifier)
-                                      .setImageFromLibrary(assetId: id);
+                                  final asset = ref
+                                      .read(signatureLibraryProvider.notifier)
+                                      .byId(id);
+                                  if (asset != null) {
+                                    ref
+                                        .read(signatureProvider.notifier)
+                                        .setImageFromLibrary(asset: asset);
+                                  }
                                 }
                               },
                       icon: const Icon(Icons.image_outlined),
@@ -176,9 +181,14 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                   final id = ref
                                       .read(signatureLibraryProvider.notifier)
                                       .add(b, name: 'drawing');
-                                  ref
-                                      .read(signatureProvider.notifier)
-                                      .setImageFromLibrary(assetId: id);
+                                  final asset = ref
+                                      .read(signatureLibraryProvider.notifier)
+                                      .byId(id);
+                                  if (asset != null) {
+                                    ref
+                                        .read(signatureProvider.notifier)
+                                        .setImageFromLibrary(asset: asset);
+                                  }
                                 }
                               },
                       icon: const Icon(Icons.gesture),

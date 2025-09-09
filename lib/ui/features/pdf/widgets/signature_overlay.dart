@@ -245,7 +245,7 @@ class _SignatureImage extends ConsumerWidget {
           (placementList != null && placedIndex! < placementList.length)
               ? placementList[placedIndex!]
               : null;
-      final imgId = placement?.assetId;
+      final imgId = (placement?.asset)?.id;
       if (imgId != null && imgId.isNotEmpty) {
         final lib = ref.watch(signatureLibraryProvider);
         for (final a in lib) {

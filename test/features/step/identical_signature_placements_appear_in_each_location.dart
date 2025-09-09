@@ -11,6 +11,6 @@ Future<void> identicalSignaturePlacementsAppearInEachLocation(
   final pdf = container.read(pdfProvider);
   final allPlacements =
       pdf.placementsByPage.values.expand((list) => list).toList();
-  final assetIds = allPlacements.map((p) => p.assetId).toSet();
+  final assetIds = allPlacements.map((p) => p.asset.id).toSet();
   expect(assetIds.length, 1); // All the same
 }

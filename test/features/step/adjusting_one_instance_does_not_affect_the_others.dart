@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/model/model.dart';
 import '_world.dart';
 
 /// Usage: adjusting one instance does not affect the others
@@ -14,7 +15,7 @@ Future<void> adjustingOneInstanceDoesNotAffectTheOthers(
   container.read(pdfProvider.notifier).removePlacement(page: 2, index: 0);
   container
       .read(pdfProvider.notifier)
-      .addPlacement(page: 2, rect: modified, assetId: before[0].assetId);
+      .addPlacement(page: 2, rect: modified, asset: before[0].asset);
   final after = container.read(pdfProvider.notifier).placementsOn(2);
   expect(after.any((p) => p.rect == before[1].rect), isTrue);
 }

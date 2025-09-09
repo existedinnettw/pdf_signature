@@ -1,7 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import '_world.dart';
 
 /// Usage: a signature placement appears on the page based on the signature card
 Future<void> aSignaturePlacementAppearsOnThePageBasedOnTheSignatureCard(
-    WidgetTester tester) async {
-  throw UnimplementedError();
+  WidgetTester tester,
+) async {
+  final container = TestWorld.container!;
+  final pdf = container.read(pdfProvider);
+  final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
+  expect(
+    placements.isNotEmpty,
+    true,
+    reason: 'A signature placement should appear on the page',
+  );
 }

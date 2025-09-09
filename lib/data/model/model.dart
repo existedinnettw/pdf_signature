@@ -58,8 +58,8 @@ class SignatureCard {
 }
 
 /// Represents a single signature placement on a page combining both the
-/// geometric rectangle (UI coordinate space) and the identifier of the
-/// image/signature asset assigned to that placement.
+/// geometric rectangle (UI coordinate space) and the signature asset
+/// assigned to that placement.
 class SignaturePlacement {
   // The bounding box of this placement in UI coordinate space, implies scaling and position.
   final Rect rect;
@@ -67,23 +67,23 @@ class SignaturePlacement {
   /// Rotation in degrees to apply when rendering/exporting this placement.
   final double rotationDeg;
   final GraphicAdjust graphicAdjust;
-  final String assetId; // ID of the signature asset
+  final SignatureAsset asset;
 
   const SignaturePlacement({
     required this.rect,
-    required this.assetId,
+    required this.asset,
     this.rotationDeg = 0.0,
     this.graphicAdjust = const GraphicAdjust(),
   });
 
   SignaturePlacement copyWith({
     Rect? rect,
-    String? assetId,
+    SignatureAsset? asset,
     double? rotationDeg,
     GraphicAdjust? graphicAdjust,
   }) => SignaturePlacement(
     rect: rect ?? this.rect,
-    assetId: assetId ?? this.assetId,
+    asset: asset ?? this.asset,
     rotationDeg: rotationDeg ?? this.rotationDeg,
     graphicAdjust: graphicAdjust ?? this.graphicAdjust,
   );
@@ -96,7 +96,7 @@ class PdfState {
   final String? pickedPdfPath;
   final Uint8List? pickedPdfBytes;
   final int? signedPage;
-  // Multiple signature placements per page, each combines geometry and asset id.
+  // Multiple signature placements per page, each combines geometry and asset.
   final Map<int, List<SignaturePlacement>> placementsByPage;
   // UI state: selected placement index on the current page (if any)
   final int? selectedPlacementIndex;
@@ -151,8 +151,8 @@ class SignatureState {
   final double rotation;
   final List<List<Offset>> strokes;
   final Uint8List? imageBytes;
-  // The ID of the signature asset the current overlay is based on (from library)
-  final String? assetId;
+  // The signature asset the current overlay is based on (from library)
+  final SignatureAsset? asset;
   // When true, the active signature overlay is movable/resizable and should not be exported.
   // When false, the overlay is confirmed (unmovable) and eligible for export.
   final bool editingEnabled;
@@ -165,7 +165,7 @@ class SignatureState {
     this.rotation = 0.0,
     required this.strokes,
     this.imageBytes,
-    this.assetId,
+    this.asset,
     this.editingEnabled = false,
   });
   factory SignatureState.initial() => const SignatureState(
@@ -177,7 +177,7 @@ class SignatureState {
     rotation: 0.0,
     strokes: [],
     imageBytes: null,
-    assetId: null,
+    asset: null,
     editingEnabled: false,
   );
   SignatureState copyWith({
@@ -189,7 +189,7 @@ class SignatureState {
     double? rotation,
     List<List<Offset>>? strokes,
     Uint8List? imageBytes,
-    String? assetId,
+    SignatureAsset? asset,
     bool? editingEnabled,
   }) => SignatureState(
     rect: rect ?? this.rect,
@@ -200,7 +200,7 @@ class SignatureState {
     rotation: rotation ?? this.rotation,
     strokes: strokes ?? this.strokes,
     imageBytes: imageBytes ?? this.imageBytes,
-    assetId: assetId ?? this.assetId,
+    asset: asset ?? this.asset,
     editingEnabled: editingEnabled ?? this.editingEnabled,
   );
 }

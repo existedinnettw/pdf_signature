@@ -119,7 +119,7 @@ void main() {
     final processed = container3.read(processedSignatureImageProvider);
     expect(processed, isNotNull);
     final pdf = container3.read(pdfProvider);
-    final imgId = pdf.placementsByPage[pdf.currentPage]?.first.assetId;
+    final imgId = pdf.placementsByPage[pdf.currentPage]?.first.asset?.id;
     expect(imgId, isNotNull);
     expect(imgId, isNotEmpty);
     final lib = container3.read(signatureLibraryProvider);

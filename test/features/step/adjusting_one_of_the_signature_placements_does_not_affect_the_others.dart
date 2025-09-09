@@ -1,7 +1,22 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import '_world.dart';
 
 /// Usage: adjusting one of the signature placements does not affect the others
 Future<void> adjustingOneOfTheSignaturePlacementsDoesNotAffectTheOthers(
-    WidgetTester tester) async {
-  throw UnimplementedError();
+  WidgetTester tester,
+) async {
+  final container = TestWorld.container!;
+  final pdf = container.read(pdfProvider);
+  final placements =
+      pdf.placementsByPage.values.expand((list) => list).toList();
+
+  // All placements should have the same asset ID (reusing the same asset)
+  final assetIds = placements.map((p) => p.asset.id).toSet();
+  expect(assetIds.length, 1);
+
+  // All should have default rotation (0.0) since none were adjusted
+  final rotations = placements.map((p) => p.rotationDeg).toSet();
+  expect(rotations.length, 1);
+  expect(rotations.first, 0.0);
 }

@@ -22,15 +22,18 @@ Future<void> theUserPlacesASignaturePlacementFromAssetOnPage(
     final id = container
         .read(signatureLibraryProvider.notifier)
         .add(Uint8List(0), name: assetName);
-    asset = container
-        .read(signatureLibraryProvider)
-        .firstWhere((a) => a.id == id);
+    final updatedLibrary = container.read(signatureLibraryProvider);
+    asset = updatedLibrary.firstWhere(
+      (a) => a.id == id,
+      orElse:
+          () => SignatureAsset(id: id, bytes: Uint8List(0), name: assetName),
+    );
   }
   container
       .read(pdfProvider.notifier)
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(10, 10, 50, 50),
-        assetId: asset.id,
+        asset: asset,
       );
 }

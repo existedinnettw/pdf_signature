@@ -142,7 +142,7 @@ class SignatureCard extends StatelessWidget {
       data:
           useCurrentBytesForDrag
               ? const SignatureDragData()
-              : SignatureDragData(assetId: asset.id),
+              : SignatureDragData(asset: asset),
       feedback: Opacity(
         opacity: 0.9,
         child: ConstrainedBox(

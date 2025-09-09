@@ -340,11 +340,11 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
           final cx = (local.dx / size.width) * widget.pageSize.width;
           final cy = (local.dy / size.height) * widget.pageSize.height;
           final data = details.data;
-          if (data is SignatureDragData && data.assetId != null) {
+          if (data is SignatureDragData && data.asset != null) {
             // Set current overlay to use this asset
             ref
                 .read(signatureProvider.notifier)
-                .setImageFromLibrary(assetId: data.assetId!);
+                .setImageFromLibrary(asset: data.asset!);
           }
           ref.read(signatureProvider.notifier).placeAtCenter(Offset(cx, cy));
           ref

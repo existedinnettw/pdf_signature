@@ -1,7 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/model/model.dart';
 import '_world.dart';
 
 /// Usage: the user navigates to page {5} and places another signature placement
@@ -18,6 +20,10 @@ Future<void> theUserNavigatesToPageAndPlacesAnotherSignaturePlacement(
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(40, 40, 100, 50),
-        assetId: 'another.png',
+        asset: SignatureAsset(
+          id: 'another.png',
+          bytes: Uint8List(0),
+          name: 'another.png',
+        ),
       );
 }
