@@ -122,11 +122,11 @@ void main() {
     final sigState = container.read(signatureProvider);
     final r = sigState.rect!;
     final lib = container.read(signatureLibraryProvider);
-    final imageId = lib.isNotEmpty ? lib.first.id : 'default.png';
+    final imageId = lib.isNotEmpty ? lib.first.id : '';
     final pdf = container.read(pdfProvider);
     container
         .read(pdfProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: r, imageId: imageId);
+        .addPlacement(page: pdf.currentPage, rect: r, assetId: imageId);
     container.read(signatureProvider.notifier).clearActiveOverlay();
     await tester.pumpAndSettle();
 

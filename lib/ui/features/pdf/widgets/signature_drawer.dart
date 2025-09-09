@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/data/model/model.dart' as model;
 
 import '../../../../data/services/export_providers.dart';
 import '../../signature/view_model/signature_controller.dart';
@@ -54,7 +54,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                   key: ValueKey('sig_card_${a.id}'),
                   asset:
                       (sig.assetId == a.id)
-                          ? SignatureAsset(
+                          ? model.SignatureAsset(
                             id: a.id,
                             bytes: (processed ?? a.bytes),
                             name: a.name,
@@ -97,7 +97,11 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                   bytes == null
                       ? Text(l.noSignatureLoaded)
                       : SignatureCard(
-                        asset: SignatureAsset(id: '', bytes: bytes, name: ''),
+                        asset: model.SignatureAsset(
+                          id: '',
+                          bytes: bytes,
+                          name: '',
+                        ),
                         rotationDeg: sig.rotation,
                         disabled: disabled,
                         useCurrentBytesForDrag: true,

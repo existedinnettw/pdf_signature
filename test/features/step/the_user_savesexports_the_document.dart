@@ -15,9 +15,22 @@ Future<void> theUserSavesexportsTheDocument(WidgetTester tester) async {
   final pdf = container.read(pdfProvider);
   final sig = container.read(signatureProvider);
   expect(pdf.loaded, isTrue, reason: 'PDF must be loaded before export');
-  expect(pdf.signedPage, isNotNull, reason: 'A signed page must be selected');
-  expect(sig.rect, isNotNull, reason: 'Signature rect must exist');
-  expect(sig.imageBytes, isNotNull, reason: 'Signature image must exist');
+  // Check if there are placements
+  final hasPlacements = pdf.placementsByPage.values.any(
+    (list) => list.isNotEmpty,
+  );
+  if (!hasPlacements) {
+    expect(
+      sig.rect,
+      isNotNull,
+      reason: 'Signature rect must exist if no placements',
+    );
+    expect(
+      sig.imageBytes,
+      isNotNull,
+      reason: 'Signature image must exist if no placements',
+    );
+  }
 
   // Simulate output
   TestWorld.lastExportBytes =

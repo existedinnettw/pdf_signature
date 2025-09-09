@@ -20,7 +20,7 @@ Future<void> draggingOrResizingOneDoesNotChangeTheOther(
       .addPlacement(
         page: 1,
         rect: changed,
-        imageId: list[1].imageId,
+        assetId: list[1].assetId,
         rotationDeg: list[1].rotationDeg,
       );
   final after = container.read(pdfProvider.notifier).placementsOn(1);

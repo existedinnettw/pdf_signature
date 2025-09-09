@@ -14,7 +14,7 @@ Future<void> adjustingOneInstanceDoesNotAffectTheOthers(
   container.read(pdfProvider.notifier).removePlacement(page: 2, index: 0);
   container
       .read(pdfProvider.notifier)
-      .addPlacement(page: 2, rect: modified, imageId: before[0].imageId);
+      .addPlacement(page: 2, rect: modified, assetId: before[0].assetId);
   final after = container.read(pdfProvider.notifier).placementsOn(2);
   expect(after.any((p) => p.rect == before[1].rect), isTrue);
 }

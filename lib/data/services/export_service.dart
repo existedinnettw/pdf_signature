@@ -148,8 +148,8 @@ class ExportService {
                   final w = r.width / uiPageSize.width * widthPts;
                   final h = r.height / uiPageSize.height * heightPts;
                   Uint8List? bytes;
-                  final id = placement.imageId;
-                  if (id != null) {
+                  final id = placement.assetId;
+                  if (id.isNotEmpty) {
                     bytes = libraryBytes?[id];
                   }
                   bytes ??= signatureImageBytes; // fallback
@@ -275,8 +275,8 @@ class ExportService {
                 final w = r.width / uiPageSize.width * widthPts;
                 final h = r.height / uiPageSize.height * heightPts;
                 Uint8List? bytes;
-                final id = placement.imageId;
-                if (id != null) {
+                final id = placement.assetId;
+                if (id.isNotEmpty) {
                   bytes = libraryBytes?[id];
                 }
                 bytes ??= signatureImageBytes; // fallback

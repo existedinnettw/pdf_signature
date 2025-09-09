@@ -1,0 +1,23 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import '_world.dart';
+
+/// Usage: the user navigates to page {5} and places another signature placement
+Future<void> theUserNavigatesToPageAndPlacesAnotherSignaturePlacement(
+  WidgetTester tester,
+  num param1,
+) async {
+  final container = TestWorld.container ?? ProviderContainer();
+  TestWorld.container = container;
+  final page = param1.toInt();
+  container.read(pdfProvider.notifier).jumpTo(page);
+  container
+      .read(pdfProvider.notifier)
+      .addPlacement(
+        page: page,
+        rect: Rect.fromLTWH(40, 40, 100, 50),
+        assetId: 'another.png',
+      );
+}

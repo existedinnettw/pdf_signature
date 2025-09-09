@@ -188,7 +188,7 @@ class SignatureController extends StateNotifier<SignatureState> {
         .addPlacement(
           page: pdf.currentPage,
           rect: r,
-          imageId: id,
+          assetId: id,
           rotationDeg: state.rotation,
         );
     // Newly placed index is the last one on the page
@@ -220,7 +220,7 @@ class SignatureController extends StateNotifier<SignatureState> {
         .addPlacement(
           page: pdf.currentPage,
           rect: r,
-          imageId: id,
+          assetId: id,
           rotationDeg: state.rotation,
         );
     final idx =

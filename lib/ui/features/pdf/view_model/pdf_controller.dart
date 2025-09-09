@@ -65,7 +65,7 @@ class PdfController extends StateNotifier<PdfState> {
   void addPlacement({
     required int page,
     required Rect rect,
-    String? imageId = 'default.png',
+    String? assetId,
     double rotationDeg = 0.0,
   }) {
     if (!state.loaded) return;
@@ -75,7 +75,7 @@ class PdfController extends StateNotifier<PdfState> {
     list.add(
       SignaturePlacement(
         rect: rect,
-        imageId: imageId,
+        assetId: assetId ?? '',
         rotationDeg: rotationDeg,
       ),
     );
@@ -165,11 +165,11 @@ class PdfController extends StateNotifier<PdfState> {
 
   // NOTE: Programmatic reassignment of images has been removed.
 
-  // Convenience to get image name for a placement
-  String? imageOfPlacement({required int page, required int index}) {
+  // Convenience to get asset id for a placement
+  String? assetIdOfPlacement({required int page, required int index}) {
     final list = state.placementsByPage[page] ?? const [];
     if (index < 0 || index >= list.length) return null;
-    return list[index].imageId;
+    return list[index].assetId;
   }
 }
 

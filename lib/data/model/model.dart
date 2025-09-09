@@ -38,11 +38,23 @@ class GraphicAdjust {
 class SignatureCard {
   final double rotationDeg;
   final SignatureAsset asset;
+  final GraphicAdjust graphicAdjust;
 
-  GraphicAdjust graphicAdjust;
+  const SignatureCard({
+    required this.rotationDeg,
+    required this.asset,
+    this.graphicAdjust = const GraphicAdjust(),
+  });
 
-  SignatureCard({required this.rotationDeg, required this.asset})
-    : graphicAdjust = GraphicAdjust();
+  SignatureCard copyWith({
+    double? rotationDeg,
+    SignatureAsset? asset,
+    GraphicAdjust? graphicAdjust,
+  }) => SignatureCard(
+    rotationDeg: rotationDeg ?? this.rotationDeg,
+    asset: asset ?? this.asset,
+    graphicAdjust: graphicAdjust ?? this.graphicAdjust,
+  );
 }
 
 /// Represents a single signature placement on a page combining both the
@@ -52,29 +64,28 @@ class SignaturePlacement {
   // The bounding box of this placement in UI coordinate space, implies scaling and position.
   final Rect rect;
 
-  /// from `SignatureCard`
   /// Rotation in degrees to apply when rendering/exporting this placement.
   final double rotationDeg;
-  GraphicAdjust graphicAdjust;
-  final SignatureAsset asset;
+  final GraphicAdjust graphicAdjust;
+  final String assetId; // ID of the signature asset
 
-  SignaturePlacement({
+  const SignaturePlacement({
     required this.rect,
-    required this.asset,
+    required this.assetId,
     this.rotationDeg = 0.0,
-    GraphicAdjust graphicAdjust = const GraphicAdjust(),
-  }) : graphicAdjust = graphicAdjust;
+    this.graphicAdjust = const GraphicAdjust(),
+  });
 
   SignaturePlacement copyWith({
-    required Rect rect,
-    required SignatureAsset asset,
-    double rotationDeg = 0.0,
-    GraphicAdjust graphicAdjust = const GraphicAdjust(),
+    Rect? rect,
+    String? assetId,
+    double? rotationDeg,
+    GraphicAdjust? graphicAdjust,
   }) => SignaturePlacement(
-    rect: rect,
-    asset: asset,
-    rotationDeg: rotationDeg,
-    graphicAdjust: graphicAdjust,
+    rect: rect ?? this.rect,
+    assetId: assetId ?? this.assetId,
+    rotationDeg: rotationDeg ?? this.rotationDeg,
+    graphicAdjust: graphicAdjust ?? this.graphicAdjust,
   );
 }
 
@@ -85,7 +96,7 @@ class PdfState {
   final String? pickedPdfPath;
   final Uint8List? pickedPdfBytes;
   final int? signedPage;
-  // Multiple signature placements per page, each combines geometry and optional image id.
+  // Multiple signature placements per page, each combines geometry and asset id.
   final Map<int, List<SignaturePlacement>> placementsByPage;
   // UI state: selected placement index on the current page (if any)
   final int? selectedPlacementIndex;

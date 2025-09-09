@@ -119,8 +119,9 @@ void main() {
     final processed = container3.read(processedSignatureImageProvider);
     expect(processed, isNotNull);
     final pdf = container3.read(pdfProvider);
-    final imgId = pdf.placementsByPage[pdf.currentPage]?.first.imageId;
+    final imgId = pdf.placementsByPage[pdf.currentPage]?.first.assetId;
     expect(imgId, isNotNull);
+    expect(imgId, isNotEmpty);
     final lib = container3.read(signatureLibraryProvider);
     final match = lib.firstWhere((a) => a.id == imgId);
     expect(match.bytes, equals(processed));
