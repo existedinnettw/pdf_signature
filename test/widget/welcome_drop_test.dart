@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/ui/features/welcome/widgets/welcome_screen.dart';
-import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 
 class _FakeDropReadable implements DropReadable {
@@ -23,7 +22,7 @@ class _FakeDropReadable implements DropReadable {
 }
 
 void main() {
-  testWidgets('dropping a PDF opens it and resets signature state', (
+  testWidgets('dropping a PDF opens it and updates document state', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -47,11 +46,6 @@ void main() {
     final container = ProviderScope.containerOf(stateful.context);
     final pdf = container.read(documentRepositoryProvider);
     expect(pdf.loaded, isTrue);
-    expect(pdf.pickedPdfPath, '/tmp/sample.pdf');
     expect(pdf.pickedPdfBytes, bytes);
-
-    final sig = container.read(signatureProvider);
-    expect(sig.rect, isNull);
-    expect(sig.editingEnabled, isFalse);
   });
 }

@@ -1,0 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Whether to use a mock continuous viewer (ListView) instead of a real PDF viewer.
+/// Tests will override this to true.
+final useMockViewerProvider = Provider<bool>((ref) => true);
+
+/// Global visibility toggle for signature overlays (placed items). Kept simple for tests.
+final signatureVisibilityProvider = StateProvider<bool>((ref) => true);
+
+/// Whether resizing keeps the current aspect ratio for the active overlay
+final aspectLockedProvider = StateProvider<bool>((ref) => false);

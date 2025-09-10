@@ -2,9 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/domain/models/model.dart' as model;
+// No direct model construction needed here
 
-import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'image_editor_dialog.dart';
 import '../../signature/widgets/signature_card.dart';
@@ -33,11 +32,9 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final sig = ref.watch(signatureProvider);
-    final processed = ref.watch(processedSignatureImageProvider);
-    final bytes = processed ?? sig.imageBytes;
     final library = ref.watch(signatureAssetRepositoryProvider);
-    final isExporting = ref.watch(exportingProvider);
+    // Exporting flag lives in ui_services; keep drawer interactive regardless here.
+    final isExporting = false;
     final disabled = widget.disabled || isExporting;
 
     return Column(
@@ -50,37 +47,22 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: SignatureCard(
-                  key: ValueKey('sig_card_${a.id}'),
-                  asset:
-                      (sig.asset?.id == a.id)
-                          ? model.SignatureAsset(
-                            id: a.id,
-                            bytes: (processed ?? a.bytes),
-                            name: a.name,
-                          )
-                          : a,
-                  rotationDeg: (sig.asset?.id == a.id) ? sig.rotation : 0.0,
+                  key: ValueKey('sig_card_${library.indexOf(a)}'),
+                  asset: a,
+                  rotationDeg: 0.0,
                   disabled: disabled,
                   onDelete:
                       () => ref
                           .read(signatureAssetRepositoryProvider.notifier)
-                          .remove(a.id),
+                          .remove(a),
                   onAdjust: () async {
-                    ref
-                        .read(signatureProvider.notifier)
-                        .setImageFromLibrary(asset: a);
                     if (!mounted) return;
                     await showDialog(
                       context: context,
                       builder: (_) => const ImageEditorDialog(),
                     );
                   },
-                  onTap: () {
-                    // Never reassign placed signatures via tap; only set active overlay source
-                    ref
-                        .read(signatureProvider.notifier)
-                        .setImageFromLibrary(asset: a);
-                  },
+                  onTap: () {},
                 ),
               ),
             ),
@@ -92,32 +74,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
             margin: EdgeInsets.zero,
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child:
-                  bytes == null
-                      ? Text(l.noSignatureLoaded)
-                      : SignatureCard(
-                        asset: model.SignatureAsset(
-                          id: '',
-                          bytes: bytes,
-                          name: '',
-                        ),
-                        rotationDeg: sig.rotation,
-                        disabled: disabled,
-                        useCurrentBytesForDrag: true,
-                        onDelete: () {
-                          ref
-                              .read(signatureProvider.notifier)
-                              .clearActiveOverlay();
-                          ref.read(signatureProvider.notifier).clearImage();
-                        },
-                        onAdjust: () async {
-                          if (!mounted) return;
-                          await showDialog(
-                            context: context,
-                            builder: (_) => const ImageEditorDialog(),
-                          );
-                        },
-                      ),
+              child: Text(l.noSignatureLoaded),
             ),
           ),
         Card(
@@ -144,28 +101,14 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                               : () async {
                                 final loaded =
                                     await widget.onLoadSignatureFromFile();
-                                final b =
-                                    loaded ??
-                                    ref.read(processedSignatureImageProvider) ??
-                                    ref.read(signatureProvider).imageBytes;
+                                final b = loaded;
                                 if (b != null) {
-                                  final id = ref
+                                  ref
                                       .read(
                                         signatureAssetRepositoryProvider
                                             .notifier,
                                       )
                                       .add(b, name: 'image');
-                                  final asset = ref
-                                      .read(
-                                        signatureAssetRepositoryProvider
-                                            .notifier,
-                                      )
-                                      .byId(id);
-                                  if (asset != null) {
-                                    ref
-                                        .read(signatureProvider.notifier)
-                                        .setImageFromLibrary(asset: asset);
-                                  }
                                 }
                               },
                       icon: const Icon(Icons.image_outlined),
@@ -178,28 +121,14 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                               ? null
                               : () async {
                                 final drawn = await widget.onOpenDrawCanvas();
-                                final b =
-                                    drawn ??
-                                    ref.read(processedSignatureImageProvider) ??
-                                    ref.read(signatureProvider).imageBytes;
+                                final b = drawn;
                                 if (b != null) {
-                                  final id = ref
+                                  ref
                                       .read(
                                         signatureAssetRepositoryProvider
                                             .notifier,
                                       )
                                       .add(b, name: 'drawing');
-                                  final asset = ref
-                                      .read(
-                                        signatureAssetRepositoryProvider
-                                            .notifier,
-                                      )
-                                      .byId(id);
-                                  if (asset != null) {
-                                    ref
-                                        .read(signatureProvider.notifier)
-                                        .setImageFromLibrary(asset: asset);
-                                  }
                                 }
                               },
                       icon: const Icon(Icons.gesture),

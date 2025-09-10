@@ -1,12 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'dart:typed_data';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 // preferences_providers.dart no longer exports pageViewModeProvider
@@ -16,9 +18,10 @@ Future<void> pumpWithOpenPdf(WidgetTester tester) async {
     ProviderScope(
       overrides: [
         documentRepositoryProvider.overrideWith(
-          (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
+          (ref) => DocumentStateNotifier()..openSample(),
         ),
-        useMockViewerProvider.overrideWith((ref) => true),
+        useMockViewerProvider.overrideWithValue(true),
+        exportingProvider.overrideWith((ref) => false),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -44,20 +47,22 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
     y2: 15,
     color: img.ColorUint8.rgb(0, 0, 0),
   );
-  final sigBytes = Uint8List.fromList(img.encodePng(canvas));
+  final bytes = img.encodePng(canvas);
+  // keep drawing for determinism even if bytes unused in simplified UI
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         documentRepositoryProvider.overrideWith(
-          (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
+          (ref) => DocumentStateNotifier()..openSample(),
         ),
-        signatureProvider.overrideWith(
-          (ref) =>
-              SignatureCardStateNotifier()
-                ..setImageBytes(sigBytes)
-                ..placeDefaultRect(),
-        ),
-        useMockViewerProvider.overrideWith((ref) => true),
+        signatureAssetRepositoryProvider.overrideWith((ref) {
+          final repo = SignatureAssetRepository();
+          repo.add(Uint8List.fromList(bytes), name: 'test');
+          return repo;
+        }),
+        // In new model, interactive overlay not implemented; keep library empty
+        useMockViewerProvider.overrideWithValue(true),
+        exportingProvider.overrideWith((ref) => false),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

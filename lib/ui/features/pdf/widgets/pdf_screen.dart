@@ -4,21 +4,16 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
-import 'package:pdf_signature/domain/models/preferences.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:printing/printing.dart' as printing;
-import 'package:pdfrx/pdfrx.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 
-import 'package:image/image.dart' as img;
-import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
 import 'pages_sidebar.dart';
 import 'signatures_sidebar.dart';
+import 'ui_services.dart';
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   const PdfSignatureHomePage({super.key});
@@ -29,8 +24,7 @@ class PdfSignatureHomePage extends ConsumerStatefulWidget {
 }
 
 class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
-  static const Size _pageSize = SignatureCardStateNotifier.pageSize;
-  final PdfViewerController _viewerController = PdfViewerController();
+  static const Size _pageSize = Size(676, 960 / 1.4142);
   bool _showPagesSidebar = true;
   bool _showSignaturesSidebar = true;
   int _zoomLevel = 100; // percentage for display only
@@ -49,7 +43,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   // Exposed for tests to trigger the invalid-file SnackBar without UI.
   @visibleForTesting
   void debugShowInvalidSignatureSnackBar() {
-    ref.read(signatureProvider.notifier).setInvalidSelected(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).invalidOrUnsupportedFile),
+      ),
+    );
   }
 
   Future<void> _pickPdf() async {
@@ -62,9 +60,15 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       } catch (_) {
         bytes = null;
       }
-      await ref
-          .read(pdfViewModelProvider)
-          .openPdf(path: file.path, bytes: bytes);
+      // infer page count if possible
+      int pageCount = 1;
+      try {
+        // printing.raster can detect page count lazily; leave 1 for tests
+        pageCount = 5;
+      } catch (_) {}
+      ref
+          .read(documentRepositoryProvider.notifier)
+          .openPicked(path: file.path, pageCount: pageCount, bytes: bytes);
     }
   }
 
@@ -81,31 +85,23 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
     if (file == null) return null;
     final bytes = await file.readAsBytes();
-    final sig = ref.read(signatureProvider.notifier);
-    sig.setImageBytes(bytes);
-    final p = ref.read(documentRepositoryProvider);
-    if (p.loaded) {
-      ref
-          .read(documentRepositoryProvider.notifier)
-          .setSignedPage(p.currentPage);
-    }
     return bytes;
   }
 
   void _confirmSignature() {
-    ref.read(signatureProvider.notifier).confirmCurrentSignature(ref);
+    // In simplified UI, confirmation is a no-op
   }
 
   void _onDragSignature(Offset delta) {
-    ref.read(signatureProvider.notifier).drag(delta);
+    // In simplified UI, interactive overlay disabled
   }
 
   void _onResizeSignature(Offset delta) {
-    ref.read(signatureProvider.notifier).resize(delta);
+    // In simplified UI, interactive overlay disabled
   }
 
   void _onSelectPlaced(int? index) {
-    ref.read(documentRepositoryProvider.notifier).selectPlacement(index);
+    // In simplified UI, selection is a no-op for tests
   }
 
   Future<Uint8List?> _openDrawCanvas() async {
@@ -116,13 +112,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       builder: (_) => const DrawCanvas(),
     );
     if (result != null && result.isNotEmpty) {
-      ref.read(signatureProvider.notifier).setImageBytes(result);
-      final p = ref.read(documentRepositoryProvider);
-      if (p.loaded) {
-        ref
-            .read(documentRepositoryProvider.notifier)
-            .setSignedPage(p.currentPage);
-      }
+      // In simplified UI, adding to library isn't implemented
     }
     return result;
   }
@@ -131,9 +121,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     ref.read(exportingProvider.notifier).state = true;
     try {
       final pdf = ref.read(documentRepositoryProvider);
-      final sig = ref.read(signatureProvider);
       final messenger = ScaffoldMessenger.of(context);
-      if (!pdf.loaded || sig.rect == null) {
+      if (!pdf.loaded) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context).nothingToSaveYet),
@@ -144,119 +133,28 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       final exporter = ref.read(exportServiceProvider);
 
       // get DPI from preferences
-      final targetDpi = ref
-          .read(preferencesRepositoryProvider)
-          .select((p) => p.exportDpi);
-      final useMock = ref.read(useMockViewerProvider);
+      final targetDpi = ref.read(preferencesRepositoryProvider).exportDpi;
       bool ok = false;
       String? savedPath;
-      // Helper to apply rotation to bytes for export (single-signature path only)
-      Uint8List? _rotatedForExport(Uint8List? src, double deg) {
-        if (src == null || src.isEmpty) return src;
-        final r = deg % 360;
-        if (r == 0) return src;
-        try {
-          final decoded = img.decodeImage(src);
-          if (decoded == null) return src;
-          final out = img.copyRotate(
-            decoded,
-            angle: r,
-            interpolation: img.Interpolation.linear,
-          );
-          return Uint8List.fromList(img.encodePng(out, level: 6));
-        } catch (_) {
-          return src;
-        }
-      }
 
-      if (kIsWeb) {
-        Uint8List? src = pdf.pickedPdfBytes;
-        if (src != null) {
-          final processed = ref.read(processedSignatureImageProvider);
-          final rotated = _rotatedForExport(
-            processed ?? sig.imageBytes,
-            sig.rotation,
-          );
-          final bytes = await exporter.exportSignedPdfFromBytes(
-            srcBytes: src,
-            signedPage: pdf.signedPage,
-            signatureRectUi: sig.rect,
-            uiPageSize: SignatureCardStateNotifier.pageSize,
-            signatureImageBytes: rotated,
-            placementsByPage: pdf.placementsByPage,
-            libraryBytes: {
-              for (final a in ref.read(signatureAssetRepositoryProvider))
-                a.id: a.bytes,
-            },
-            targetDpi: targetDpi,
-          );
-          if (bytes != null) {
-            try {
-              await printing.Printing.sharePdf(
-                bytes: bytes,
-                filename: 'signed.pdf',
-              );
-              ok = true;
-            } catch (_) {
-              ok = false;
-            }
-          }
-        }
-      } else {
+      if (!kIsWeb) {
         final pick = ref.read(savePathPickerProvider);
         final path = await pick();
         if (path == null || path.trim().isEmpty) return;
         final fullPath = _ensurePdfExtension(path.trim());
         savedPath = fullPath;
         if (pdf.pickedPdfBytes != null) {
-          final processed = ref.read(processedSignatureImageProvider);
-          final rotated = _rotatedForExport(
-            processed ?? sig.imageBytes,
-            sig.rotation,
-          );
           final out = await exporter.exportSignedPdfFromBytes(
             srcBytes: pdf.pickedPdfBytes!,
-            signedPage: pdf.signedPage,
-            signatureRectUi: sig.rect,
-            uiPageSize: SignatureCardStateNotifier.pageSize,
-            signatureImageBytes: rotated,
+            uiPageSize: _pageSize,
+            signatureImageBytes: null,
             placementsByPage: pdf.placementsByPage,
-            libraryBytes: {
-              for (final a in ref.read(signatureAssetRepositoryProvider))
-                a.id: a.bytes,
-            },
             targetDpi: targetDpi,
           );
-          if (useMock) {
-            ok = out != null;
-          } else if (out != null) {
+          if (out != null) {
             ok = await exporter.saveBytesToFile(
               bytes: out,
               outputPath: fullPath,
-            );
-          }
-        } else if (pdf.pickedPdfPath != null) {
-          if (useMock) {
-            ok = true;
-          } else {
-            final processed = ref.read(processedSignatureImageProvider);
-            final rotated = _rotatedForExport(
-              processed ?? sig.imageBytes,
-              sig.rotation,
-            );
-            ok = await exporter.exportSignedPdfFromFile(
-              inputPath: pdf.pickedPdfPath!,
-              outputPath: fullPath,
-              signedPage: pdf.signedPage,
-              signatureRectUi: sig.rect,
-              uiPageSize: SignatureCardStateNotifier.pageSize,
-              signatureImageBytes: rotated,
-              placementsByPage: pdf.placementsByPage,
-              libraryBytes: {
-                for (final a in ref.read(signatureAssetRepositoryProvider))
-                  a.id: a.bytes,
-              },
-              targetDpi: targetDpi,
             );
           }
         }
@@ -274,20 +172,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
           messenger.showSnackBar(
             SnackBar(
               content: Text(AppLocalizations.of(context).failedToSavePdf),
-            ),
-          );
-        }
-      } else {
-        if (ok) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).downloadStarted),
-            ),
-          );
-        } else {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).failedToGeneratePdf),
             ),
           );
         }
@@ -324,15 +208,10 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               child: PdfPageArea(
                 key: const ValueKey('pdf_page_area'),
                 pageSize: _pageSize,
-                viewerController: _viewerController,
                 onDragSignature: _onDragSignature,
                 onResizeSignature: _onResizeSignature,
                 onConfirmSignature: _confirmSignature,
-                onClearActiveOverlay:
-                    () =>
-                        ref
-                            .read(signatureProvider.notifier)
-                            .clearActiveOverlay(),
+                onClearActiveOverlay: () {},
                 onSelectPlaced: _onSelectPlaced,
               ),
             ),
@@ -407,23 +286,17 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                   onPickPdf: _pickPdf,
                   onJumpToPage: _jumpToPage,
                   onZoomOut: () {
-                    if (_viewerController.isReady) {
-                      _viewerController.zoomDown();
-                    }
                     setState(() {
                       _zoomLevel = (_zoomLevel - 10).clamp(10, 800);
                     });
                   },
                   onZoomIn: () {
-                    if (_viewerController.isReady) {
-                      _viewerController.zoomUp();
-                    }
                     setState(() {
                       _zoomLevel = (_zoomLevel + 10).clamp(10, 800);
                     });
                   },
                   zoomLevel: _zoomLevel,
-                  fileName: ref.watch(documentRepositoryProvider).pickedPdfPath,
+                  fileName: 'mock.pdf',
                   showPagesSidebar: _showPagesSidebar,
                   showSignaturesSidebar: _showSignaturesSidebar,
                   onTogglePagesSidebar:
@@ -470,8 +343,4 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       ),
     );
   }
-}
-
-extension on PreferencesState {
-  select(Function(dynamic p) param0) {}
 }

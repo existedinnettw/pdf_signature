@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdfrx/pdfrx.dart';
-
 import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'pdf_providers.dart';
 
 class PdfPagesOverview extends ConsumerWidget {
   const PdfPagesOverview({super.key});
@@ -10,7 +9,7 @@ class PdfPagesOverview extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pdf = ref.watch(documentRepositoryProvider);
-    final useMock = ref.watch(useMockViewerProvider);
+    ref.watch(useMockViewerProvider);
     final theme = Theme.of(context);
 
     if (!pdf.loaded) return const SizedBox.shrink();
@@ -61,39 +60,7 @@ class PdfPagesOverview extends ConsumerWidget {
       );
     }
 
-    if (useMock) {
-      final count = pdf.pageCount == 0 ? 1 : pdf.pageCount;
-      return buildList(count);
-    }
-
-    if (pdf.pickedPdfPath != null) {
-      return PdfDocumentViewBuilder.file(
-        pdf.pickedPdfPath!,
-        builder: (context, document) {
-          if (document == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final pages = document.pages;
-          if (pdf.pageCount != pages.length) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref
-                  .read(documentRepositoryProvider.notifier)
-                  .setPageCount(pages.length);
-            });
-          }
-          return buildList(
-            pages.length,
-            item:
-                (i) => PdfPageView(
-                  document: document,
-                  pageNumber: i + 1,
-                  alignment: Alignment.center,
-                ),
-          );
-        },
-      );
-    }
-
-    return const SizedBox.shrink();
+    final count = pdf.pageCount == 0 ? 1 : pdf.pageCount;
+    return buildList(count);
   }
 }

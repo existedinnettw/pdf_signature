@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import 'signature_drawer.dart';
+import 'ui_services.dart';
 
 class SignaturesSidebar extends ConsumerWidget {
   const SignaturesSidebar({

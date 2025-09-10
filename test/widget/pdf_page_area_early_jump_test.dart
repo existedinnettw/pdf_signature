@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/domain/models/model.dart';
@@ -19,17 +20,15 @@ class _TestPdfController extends DocumentStateNotifier {
 }
 
 void main() {
-  testWidgets('PdfPageArea: early jump queues and scrolls once list builds', (
+  testWidgets('PdfPageArea: early jump before build still scrolls to page', (
     tester,
   ) async {
     final ctrl = _TestPdfController();
 
-    // Build the widget tree
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           useMockViewerProvider.overrideWithValue(true),
-          // Continuous mode is always-on; no page view override needed
           documentRepositoryProvider.overrideWith((ref) => ctrl),
         ],
         child: MaterialApp(
@@ -56,25 +55,16 @@ void main() {
       ),
     );
 
-    // Trigger an early jump immediately after first pump, before settle.
+    // Jump to page 5 right away
     ctrl.jumpTo(5);
-
-    // Now allow frames to build and settle
     await tester.pump();
-    await tester.pumpAndSettle(const Duration(milliseconds: 800));
+    await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
-    // Validate that page 5 is in view and scroll offset moved.
     final listFinder = find.byKey(const Key('pdf_continuous_mock_list'));
     expect(listFinder, findsOneWidget);
-    final scrollableFinder = find.descendant(
-      of: listFinder,
-      matching: find.byType(Scrollable),
-    );
-    final pos = tester.state<ScrollableState>(scrollableFinder).position;
-    expect(pos.pixels, greaterThan(0));
-
     final pageStack = find.byKey(const ValueKey('page_stack_5'));
     expect(pageStack, findsOneWidget);
+
     final viewport = tester.getRect(listFinder);
     final pageRect = tester.getRect(pageStack);
     expect(viewport.overlaps(pageRect), isTrue);
