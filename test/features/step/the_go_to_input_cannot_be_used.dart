@@ -7,9 +7,9 @@ import '_world.dart';
 Future<void> theGoToInputCannotBeUsed(WidgetTester tester) async {
   final c = TestWorld.container ?? ProviderContainer();
   // Not loaded, currentPage should remain 1 even after jump attempt
-  expect(c.read(pdfProvider).loaded, isFalse);
-  final before = c.read(pdfProvider).currentPage;
-  c.read(pdfProvider.notifier).jumpTo(3);
-  final after = c.read(pdfProvider).currentPage;
+  expect(c.read(documentRepositoryProvider).loaded, isFalse);
+  final before = c.read(documentRepositoryProvider).currentPage;
+  c.read(documentRepositoryProvider.notifier).jumpTo(3);
+  final after = c.read(documentRepositoryProvider).currentPage;
   expect(before, equals(after));
 }

@@ -11,6 +11,6 @@ Future<void> theUserTypesIntoTheGoToInputAndPressesEnter(
   final target = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
   TestWorld.container = c;
-  c.read(pdfProvider.notifier).jumpTo(target);
+  c.read(documentRepositoryProvider.notifier).jumpTo(target);
   await tester.pump();
 }

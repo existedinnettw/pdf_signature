@@ -10,6 +10,6 @@ Future<void> aSampleMultipageDocument5PagesIsAvailable(
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
   container
-      .read(pdfProvider.notifier)
+      .read(documentRepositoryProvider.notifier)
       .openPicked(path: 'sample.pdf', pageCount: 5);
 }

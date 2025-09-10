@@ -45,7 +45,7 @@ void main() {
     await tester.pump();
 
     final container = ProviderScope.containerOf(stateful.context);
-    final pdf = container.read(pdfProvider);
+    final pdf = container.read(documentRepositoryProvider);
     expect(pdf.loaded, isTrue);
     expect(pdf.pickedPdfPath, '/tmp/sample.pdf');
     expect(pdf.pickedPdfBytes, bytes);

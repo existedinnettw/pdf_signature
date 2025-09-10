@@ -10,7 +10,7 @@ Future<void> theSignaturePlacementsAppearOnTheCorrespondingPageInTheOutput(
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
 
-  final pdfState = container.read(pdfProvider);
+  final pdfState = container.read(documentRepositoryProvider);
 
   // Verify that export was successful
   expect(

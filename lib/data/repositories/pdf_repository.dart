@@ -2,57 +2,39 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../data/model/model.dart';
+import '../../domain/models/model.dart';
 
-class PdfController extends StateNotifier<PdfState> {
-  PdfController() : super(PdfState.initial());
-  static const int samplePageCount = 5;
+class DocumentStateNotifier extends StateNotifier<Document> {
+  DocumentStateNotifier() : super(Document.initial());
 
   @visibleForTesting
   void openSample() {
     state = state.copyWith(
       loaded: true,
-      pageCount: samplePageCount,
+      pageCount: 5,
       currentPage: 1,
-      pickedPdfPath: null,
-      signedPage: null,
       placementsByPage: {},
-      selectedPlacementIndex: null,
     );
   }
 
   void openPicked({
     required String path,
-    int pageCount = samplePageCount,
+    required int pageCount,
     Uint8List? bytes,
   }) {
     state = state.copyWith(
       loaded: true,
       pageCount: pageCount,
       currentPage: 1,
-      pickedPdfPath: path,
       pickedPdfBytes: bytes,
-      signedPage: null,
       placementsByPage: {},
-      selectedPlacementIndex: null,
     );
   }
 
   void jumpTo(int page) {
     if (!state.loaded) return;
     final clamped = page.clamp(1, state.pageCount);
-    state = state.copyWith(currentPage: clamped, selectedPlacementIndex: null);
-  }
-
-  // Set or clear the page that will receive the signature overlay.
-  void setSignedPage(int? page) {
-    if (!state.loaded) return;
-    if (page == null) {
-      state = state.copyWith(signedPage: null, selectedPlacementIndex: null);
-    } else {
-      final clamped = page.clamp(1, state.pageCount);
-      state = state.copyWith(signedPage: clamped, selectedPlacementIndex: null);
-    }
+    state = state.copyWith(currentPage: clamped);
   }
 
   void setPageCount(int count) {
@@ -80,7 +62,7 @@ class PdfController extends StateNotifier<PdfState> {
       ),
     );
     map[p] = list;
-    state = state.copyWith(placementsByPage: map, selectedPlacementIndex: null);
+    state = state.copyWith(placementsByPage: map);
   }
 
   void updatePlacementRotation({
@@ -111,10 +93,7 @@ class PdfController extends StateNotifier<PdfState> {
       } else {
         map[p] = list;
       }
-      state = state.copyWith(
-        placementsByPage: map,
-        selectedPlacementIndex: null,
-      );
+      state = state.copyWith(placementsByPage: map);
     }
   }
 
@@ -142,27 +121,6 @@ class PdfController extends StateNotifier<PdfState> {
     );
   }
 
-  void selectPlacement(int? index) {
-    if (!state.loaded) return;
-    // Only allow valid index on current page; otherwise clear
-    if (index == null) {
-      state = state.copyWith(selectedPlacementIndex: null);
-      return;
-    }
-    final list = state.placementsByPage[state.currentPage] ?? const [];
-    if (index >= 0 && index < list.length) {
-      state = state.copyWith(selectedPlacementIndex: index);
-    } else {
-      state = state.copyWith(selectedPlacementIndex: null);
-    }
-  }
-
-  void deleteSelectedPlacement() {
-    final idx = state.selectedPlacementIndex;
-    if (idx == null) return;
-    removePlacement(page: state.currentPage, index: idx);
-  }
-
   // NOTE: Programmatic reassignment of images has been removed.
 
   // Convenience to get asset for a placement
@@ -173,6 +131,7 @@ class PdfController extends StateNotifier<PdfState> {
   }
 }
 
-final pdfProvider = StateNotifierProvider<PdfController, PdfState>(
-  (ref) => PdfController(),
-);
+final documentRepositoryProvider =
+    StateNotifierProvider<DocumentStateNotifier, Document>(
+      (ref) => DocumentStateNotifier(),
+    );

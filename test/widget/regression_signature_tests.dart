@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/data/repositories/signature_library_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_repository.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
@@ -118,11 +118,11 @@ void main() {
     final container3 = ProviderScope.containerOf(ctx3);
     final processed = container3.read(processedSignatureImageProvider);
     expect(processed, isNotNull);
-    final pdf = container3.read(pdfProvider);
+    final pdf = container3.read(documentRepositoryProvider);
     final imgId = pdf.placementsByPage[pdf.currentPage]?.first.asset?.id;
     expect(imgId, isNotNull);
     expect(imgId, isNotEmpty);
-    final lib = container3.read(signatureLibraryProvider);
+    final lib = container3.read(signatureAssetRepositoryProvider);
     final match = lib.firstWhere((a) => a.id == imgId);
     expect(match.bytes, equals(processed));
   });

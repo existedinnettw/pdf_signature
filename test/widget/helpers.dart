@@ -15,8 +15,8 @@ Future<void> pumpWithOpenPdf(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        pdfProvider.overrideWith(
-          (ref) => PdfController()..openPicked(path: 'test.pdf'),
+        documentRepositoryProvider.overrideWith(
+          (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
         ),
         useMockViewerProvider.overrideWith((ref) => true),
         // Continuous mode is always-on; no page view override needed
@@ -49,8 +49,8 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        pdfProvider.overrideWith(
-          (ref) => PdfController()..openPicked(path: 'test.pdf'),
+        documentRepositoryProvider.overrideWith(
+          (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
         ),
         signatureProvider.overrideWith(
           (ref) =>

@@ -8,7 +8,7 @@ Future<void> theUserClicksTheGoToApplyButton(WidgetTester tester) async {
   final c = TestWorld.container ?? ProviderContainer();
   final pending = TestWorld.pendingGoTo;
   if (pending != null) {
-    c.read(pdfProvider.notifier).jumpTo(pending);
+    c.read(documentRepositoryProvider.notifier).jumpTo(pending);
     await tester.pump();
   }
 }

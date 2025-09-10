@@ -7,7 +7,7 @@ Future<void> adjustingOneOfTheSignaturePlacementsDoesNotAffectTheOthers(
   WidgetTester tester,
 ) async {
   final container = TestWorld.container!;
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   final placements =
       pdf.placementsByPage.values.expand((list) => list).toList();
 

@@ -98,7 +98,7 @@ class _RootHomeSwitcher extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pdf = ref.watch(pdfProvider);
+    final pdf = ref.watch(documentRepositoryProvider);
     if (!pdf.loaded) {
       return const WelcomeScreen();
     }

@@ -10,7 +10,7 @@ Future<void> aDocumentIsOpenWithNoSignaturePlacementsPlaced(
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
   container
-      .read(pdfProvider.notifier)
+      .read(documentRepositoryProvider.notifier)
       .openPicked(path: 'empty.pdf', pageCount: 5);
   // No placements added
 }

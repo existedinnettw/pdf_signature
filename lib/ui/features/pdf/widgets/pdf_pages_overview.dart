@@ -10,7 +10,7 @@ class PdfPagesOverview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pdf = ref.watch(pdfProvider);
+    final pdf = ref.watch(documentRepositoryProvider);
     final useMock = ref.watch(useMockViewerProvider);
     final theme = Theme.of(context);
 
@@ -25,7 +25,10 @@ class PdfPagesOverview extends ConsumerWidget {
           final pageNumber = index + 1;
           final isSelected = pdf.currentPage == pageNumber;
           return InkWell(
-            onTap: () => ref.read(pdfProvider.notifier).jumpTo(pageNumber),
+            onTap:
+                () => ref
+                    .read(documentRepositoryProvider.notifier)
+                    .jumpTo(pageNumber),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color:
@@ -74,7 +77,9 @@ class PdfPagesOverview extends ConsumerWidget {
           final pages = document.pages;
           if (pdf.pageCount != pages.length) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(pdfProvider.notifier).setPageCount(pages.length);
+              ref
+                  .read(documentRepositoryProvider.notifier)
+                  .setPageCount(pages.length);
             });
           }
           return buildList(

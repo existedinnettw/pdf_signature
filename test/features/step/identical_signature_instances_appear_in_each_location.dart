@@ -9,7 +9,7 @@ Future<void> identicalSignatureInstancesAppearInEachLocation(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final state = container.read(pdfProvider);
+  final state = container.read(documentRepositoryProvider);
   final p2 = state.placementsByPage[2] ?? const [];
   final p4 = state.placementsByPage[4] ?? const [];
   expect(p2.length, greaterThanOrEqualTo(2));

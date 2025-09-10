@@ -6,11 +6,11 @@ import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 import 'package:pdf_signature/data/services/export_providers.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 
-class _TestPdfController extends PdfController {
+class _TestPdfController extends DocumentStateNotifier {
   _TestPdfController() : super() {
-    state = PdfState.initial().copyWith(
+    state = Document.initial().copyWith(
       loaded: true,
       pageCount: 6,
       currentPage: 1,
@@ -30,7 +30,7 @@ void main() {
         overrides: [
           useMockViewerProvider.overrideWithValue(true),
           // Continuous mode is always-on; no page view override needed
-          pdfProvider.overrideWith((ref) => ctrl),
+          documentRepositoryProvider.overrideWith((ref) => ctrl),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

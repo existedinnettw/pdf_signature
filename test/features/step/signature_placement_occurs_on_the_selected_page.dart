@@ -9,7 +9,7 @@ Future<void> signaturePlacementOccursOnTheSelectedPage(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
 
   // Check that there's at least one placement on the current page
   final placements = pdf.placementsByPage[pdf.currentPage] ?? [];

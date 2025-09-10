@@ -7,7 +7,52 @@
 
 ## Package structure
 
-The repo structure follows official [Package structure](https://docs.flutter.dev/app-architecture/case-study#package-structure) with slight modifications.
+The repo structure follows official [Package structure](https://docs.flutter.dev/app-architecture/case-study#package-structure). 
+
+```
+lib
+├─┬─ ui
+│ ├─┬─ core
+│ │ ├─┬─ ui
+│ │ │ └─── <shared widgets>
+│ │ └─── themes
+│ └─┬─ <FEATURE NAME>
+│   ├─┬─ view_model
+│   │ └─── <view_model class>.dart
+│   └─┬─ widgets
+│     ├── <feature name>_screen.dart
+│     └── <other widgets>
+├─┬─ domain
+│ └─┬─ models
+│   └─── <model name>.dart
+├─┬─ data
+│ ├─┬─ repositories
+│ │ └─── <repository class>.dart
+│ ├─┬─ services
+│ │ └─── <service class>.dart
+│ └─┬─ model
+│   └─── <api model class>.dart
+├─── config
+├─── utils
+├─── routing
+├─── main_staging.dart
+├─── main_development.dart
+└─── main.dart
+
+// The test folder contains unit and widget tests
+test
+├─── data
+├─── domain
+├─── ui
+└─── utils
+
+// The testing folder contains mocks other classes need to execute tests
+testing
+├─── fakes
+└─── models
+```
+
+But with slight modifications.
 
 * put each `<FEATURE NAME>/`s in `features/` sub-directory under `ui/`.
 * `test/features/` contains BDD unit tests for each feature. It focuses on pure logic, therefore will not access `View` but `ViewModel` and `Model`.
@@ -21,15 +66,15 @@ Some rule of thumb:
 
 ### terminology
 
-* signature asset
+* `signature asset`
   * image file of a signature, stored in the device or cloud storage
     * can drawing from canvas
-* signature card
+* `signature card`
   * template of signature placement
   * It will include modifications such as brightness, contrast, background removal, rotation of the signature asset.
-* signature placement
+* `signature placement`
   * placed modified signature asset from signature card on a specific position on a specific page of a specific PDF document
-* document
+* `document`
   * PDF document to be signed
 
 ## key dependencies

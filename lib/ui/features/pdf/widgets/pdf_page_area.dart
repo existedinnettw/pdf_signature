@@ -51,7 +51,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     // is instructed to align to the provider's current page once ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final pdf = ref.read(pdfProvider);
+      final pdf = ref.read(documentRepositoryProvider);
       if (pdf.pickedPdfPath != null && pdf.loaded) {
         _scrollToPage(pdf.currentPage);
       }
@@ -68,7 +68,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
   void _scrollToPage(int page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final pdf = ref.read(pdfProvider);
+      final pdf = ref.read(documentRepositoryProvider);
       const isContinuous = true;
 
       // Real continuous: drive via PdfViewerController
@@ -156,11 +156,11 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
   @override
   Widget build(BuildContext context) {
-    final pdf = ref.watch(pdfProvider);
+    final pdf = ref.watch(documentRepositoryProvider);
     const pageViewMode = 'continuous';
 
     // React to provider currentPage changes (e.g., user tapped overview)
-    ref.listen(pdfProvider, (prev, next) {
+    ref.listen(documentRepositoryProvider, (prev, next) {
       if (_suppressProviderListen) return;
       if ((prev?.currentPage != next.currentPage)) {
         final target = next.currentPage;
@@ -288,7 +288,9 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
               ],
           onViewerReady: (doc, controller) {
             if (pdf.pageCount != doc.pages.length) {
-              ref.read(pdfProvider.notifier).setPageCount(doc.pages.length);
+              ref
+                  .read(documentRepositoryProvider.notifier)
+                  .setPageCount(doc.pages.length);
             }
             final target = _pendingPage ?? pdf.currentPage;
             _pendingPage = null;
@@ -305,9 +307,9 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
             // Programmatic navigation: wait until target reached
             if (_programmaticTargetPage != null) {
               if (n == _programmaticTargetPage) {
-                if (n != ref.read(pdfProvider).currentPage) {
+                if (n != ref.read(documentRepositoryProvider).currentPage) {
                   _suppressProviderListen = true;
-                  ref.read(pdfProvider.notifier).jumpTo(n);
+                  ref.read(documentRepositoryProvider.notifier).jumpTo(n);
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _suppressProviderListen = false;
                   });
@@ -317,9 +319,9 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
               return;
             }
             // User scroll -> reflect page to provider without re-triggering scroll
-            if (n != ref.read(pdfProvider).currentPage) {
+            if (n != ref.read(documentRepositoryProvider).currentPage) {
               _suppressProviderListen = true;
-              ref.read(pdfProvider.notifier).jumpTo(n);
+              ref.read(documentRepositoryProvider.notifier).jumpTo(n);
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _suppressProviderListen = false;
               });
@@ -348,8 +350,8 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
           }
           ref.read(signatureProvider.notifier).placeAtCenter(Offset(cx, cy));
           ref
-              .read(pdfProvider.notifier)
-              .setSignedPage(ref.read(pdfProvider).currentPage);
+              .read(documentRepositoryProvider.notifier)
+              .setSignedPage(ref.read(documentRepositoryProvider).currentPage);
         },
         builder:
             (context, candidateData, rejected) => Stack(

@@ -26,8 +26,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          pdfProvider.overrideWith(
-            (ref) => PdfController()..openPicked(path: 'test.pdf'),
+          documentRepositoryProvider.overrideWith(
+            (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
           ),
           signatureProvider.overrideWith(
             (ref) => SignatureController()..placeDefaultRect(),

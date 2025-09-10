@@ -10,7 +10,7 @@ Future<void> theSignaturePlacementOnPageIsShownOnPage(
   num param2,
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   final page = param1.toInt();
   expect(pdf.placementsByPage[page], isNotEmpty);
 }

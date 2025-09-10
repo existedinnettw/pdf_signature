@@ -10,5 +10,5 @@ Future<void> pageBecomesVisibleInTheScrollArea(
 ) async {
   final page = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  expect(c.read(pdfProvider).currentPage, page);
+  expect(c.read(documentRepositoryProvider).currentPage, page);
 }

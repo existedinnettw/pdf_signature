@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/data/repositories/signature_repository.dart';
-import '../../../../data/model/model.dart';
+import '../../../../domain/models/model.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 import 'signature_overlay.dart';
 
@@ -29,8 +29,8 @@ class PdfPageOverlays extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pdf = ref.watch(pdfProvider);
-    final sig = ref.watch(signatureProvider);
+    final pdf = ref.watch(documentRepositoryProvider);
+    final sig = ref.watch(signatureCardProvider);
     final placed =
         pdf.placementsByPage[pageNumber] ?? const <SignaturePlacement>[];
     final widgets = <Widget>[];
@@ -44,16 +44,17 @@ class PdfPageOverlays extends ConsumerWidget {
           rect: uiRect,
           sig: sig,
           pageNumber: pageNumber,
-          interactive: false,
           placedIndex: i,
           onSelectPlaced: onSelectPlaced,
         ),
       );
     }
 
+    final currentRect = ref.watch(currentRectProvider);
+    final editingEnabled = ref.watch(editingEnabledProvider);
     final showActive =
-        sig.rect != null &&
-        sig.editingEnabled &&
+        currentRect != null &&
+        editingEnabled &&
         (pdf.signedPage == null || pdf.signedPage == pageNumber) &&
         pdf.currentPage == pageNumber;
 
@@ -61,10 +62,9 @@ class PdfPageOverlays extends ConsumerWidget {
       widgets.add(
         SignatureOverlay(
           pageSize: pageSize,
-          rect: sig.rect!,
+          rect: currentRect,
           sig: sig,
           pageNumber: pageNumber,
-          interactive: true,
           onDragSignature: onDragSignature,
           onResizeSignature: onResizeSignature,
           onConfirmSignature: onConfirmSignature,

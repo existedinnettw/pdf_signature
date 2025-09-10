@@ -50,7 +50,9 @@ Future<void> handleDroppedFiles(
     bytes = null;
   }
   final String path = pdf.path ?? pdf.name;
-  read(pdfProvider.notifier).openPicked(path: path, bytes: bytes);
+  read(
+    documentRepositoryProvider.notifier,
+  ).openPicked(path: path, bytes: bytes);
   read(signatureProvider.notifier).resetForNewPage();
 }
 
@@ -74,7 +76,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       } catch (_) {
         bytes = null;
       }
-      ref.read(pdfProvider.notifier).openPicked(path: file.path, bytes: bytes);
+      ref
+          .read(documentRepositoryProvider.notifier)
+          .openPicked(path: file.path, bytes: bytes);
       ref.read(signatureProvider.notifier).resetForNewPage();
     }
   }

@@ -9,9 +9,9 @@ Future<void> theUserDeletesOneSelectedSignaturePlacement(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   if (pdf.selectedPlacementIndex == null) {
-    container.read(pdfProvider.notifier).selectPlacement(0);
+    container.read(documentRepositoryProvider.notifier).selectPlacement(0);
   }
-  container.read(pdfProvider.notifier).deleteSelectedPlacement();
+  container.read(documentRepositoryProvider.notifier).deleteSelectedPlacement();
 }

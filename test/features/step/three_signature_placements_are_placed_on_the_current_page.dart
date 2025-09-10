@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
-import 'package:pdf_signature/data/repositories/signature_library_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_repository.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 import '_world.dart';
 
 /// Usage: three signature placements are placed on the current page
@@ -14,14 +14,19 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  container.read(signatureLibraryProvider.notifier).state = [];
-  container.read(pdfProvider.notifier).state = PdfState.initial();
-  container.read(signatureProvider.notifier).state = SignatureState.initial();
+  container.read(signatureAssetRepositoryProvider.notifier).state = [];
+  container.read(documentRepositoryProvider.notifier).state =
+      Document.initial();
+  container.read(signatureCardProvider.notifier).state =
+      SignatureCard.initial();
+  container.read(currentRectProvider.notifier).state = null;
+  container.read(editingEnabledProvider.notifier).state = false;
+  container.read(aspectLockedProvider.notifier).state = false;
   container
-      .read(pdfProvider.notifier)
+      .read(documentRepositoryProvider.notifier)
       .openPicked(path: 'mock.pdf', pageCount: 5);
-  final pdfN = container.read(pdfProvider.notifier);
-  final pdf = container.read(pdfProvider);
+  final pdfN = container.read(documentRepositoryProvider.notifier);
+  final pdf = container.read(documentRepositoryProvider);
   final page = pdf.currentPage;
   pdfN.addPlacement(
     page: page,

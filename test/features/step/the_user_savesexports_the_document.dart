@@ -12,7 +12,7 @@ Future<void> theUserSavesexportsTheDocument(WidgetTester tester) async {
   TestWorld.container = container;
 
   // Ensure state looks exportable
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   final sig = container.read(signatureProvider);
   expect(pdf.loaded, isTrue, reason: 'PDF must be loaded before export');
   // Check if there are placements

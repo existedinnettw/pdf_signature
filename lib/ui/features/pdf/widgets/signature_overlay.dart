@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../../../data/model/model.dart';
+import '../../../../domain/models/model.dart';
 import 'package:pdf_signature/data/repositories/signature_repository.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
-import 'package:pdf_signature/data/repositories/signature_library_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'image_editor_dialog.dart';
 import '../../signature/widgets/rotated_signature_image.dart';
 
@@ -19,7 +19,6 @@ class SignatureOverlay extends ConsumerWidget {
     required this.rect,
     required this.sig,
     required this.pageNumber,
-    this.interactive = true,
     this.placedIndex,
     this.onDragSignature,
     this.onResizeSignature,
@@ -30,9 +29,8 @@ class SignatureOverlay extends ConsumerWidget {
 
   final Size pageSize;
   final Rect rect;
-  final SignatureState sig;
+  final SignatureCard sig;
   final int pageNumber;
-  final bool interactive;
   final int? placedIndex;
 
   // Callbacks used by interactive overlay
@@ -75,7 +73,8 @@ class SignatureOverlay extends ConsumerWidget {
     double scaleX,
     double scaleY,
   ) {
-    final selectedIdx = ref.read(pdfProvider).selectedPlacementIndex;
+    final selectedIdx =
+        ref.read(documentRepositoryProvider).selectedPlacementIndex;
     final bool isPlaced = placedIndex != null;
     final bool isSelected = isPlaced && selectedIdx == placedIndex;
     final Color borderColor = isPlaced ? Colors.red : Colors.indigo;
@@ -92,7 +91,7 @@ class SignatureOverlay extends ConsumerWidget {
               0,
               0,
               0,
-              0.05 + math.min(0.25, (sig.contrast - 1.0).abs()),
+              0.05 + math.min(0.25, (sig.graphicAdjust.contrast - 1.0).abs()),
             ),
           ),
         ),
@@ -210,7 +209,7 @@ class SignatureOverlay extends ConsumerWidget {
           onClearActiveOverlay?.call();
         } else {
           ref
-              .read(pdfProvider.notifier)
+              .read(documentRepositoryProvider.notifier)
               .removePlacement(page: pageNumber, index: placedIndex);
         }
       } else if (choice == 'adjust') {
@@ -231,23 +230,24 @@ class _SignatureImage extends ConsumerWidget {
   final bool interactive;
   final int? placedIndex;
   final int pageNumber;
-  final SignatureState sig;
+  final SignatureCard sig;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Uint8List? bytes;
     if (interactive) {
       final processed = ref.watch(processedSignatureImageProvider);
-      bytes = processed ?? sig.imageBytes;
+      bytes = processed ?? sig.asset.bytes;
     } else if (placedIndex != null) {
-      final placementList = ref.read(pdfProvider).placementsByPage[pageNumber];
+      final placementList =
+          ref.read(documentRepositoryProvider).placementsByPage[pageNumber];
       final placement =
           (placementList != null && placedIndex! < placementList.length)
               ? placementList[placedIndex!]
               : null;
       final imgId = (placement?.asset)?.id;
       if (imgId != null && imgId.isNotEmpty) {
-        final lib = ref.watch(signatureLibraryProvider);
+        final lib = ref.watch(signatureAssetRepositoryProvider);
         for (final a in lib) {
           if (a.id == imgId) {
             bytes = a.bytes;
@@ -255,7 +255,7 @@ class _SignatureImage extends ConsumerWidget {
           }
         }
       }
-      bytes ??= ref.read(processedSignatureImageProvider) ?? sig.imageBytes;
+      bytes ??= ref.read(processedSignatureImageProvider) ?? sig.asset.bytes;
     }
 
     if (bytes == null) {
@@ -271,9 +271,10 @@ class _SignatureImage extends ConsumerWidget {
     // Use live rotation for interactive overlay; stored rotation for placed
     double rotationDeg = 0.0;
     if (interactive) {
-      rotationDeg = sig.rotation;
+      rotationDeg = sig.rotationDeg;
     } else if (placedIndex != null) {
-      final placementList = ref.read(pdfProvider).placementsByPage[pageNumber];
+      final placementList =
+          ref.read(documentRepositoryProvider).placementsByPage[pageNumber];
       if (placementList != null && placedIndex! < placementList.length) {
         rotationDeg = placementList[placedIndex!].rotationDeg;
       }

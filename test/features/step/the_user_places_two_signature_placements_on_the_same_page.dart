@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 import '_world.dart';
 
 /// Usage: the user places two signature placements on the same page
@@ -12,10 +12,10 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   final page = pdf.currentPage;
   container
-      .read(pdfProvider.notifier)
+      .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(10, 10, 100, 50),
@@ -26,7 +26,7 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
         ),
       );
   container
-      .read(pdfProvider.notifier)
+      .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(120, 10, 100, 50),

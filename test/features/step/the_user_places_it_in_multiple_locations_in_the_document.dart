@@ -10,7 +10,7 @@ Future<void> theUserPlacesItInMultipleLocationsInTheDocument(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final notifier = container.read(pdfProvider.notifier);
+  final notifier = container.read(documentRepositoryProvider.notifier);
   // Always open a fresh doc to avoid state bleed between scenarios
   notifier.openPicked(path: 'mock.pdf', pageCount: 6);
   // Place two on page 2 and one on page 4

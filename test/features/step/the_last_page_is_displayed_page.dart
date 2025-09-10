@@ -7,7 +7,7 @@ import '_world.dart';
 Future<void> theLastPageIsDisplayedPage(WidgetTester tester, num param1) async {
   final last = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  final pdf = c.read(pdfProvider);
+  final pdf = c.read(documentRepositoryProvider);
   expect(pdf.pageCount, last);
   expect(pdf.currentPage, last);
 }

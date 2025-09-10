@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
-import 'package:pdf_signature/data/repositories/signature_library_repository.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 import '_world.dart';
 
 /// Usage: a signature asset is placed on the page
@@ -13,31 +13,31 @@ Future<void> aSignatureAssetIsPlacedOnThePage(WidgetTester tester) async {
   TestWorld.container = container;
 
   // Ensure PDF is open
-  if (!container.read(pdfProvider).loaded) {
+  if (!container.read(documentRepositoryProvider).loaded) {
     container
-        .read(pdfProvider.notifier)
+        .read(documentRepositoryProvider.notifier)
         .openPicked(path: 'mock.pdf', pageCount: 5);
   }
 
   // Get or create an asset
-  var library = container.read(signatureLibraryProvider);
+  var library = container.read(signatureAssetRepositoryProvider);
   SignatureAsset asset;
   if (library.isNotEmpty) {
     asset = library.first;
   } else {
     final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
     final id = container
-        .read(signatureLibraryProvider.notifier)
+        .read(signatureAssetRepositoryProvider.notifier)
         .add(bytes, name: 'test.png');
     asset = container
-        .read(signatureLibraryProvider)
+        .read(signatureAssetRepositoryProvider)
         .firstWhere((a) => a.id == id);
   }
 
   // Place it on the current page
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   container
-      .read(pdfProvider.notifier)
+      .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: pdf.currentPage,
         rect: Rect.fromLTWH(50, 50, 100, 50),

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 import '_world.dart';
 
 /// Usage: the user places a signature placement on page {1}
@@ -15,7 +15,7 @@ Future<void> theUserPlacesASignaturePlacementOnPage(
   TestWorld.container = container;
   final page = param1.toInt();
   container
-      .read(pdfProvider.notifier)
+      .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(20, 20, 100, 50),

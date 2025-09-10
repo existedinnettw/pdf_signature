@@ -7,7 +7,7 @@ import 'package:image/image.dart' as img;
 
 import 'package:pdf_signature/data/services/export_service.dart';
 import 'package:pdf_signature/data/services/export_providers.dart';
-import 'package:pdf_signature/data/repositories/signature_library_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_repository.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
@@ -32,8 +32,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          pdfProvider.overrideWith(
-            (ref) => PdfController()..openPicked(path: 'test.pdf'),
+          documentRepositoryProvider.overrideWith(
+            (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
           ),
           signatureProvider.overrideWith(
             (ref) => SignatureController()..placeDefaultRect(),
@@ -85,11 +85,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          pdfProvider.overrideWith(
-            (ref) => PdfController()..openPicked(path: 'test.pdf'),
+          documentRepositoryProvider.overrideWith(
+            (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
           ),
-          signatureLibraryProvider.overrideWith((ref) {
-            final c = SignatureLibraryController();
+          signatureAssetRepositoryProvider.overrideWith((ref) {
+            final c = SignatureAssetRepository();
             c.add(sigBytes, name: 'image');
             return c;
           }),
@@ -121,11 +121,11 @@ void main() {
     final container = ProviderScope.containerOf(ctx);
     final sigState = container.read(signatureProvider);
     final r = sigState.rect!;
-    final lib = container.read(signatureLibraryProvider);
+    final lib = container.read(signatureAssetRepositoryProvider);
     final asset = lib.isNotEmpty ? lib.first : null;
-    final pdf = container.read(pdfProvider);
+    final pdf = container.read(documentRepositoryProvider);
     container
-        .read(pdfProvider.notifier)
+        .read(documentRepositoryProvider.notifier)
         .addPlacement(page: pdf.currentPage, rect: r, asset: asset);
     container.read(signatureProvider.notifier).clearActiveOverlay();
     await tester.pumpAndSettle();

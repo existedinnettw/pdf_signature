@@ -6,11 +6,11 @@ import '_world.dart';
 /// Usage: the user can move to the next or previous page
 Future<void> theUserCanMoveToTheNextOrPreviousPage(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final pdfN = container.read(pdfProvider.notifier);
-  final pdf = container.read(pdfProvider);
+  final pdfN = container.read(documentRepositoryProvider.notifier);
+  final pdf = container.read(documentRepositoryProvider);
   expect(pdf.currentPage, 1);
   pdfN.jumpTo(2);
-  expect(container.read(pdfProvider).currentPage, 2);
+  expect(container.read(documentRepositoryProvider).currentPage, 2);
   pdfN.jumpTo(1);
-  expect(container.read(pdfProvider).currentPage, 1);
+  expect(container.read(documentRepositoryProvider).currentPage, 1);
 }

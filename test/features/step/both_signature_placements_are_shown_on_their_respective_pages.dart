@@ -8,7 +8,7 @@ Future<void> bothSignaturePlacementsAreShownOnTheirRespectivePages(
   WidgetTester tester,
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   expect(pdf.placementsByPage[1], isNotEmpty);
   expect(pdf.placementsByPage[3], isNotEmpty);
 }

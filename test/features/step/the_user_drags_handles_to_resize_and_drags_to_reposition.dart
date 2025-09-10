@@ -10,8 +10,8 @@ Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final pdf = container.read(pdfProvider);
-  final pdfN = container.read(pdfProvider.notifier);
+  final pdf = container.read(documentRepositoryProvider);
+  final pdfN = container.read(documentRepositoryProvider.notifier);
 
   if (pdf.selectedPlacementIndex != null) {
     final placements = pdf.placementsByPage[pdf.currentPage] ?? [];

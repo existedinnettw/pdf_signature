@@ -9,7 +9,7 @@ allPlacedSignaturePlacementsAppearOnTheirCorrespondingPagesInTheOutput(
   WidgetTester tester,
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   final totalPlacements = pdf.placementsByPage.values.fold(
     0,
     (sum, list) => sum + list.length,

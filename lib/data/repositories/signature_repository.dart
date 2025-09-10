@@ -6,15 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../../../data/model/model.dart';
+import '../../domain/models/model.dart';
 import 'pdf_repository.dart';
 
-class SignatureController extends StateNotifier<SignatureState> {
-  SignatureController() : super(SignatureState.initial());
+class SignatureController extends StateNotifier<SignatureCard> {
+  final Ref ref;
+  SignatureController(this.ref) : super(SignatureCard.initial());
   static const Size pageSize = Size(400, 560);
 
   void resetForNewPage() {
-    state = SignatureState.initial();
+    state = SignatureCard.initial();
+    ref.read(currentRectProvider.notifier).setRect(null);
+    ref.read(editingEnabledProvider.notifier).set(false);
   }
 
   @visibleForTesting
@@ -26,19 +29,22 @@ class SignatureController extends StateNotifier<SignatureState> {
     final cy = pageSize.height * (0.1 + rand.nextDouble() * 0.8);
     Rect r = Rect.fromCenter(center: Offset(cx, cy), width: w, height: h);
     r = _clampRectToPage(r);
-    state = state.copyWith(rect: r, editingEnabled: true);
+    ref.read(currentRectProvider.notifier).setRect(r);
+    ref.read(editingEnabledProvider.notifier).set(true);
   }
 
   void loadSample() {
     final w = 120.0, h = 60.0;
-    state = state.copyWith(
-      rect: Rect.fromCenter(
-        center: Offset(pageSize.width / 2, pageSize.height * 0.75),
-        width: w,
-        height: h,
-      ),
-      editingEnabled: true,
-    );
+    ref
+        .read(currentRectProvider.notifier)
+        .setRect(
+          Rect.fromCenter(
+            center: Offset(pageSize.width / 2, pageSize.height * 0.75),
+            width: w,
+            height: h,
+          ),
+        );
+    ref.read(editingEnabledProvider.notifier).set(true);
   }
 
   void setInvalidSelected(BuildContext context) {
@@ -56,17 +62,19 @@ class SignatureController extends StateNotifier<SignatureState> {
   }
 
   void drag(Offset delta) {
-    if (state.rect == null || !state.editingEnabled) return;
-    final moved = state.rect!.shift(delta);
-    state = state.copyWith(rect: _clampRectToPage(moved));
+    final currentRect = ref.read(currentRectProvider);
+    if (currentRect == null || !ref.read(editingEnabledProvider)) return;
+    final moved = currentRect.shift(delta);
+    ref.read(currentRectProvider.notifier).setRect(_clampRectToPage(moved));
   }
 
   void resize(Offset delta) {
-    if (state.rect == null || !state.editingEnabled) return;
-    final r = state.rect!;
+    final currentRect = ref.read(currentRectProvider);
+    if (currentRect == null || !ref.read(editingEnabledProvider)) return;
+    final r = currentRect;
     double newW = r.width + delta.dx;
     double newH = r.height + delta.dy;
-    if (state.aspectLocked) {
+    if (ref.read(aspectLockedProvider)) {
       final aspect = r.width / r.height;
       // Keep ratio based on the dominant proportional delta
       final dxRel = (delta.dx / r.width).abs();
@@ -90,7 +98,7 @@ class SignatureController extends StateNotifier<SignatureState> {
       newH *= minScale;
       Rect resized = Rect.fromLTWH(r.left, r.top, newW, newH);
       resized = _clampRectPositionToPage(resized);
-      state = state.copyWith(rect: resized);
+      ref.read(currentRectProvider.notifier).setRect(resized);
       return;
     }
     // Unlocked aspect: clamp each dimension independently
@@ -98,7 +106,7 @@ class SignatureController extends StateNotifier<SignatureState> {
     newH = newH.clamp(20.0, pageSize.height);
     Rect resized = Rect.fromLTWH(r.left, r.top, newW, newH);
     resized = _clampRectToPage(resized);
-    state = state.copyWith(rect: resized);
+    ref.read(currentRectProvider.notifier).setRect(resized);
   }
 
   Rect _clampRectToPage(Rect r) {
@@ -116,89 +124,98 @@ class SignatureController extends StateNotifier<SignatureState> {
     return Rect.fromLTWH(left, top, r.width, r.height);
   }
 
-  void toggleAspect(bool v) => state = state.copyWith(aspectLocked: v);
-  void setBgRemoval(bool v) => state = state.copyWith(bgRemoval: v);
-  void setContrast(double v) => state = state.copyWith(contrast: v);
-  void setBrightness(double v) => state = state.copyWith(brightness: v);
-  void setRotation(double deg) => state = state.copyWith(rotation: deg);
+  void toggleAspect(bool v) => ref.read(aspectLockedProvider.notifier).set(v);
+  void setBgRemoval(bool v) =>
+      state = state.copyWith(
+        graphicAdjust: state.graphicAdjust.copyWith(bgRemoval: v),
+      );
+  void setContrast(double v) =>
+      state = state.copyWith(
+        graphicAdjust: state.graphicAdjust.copyWith(contrast: v),
+      );
+  void setBrightness(double v) =>
+      state = state.copyWith(
+        graphicAdjust: state.graphicAdjust.copyWith(brightness: v),
+      );
+  void setRotation(double deg) => state = state.copyWith(rotationDeg: deg);
 
-  void setStrokes(List<List<Offset>> strokes) =>
-      state = state.copyWith(strokes: strokes);
   void ensureRectForStrokes() {
-    state = state.copyWith(
-      rect:
-          state.rect ??
-          Rect.fromCenter(
-            center: Offset(pageSize.width / 2, pageSize.height * 0.75),
-            width: 140,
-            height: 70,
-          ),
-      editingEnabled: true,
-    );
+    if (ref.read(currentRectProvider) == null) {
+      ref
+          .read(currentRectProvider.notifier)
+          .setRect(
+            Rect.fromCenter(
+              center: Offset(pageSize.width / 2, pageSize.height * 0.75),
+              width: 140,
+              height: 70,
+            ),
+          );
+      ref.read(editingEnabledProvider.notifier).set(true);
+    }
   }
 
   void setImageBytes(Uint8List bytes) {
-    state = state.copyWith(imageBytes: bytes, asset: null);
-    if (state.rect == null) {
+    final newAsset = SignatureAsset(id: 'drawn', bytes: bytes);
+    state = state.copyWith(asset: newAsset);
+    if (ref.read(currentRectProvider) == null) {
       placeDefaultRect();
     }
-    // Mark as draft/editable when user just loaded image
-    state = state.copyWith(editingEnabled: true);
+    ref.read(editingEnabledProvider.notifier).set(true);
   }
 
   // Select image from the shared signature library
   void setImageFromLibrary({required SignatureAsset asset}) {
     state = state.copyWith(asset: asset);
-    if (state.rect == null) {
+    if (ref.read(currentRectProvider) == null) {
       placeDefaultRect();
     }
-    state = state.copyWith(editingEnabled: true);
+    ref.read(editingEnabledProvider.notifier).set(true);
   }
 
   void clearImage() {
-    state = state.copyWith(imageBytes: null, rect: null, editingEnabled: false);
+    state = SignatureCard.initial();
+    ref.read(currentRectProvider.notifier).setRect(null);
+    ref.read(editingEnabledProvider.notifier).set(false);
   }
 
   void placeAtCenter(Offset center, {double width = 120, double height = 60}) {
     Rect r = Rect.fromCenter(center: center, width: width, height: height);
     r = _clampRectToPage(r);
-    state = state.copyWith(rect: r, editingEnabled: true);
+    ref.read(currentRectProvider.notifier).setRect(r);
+    ref.read(editingEnabledProvider.notifier).set(true);
   }
 
   // Confirm current signature: freeze editing and place it on the PDF as an immutable overlay.
   // Stores the placement rect in UI-space (SignatureController.pageSize units).
   // Returns the Rect placed, or null if no rect to confirm.
   Rect? confirmCurrentSignature(WidgetRef ref) {
-    final r = state.rect;
+    final r = ref.read(currentRectProvider);
     if (r == null) return null;
     // Place onto the current page
-    final pdf = ref.read(pdfProvider);
+    final pdf = ref.read(documentRepositoryProvider);
     if (!pdf.loaded) return null;
-    // Bind the processed image at placement time (so placed preview matches adjustments).
-    // If processed bytes exist, always create a new asset for this placement.
-    // Prefer reusing an existing library asset when the active overlay is
-    // based on a library item. If there is no library asset, do NOT create
-    // a new library card here — keep the placement's asset empty so the
-    // UI and exporter will fall back to using the processed/current bytes.
-    // Store as UI-space rect (consistent with export and rendering paths)
     ref
-        .read(pdfProvider.notifier)
+        .read(documentRepositoryProvider.notifier)
         .addPlacement(
           page: pdf.currentPage,
           rect: r,
           asset: state.asset,
-          rotationDeg: state.rotation,
+          rotationDeg: state.rotationDeg,
         );
     // Newly placed index is the last one on the page
     final idx =
-        (ref.read(pdfProvider).placementsByPage[pdf.currentPage]?.length ?? 1) -
+        (ref
+                .read(documentRepositoryProvider)
+                .placementsByPage[pdf.currentPage]
+                ?.length ??
+            1) -
         1;
     // Auto-select the newly placed item so the red box appears
     if (idx >= 0) {
-      ref.read(pdfProvider.notifier).selectPlacement(idx);
+      ref.read(documentRepositoryProvider.notifier).selectPlacement(idx);
     }
     // Freeze editing: keep rect for preview but disable interaction
-    state = state.copyWith(editingEnabled: false);
+    ref.read(editingEnabledProvider.notifier).set(false);
     return r;
   }
 
@@ -206,76 +223,89 @@ class SignatureController extends StateNotifier<SignatureState> {
   // Useful in widget tests where obtaining a WidgetRef is not straightforward.
   @visibleForTesting
   Rect? confirmCurrentSignatureWithContainer(ProviderContainer container) {
-    final r = state.rect;
+    final r = container.read(currentRectProvider);
     if (r == null) return null;
-    final pdf = container.read(pdfProvider);
+    final pdf = container.read(documentRepositoryProvider);
     if (!pdf.loaded) return null;
-    // Reuse existing library asset if present; otherwise leave empty so the
-    // placement will reference the current bytes via fallback paths.
     container
-        .read(pdfProvider.notifier)
+        .read(documentRepositoryProvider.notifier)
         .addPlacement(
           page: pdf.currentPage,
           rect: r,
           asset: state.asset,
-          rotationDeg: state.rotation,
+          rotationDeg: state.rotationDeg,
         );
     final idx =
         (container
-                .read(pdfProvider)
+                .read(documentRepositoryProvider)
                 .placementsByPage[pdf.currentPage]
                 ?.length ??
             1) -
         1;
     // Auto-select the newly placed item so the red box appears
     if (idx >= 0) {
-      container.read(pdfProvider.notifier).selectPlacement(idx);
+      container.read(documentRepositoryProvider.notifier).selectPlacement(idx);
     }
     // Freeze editing: keep rect for preview but disable interaction
-    state = state.copyWith(editingEnabled: false);
+    container.read(editingEnabledProvider.notifier).set(false);
     return r;
   }
 
   // Remove the active overlay (draft or confirmed preview) but keep image settings intact
   void clearActiveOverlay() {
-    state = state.copyWith(rect: null, editingEnabled: false);
+    ref.read(currentRectProvider.notifier).setRect(null);
+    ref.read(editingEnabledProvider.notifier).set(false);
   }
 }
 
-final signatureProvider =
-    StateNotifierProvider<SignatureController, SignatureState>(
-      (ref) => SignatureController(),
+final signatureCardProvider =
+    StateNotifierProvider<SignatureController, SignatureCard>(
+      (ref) => SignatureController(ref),
     );
+
+final currentRectProvider = StateNotifierProvider<RectNotifier, Rect?>(
+  (ref) => RectNotifier(),
+);
+
+class RectNotifier extends StateNotifier<Rect?> {
+  RectNotifier() : super(null);
+
+  void setRect(Rect? r) => state = r;
+}
+
+final editingEnabledProvider = StateNotifierProvider<BoolNotifier, bool>(
+  (ref) => BoolNotifier(false),
+);
+
+class BoolNotifier extends StateNotifier<bool> {
+  BoolNotifier(bool initial) : super(initial);
+
+  void set(bool v) => state = v;
+}
+
+final aspectLockedProvider = StateNotifierProvider<BoolNotifier, bool>(
+  (ref) => BoolNotifier(false),
+);
 
 /// Derived provider that returns processed signature image bytes according to
 /// current adjustment settings (contrast/brightness) and background removal.
 /// Returns null if no image is loaded. The output is a PNG to preserve alpha.
 final processedSignatureImageProvider = Provider<Uint8List?>((ref) {
-  // Watch only the fields that affect pixel processing to avoid recompute on rotation.
-  final SignatureAsset? asset = ref.watch(
-    signatureProvider.select((s) => s.asset),
-  );
-  final Uint8List? directBytes = ref.watch(
-    signatureProvider.select((s) => s.imageBytes),
+  final SignatureAsset asset = ref.watch(
+    signatureCardProvider.select((s) => s.asset),
   );
   final double contrast = ref.watch(
-    signatureProvider.select((s) => s.contrast),
+    signatureCardProvider.select((s) => s.graphicAdjust.contrast),
   );
   final double brightness = ref.watch(
-    signatureProvider.select((s) => s.brightness),
+    signatureCardProvider.select((s) => s.graphicAdjust.brightness),
   );
   final bool bgRemoval = ref.watch(
-    signatureProvider.select((s) => s.bgRemoval),
+    signatureCardProvider.select((s) => s.graphicAdjust.bgRemoval),
   );
 
-  // If active overlay is based on a library asset, pull its bytes
-  Uint8List? bytes;
-  if (asset != null) {
-    bytes = asset.bytes;
-  } else {
-    bytes = directBytes;
-  }
-  if (bytes == null || bytes.isEmpty) return null;
+  Uint8List? bytes = asset.bytes;
+  if (bytes.isEmpty) return null;
 
   // Decode (supports PNG/JPEG, etc.)
   final decoded = img.decodeImage(bytes);

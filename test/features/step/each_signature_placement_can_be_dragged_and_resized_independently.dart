@@ -8,7 +8,7 @@ Future<void> eachSignaturePlacementCanBeDraggedAndResizedIndependently(
   WidgetTester tester,
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
   final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
   expect(placements.length, greaterThan(1));
 }

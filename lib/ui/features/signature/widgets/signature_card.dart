@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 import 'signature_drag_data.dart';
 import 'rotated_signature_image.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';

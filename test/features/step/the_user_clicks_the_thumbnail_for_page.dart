@@ -10,6 +10,6 @@ Future<void> theUserClicksTheThumbnailForPage(
 ) async {
   final page = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  c.read(pdfProvider.notifier).jumpTo(page);
+  c.read(documentRepositoryProvider.notifier).jumpTo(page);
   await tester.pump();
 }

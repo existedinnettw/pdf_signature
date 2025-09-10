@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../../../data/model/model.dart';
+import '../../../../domain/models/model.dart';
 import 'package:pdf_signature/data/repositories/signature_repository.dart';
 
 class AdjustmentsPanel extends ConsumerWidget {
   const AdjustmentsPanel({super.key, required this.sig});
 
-  final SignatureState sig;
+  final SignatureCard sig;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,19 +22,20 @@ class AdjustmentsPanel extends ConsumerWidget {
           children: [
             Checkbox(
               key: const Key('chk_aspect_lock'),
-              value: sig.aspectLocked,
+              value: ref.watch(aspectLockedProvider),
               onChanged:
                   (v) => ref
-                      .read(signatureProvider.notifier)
+                      .read(signatureCardProvider.notifier)
                       .toggleAspect(v ?? false),
             ),
             Text(AppLocalizations.of(context).lockAspectRatio),
             const SizedBox(width: 16),
             Switch(
               key: const Key('swt_bg_removal'),
-              value: sig.bgRemoval,
+              value: sig.graphicAdjust.bgRemoval,
               onChanged:
-                  (v) => ref.read(signatureProvider.notifier).setBgRemoval(v),
+                  (v) =>
+                      ref.read(signatureCardProvider.notifier).setBgRemoval(v),
             ),
             Text(AppLocalizations.of(context).backgroundRemoval),
           ],
@@ -47,15 +48,16 @@ class AdjustmentsPanel extends ConsumerWidget {
             Text(AppLocalizations.of(context).contrast),
             Align(
               alignment: Alignment.centerRight,
-              child: Text(sig.contrast.toStringAsFixed(2)),
+              child: Text(sig.graphicAdjust.contrast.toStringAsFixed(2)),
             ),
             Slider(
               key: const Key('sld_contrast'),
               min: 0.0,
               max: 2.0,
-              value: sig.contrast,
+              value: sig.graphicAdjust.contrast,
               onChanged:
-                  (v) => ref.read(signatureProvider.notifier).setContrast(v),
+                  (v) =>
+                      ref.read(signatureCardProvider.notifier).setContrast(v),
             ),
           ],
         ),
@@ -66,15 +68,16 @@ class AdjustmentsPanel extends ConsumerWidget {
             Text(AppLocalizations.of(context).brightness),
             Align(
               alignment: Alignment.centerRight,
-              child: Text(sig.brightness.toStringAsFixed(2)),
+              child: Text(sig.graphicAdjust.brightness.toStringAsFixed(2)),
             ),
             Slider(
               key: const Key('sld_brightness'),
               min: -1.0,
               max: 1.0,
-              value: sig.brightness,
+              value: sig.graphicAdjust.brightness,
               onChanged:
-                  (v) => ref.read(signatureProvider.notifier).setBrightness(v),
+                  (v) =>
+                      ref.read(signatureCardProvider.notifier).setBrightness(v),
             ),
           ],
         ),

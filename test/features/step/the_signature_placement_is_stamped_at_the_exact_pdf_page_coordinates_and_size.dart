@@ -10,7 +10,7 @@ Future<void> theSignaturePlacementIsStampedAtTheExactPdfPageCoordinatesAndSize(
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
 
-  final pdfState = container.read(pdfProvider);
+  final pdfState = container.read(documentRepositoryProvider);
 
   // Verify PDF is loaded
   expect(pdfState.loaded, isTrue, reason: 'PDF should be loaded');

@@ -53,10 +53,10 @@ void main() {
     await tester.pumpWidget(buildHarness(width: 480));
 
     // Open sample and add a normalized placement to page 1
-    container.read(pdfProvider.notifier).openSample();
+    container.read(documentRepositoryProvider.notifier).openSample();
     // One placement at (25% x, 50% y), size 10% x 10%
     container
-        .read(pdfProvider.notifier)
+        .read(documentRepositoryProvider.notifier)
         .addPlacement(
           page: 1,
           rect: const Rect.fromLTWH(0.25, 0.50, 0.10, 0.10),

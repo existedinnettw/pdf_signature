@@ -6,7 +6,7 @@ import '_world.dart';
 /// Usage: resize to fit within bounding box
 Future<void> resizeToFitWithinBoundingBox(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final pdf = container.read(pdfProvider);
+  final pdf = container.read(documentRepositoryProvider);
 
   if (pdf.selectedPlacementIndex != null) {
     final placements = pdf.placementsByPage[pdf.currentPage] ?? [];

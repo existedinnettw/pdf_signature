@@ -10,6 +10,6 @@ Future<void> theUserEntersIntoTheGoToInputAndAppliesIt(
 ) async {
   final value = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  c.read(pdfProvider.notifier).jumpTo(value);
+  c.read(documentRepositoryProvider.notifier).jumpTo(value);
   await tester.pump();
 }

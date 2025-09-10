@@ -6,8 +6,8 @@ import '_world.dart';
 /// Usage: the user uses rotate controls
 Future<void> theUserUsesRotateControls(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final pdf = container.read(pdfProvider);
-  final pdfN = container.read(pdfProvider.notifier);
+  final pdf = container.read(documentRepositoryProvider);
+  final pdfN = container.read(documentRepositoryProvider.notifier);
 
   if (pdf.selectedPlacementIndex != null) {
     // Rotate the selected placement by 45 degrees

@@ -6,7 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart' as pdf;
 import 'package:printing/printing.dart' as printing;
 import 'package:image/image.dart' as img;
-import '../model/model.dart';
+import '../../domain/models/model.dart';
 
 // NOTE:
 // - This exporter uses a raster snapshot of the UI (RepaintBoundary) and embeds it into a new PDF.

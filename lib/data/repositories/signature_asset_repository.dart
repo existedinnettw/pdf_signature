@@ -1,9 +1,10 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 
-class SignatureLibraryController extends StateNotifier<List<SignatureAsset>> {
-  SignatureLibraryController() : super(const []);
+///
+class SignatureAssetRepository extends StateNotifier<List<SignatureAsset>> {
+  SignatureAssetRepository() : super(const []);
 
   String add(Uint8List bytes, {String? name}) {
     // Always add a new asset (allow duplicates). This lets users create multiple cards
@@ -27,7 +28,7 @@ class SignatureLibraryController extends StateNotifier<List<SignatureAsset>> {
   }
 }
 
-final signatureLibraryProvider =
-    StateNotifierProvider<SignatureLibraryController, List<SignatureAsset>>(
-      (ref) => SignatureLibraryController(),
+final signatureAssetRepositoryProvider =
+    StateNotifierProvider<SignatureAssetRepository, List<SignatureAsset>>(
+      (ref) => SignatureAssetRepository(),
     );

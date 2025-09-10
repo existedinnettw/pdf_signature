@@ -12,7 +12,7 @@ import '../../../../data/services/export_providers.dart';
 import 'package:image/image.dart' as img;
 import 'package:pdf_signature/data/repositories/signature_repository.dart';
 import 'package:pdf_signature/data/repositories/pdf_repository.dart';
-import 'package:pdf_signature/data/repositories/signature_library_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
@@ -61,13 +61,15 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       } catch (_) {
         bytes = null;
       }
-      ref.read(pdfProvider.notifier).openPicked(path: file.path, bytes: bytes);
+      ref
+          .read(documentRepositoryProvider.notifier)
+          .openPicked(path: file.path, bytes: bytes);
       ref.read(signatureProvider.notifier).resetForNewPage();
     }
   }
 
   void _jumpToPage(int page) {
-    ref.read(pdfProvider.notifier).jumpTo(page);
+    ref.read(documentRepositoryProvider.notifier).jumpTo(page);
   }
 
   Future<Uint8List?> _loadSignatureFromFile() async {
@@ -81,9 +83,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final bytes = await file.readAsBytes();
     final sig = ref.read(signatureProvider.notifier);
     sig.setImageBytes(bytes);
-    final p = ref.read(pdfProvider);
+    final p = ref.read(documentRepositoryProvider);
     if (p.loaded) {
-      ref.read(pdfProvider.notifier).setSignedPage(p.currentPage);
+      ref
+          .read(documentRepositoryProvider.notifier)
+          .setSignedPage(p.currentPage);
     }
     return bytes;
   }
@@ -101,7 +105,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   void _onSelectPlaced(int? index) {
-    ref.read(pdfProvider.notifier).selectPlacement(index);
+    ref.read(documentRepositoryProvider.notifier).selectPlacement(index);
   }
 
   Future<Uint8List?> _openDrawCanvas() async {
@@ -113,9 +117,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     );
     if (result != null && result.isNotEmpty) {
       ref.read(signatureProvider.notifier).setImageBytes(result);
-      final p = ref.read(pdfProvider);
+      final p = ref.read(documentRepositoryProvider);
       if (p.loaded) {
-        ref.read(pdfProvider.notifier).setSignedPage(p.currentPage);
+        ref
+            .read(documentRepositoryProvider.notifier)
+            .setSignedPage(p.currentPage);
       }
     }
     return result;
@@ -124,7 +130,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   Future<void> _saveSignedPdf() async {
     ref.read(exportingProvider.notifier).state = true;
     try {
-      final pdf = ref.read(pdfProvider);
+      final pdf = ref.read(documentRepositoryProvider);
       final sig = ref.read(signatureProvider);
       final messenger = ScaffoldMessenger.of(context);
       if (!pdf.loaded || sig.rect == null) {
@@ -175,7 +181,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             signatureImageBytes: rotated,
             placementsByPage: pdf.placementsByPage,
             libraryBytes: {
-              for (final a in ref.read(signatureLibraryProvider)) a.id: a.bytes,
+              for (final a in ref.read(signatureAssetRepositoryProvider))
+                a.id: a.bytes,
             },
             targetDpi: targetDpi,
           );
@@ -211,7 +218,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             signatureImageBytes: rotated,
             placementsByPage: pdf.placementsByPage,
             libraryBytes: {
-              for (final a in ref.read(signatureLibraryProvider)) a.id: a.bytes,
+              for (final a in ref.read(signatureAssetRepositoryProvider))
+                a.id: a.bytes,
             },
             targetDpi: targetDpi,
           );
@@ -241,7 +249,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               signatureImageBytes: rotated,
               placementsByPage: pdf.placementsByPage,
               libraryBytes: {
-                for (final a in ref.read(signatureLibraryProvider))
+                for (final a in ref.read(signatureAssetRepositoryProvider))
                   a.id: a.bytes,
               },
               targetDpi: targetDpi,
@@ -411,7 +419,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                     });
                   },
                   zoomLevel: _zoomLevel,
-                  fileName: ref.watch(pdfProvider).pickedPdfPath,
+                  fileName: ref.watch(documentRepositoryProvider).pickedPdfPath,
                   showPagesSidebar: _showPagesSidebar,
                   showSignaturesSidebar: _showSignaturesSidebar,
                   onTogglePagesSidebar:

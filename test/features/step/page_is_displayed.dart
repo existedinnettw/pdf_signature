@@ -7,5 +7,5 @@ import '_world.dart';
 Future<void> pageIsDisplayed(WidgetTester tester, num param1) async {
   final expected = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  expect(c.read(pdfProvider).currentPage, expected);
+  expect(c.read(documentRepositoryProvider).currentPage, expected);
 }

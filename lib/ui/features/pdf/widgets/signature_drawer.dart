@@ -2,11 +2,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/data/model/model.dart' as model;
+import 'package:pdf_signature/domain/models/model.dart' as model;
 
 import '../../../../data/services/export_providers.dart';
 import 'package:pdf_signature/data/repositories/signature_repository.dart';
-import 'package:pdf_signature/data/repositories/signature_library_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'image_editor_dialog.dart';
 import '../../signature/widgets/signature_card.dart';
 
@@ -37,7 +37,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
     final sig = ref.watch(signatureProvider);
     final processed = ref.watch(processedSignatureImageProvider);
     final bytes = processed ?? sig.imageBytes;
-    final library = ref.watch(signatureLibraryProvider);
+    final library = ref.watch(signatureAssetRepositoryProvider);
     final isExporting = ref.watch(exportingProvider);
     final disabled = widget.disabled || isExporting;
 
@@ -64,7 +64,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                   disabled: disabled,
                   onDelete:
                       () => ref
-                          .read(signatureLibraryProvider.notifier)
+                          .read(signatureAssetRepositoryProvider.notifier)
                           .remove(a.id),
                   onAdjust: () async {
                     ref
@@ -151,10 +151,16 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                     ref.read(signatureProvider).imageBytes;
                                 if (b != null) {
                                   final id = ref
-                                      .read(signatureLibraryProvider.notifier)
+                                      .read(
+                                        signatureAssetRepositoryProvider
+                                            .notifier,
+                                      )
                                       .add(b, name: 'image');
                                   final asset = ref
-                                      .read(signatureLibraryProvider.notifier)
+                                      .read(
+                                        signatureAssetRepositoryProvider
+                                            .notifier,
+                                      )
                                       .byId(id);
                                   if (asset != null) {
                                     ref
@@ -179,10 +185,16 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                     ref.read(signatureProvider).imageBytes;
                                 if (b != null) {
                                   final id = ref
-                                      .read(signatureLibraryProvider.notifier)
+                                      .read(
+                                        signatureAssetRepositoryProvider
+                                            .notifier,
+                                      )
                                       .add(b, name: 'drawing');
                                   final asset = ref
-                                      .read(signatureLibraryProvider.notifier)
+                                      .read(
+                                        signatureAssetRepositoryProvider
+                                            .notifier,
+                                      )
                                       .byId(id);
                                   if (asset != null) {
                                     ref
