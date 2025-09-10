@@ -4,8 +4,8 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../../data/services/export_providers.dart';
-import 'package:pdf_signature/data/repositories/signature_repository.dart';
-import 'package:pdf_signature/data/repositories/pdf_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 import '../../signature/widgets/signature_drag_data.dart';
 import 'pdf_mock_continuous_list.dart';
 import 'pdf_page_overlays.dart';

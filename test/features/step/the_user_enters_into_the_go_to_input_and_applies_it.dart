@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/data/repositories/pdf_repository.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 import '_world.dart';
 
 /// Usage: the user enters {99} into the Go to input and applies it

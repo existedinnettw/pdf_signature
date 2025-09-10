@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:flutter_localized_locales/flutter_localized_locales.dart';
+import 'package:pdf_signature/domain/models/preferences.dart';
 
 // Helpers to work with BCP-47 language tags
 String toLanguageTag(Locale loc) {
@@ -27,6 +28,7 @@ Set<String> _supportedTags() {
 
 // Keys
 const _kTheme = 'theme'; // 'light'|'dark'|'system'
+const _kThemeColor = 'theme_color'; // 'blue'|'green'|'red'|'purple'
 const _kLanguage = 'language'; // BCP-47 tag like 'en', 'zh-TW', 'es'
 const _kPageView = 'page_view'; // now only 'continuous'
 const _kExportDpi = 'export_dpi'; // double, allowed: 96,144,200,300
@@ -63,34 +65,9 @@ String _normalizeLanguageTag(String tag) {
   return tags.contains('en') ? 'en' : tags.first;
 }
 
-class PreferencesState {
-  final String theme; // 'light' | 'dark' | 'system'
-  final String language; // 'en' | 'zh-TW' | 'es'
-  final String pageView; // only 'continuous'
-  final double exportDpi; // 96.0 | 144.0 | 200.0 | 300.0
-  const PreferencesState({
-    required this.theme,
-    required this.language,
-    required this.pageView,
-    required this.exportDpi,
-  });
-
-  PreferencesState copyWith({
-    String? theme,
-    String? language,
-    String? pageView,
-    double? exportDpi,
-  }) => PreferencesState(
-    theme: theme ?? this.theme,
-    language: language ?? this.language,
-    pageView: pageView ?? this.pageView,
-    exportDpi: exportDpi ?? this.exportDpi,
-  );
-}
-
-class PreferencesNotifier extends StateNotifier<PreferencesState> {
+class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
   final SharedPreferences prefs;
-  PreferencesNotifier(this.prefs)
+  PreferencesStateNotifier(this.prefs)
     : super(
         PreferencesState(
           theme: prefs.getString(_kTheme) ?? 'system',
@@ -99,8 +76,8 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
                 WidgetsBinding.instance.platformDispatcher.locale
                     .toLanguageTag(),
           ),
-          pageView: prefs.getString(_kPageView) ?? 'continuous',
           exportDpi: _readDpi(prefs),
+          theme_color: prefs.getString(_kThemeColor) ?? 'blue',
         ),
       ) {
     // normalize language to supported/fallback
@@ -124,11 +101,6 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
     if (normalized != state.language) {
       state = state.copyWith(language: normalized);
       prefs.setString(_kLanguage, normalized);
-    }
-    final pageViewValid = {'continuous'};
-    if (!pageViewValid.contains(state.pageView)) {
-      state = state.copyWith(pageView: 'continuous');
-      prefs.setString(_kPageView, 'continuous');
     }
     // Ensure DPI is one of allowed values
     const allowed = [96.0, 144.0, 200.0, 300.0];
@@ -158,20 +130,13 @@ class PreferencesNotifier extends StateNotifier<PreferencesState> {
     state = PreferencesState(
       theme: 'system',
       language: normalized,
-      pageView: 'continuous',
       exportDpi: 144.0,
+      theme_color: '',
     );
     await prefs.setString(_kTheme, 'system');
     await prefs.setString(_kLanguage, normalized);
     await prefs.setString(_kPageView, 'continuous');
     await prefs.setDouble(_kExportDpi, 144.0);
-  }
-
-  Future<void> setPageView(String pageView) async {
-    final valid = {'continuous'};
-    if (!valid.contains(pageView)) return;
-    state = state.copyWith(pageView: pageView);
-    await prefs.setString(_kPageView, pageView);
   }
 
   Future<void> setExportDpi(double dpi) async {
@@ -189,8 +154,8 @@ final sharedPreferencesProvider = FutureProvider<SharedPreferences>((
   return p;
 });
 
-final preferencesProvider =
-    StateNotifierProvider<PreferencesNotifier, PreferencesState>((ref) {
+final preferencesRepositoryProvider =
+    StateNotifierProvider<PreferencesStateNotifier, PreferencesState>((ref) {
       // In tests, you can override sharedPreferencesProvider
       final prefs = ref
           .watch(sharedPreferencesProvider)
@@ -198,14 +163,14 @@ final preferencesProvider =
             data: (p) => p,
             orElse: () => throw StateError('SharedPreferences not ready'),
           );
-      return PreferencesNotifier(prefs);
+      return PreferencesStateNotifier(prefs);
     });
 
 // pageViewModeProvider removed; the app always runs in continuous mode.
 
 /// Derive the active ThemeMode based on preference and platform brightness
 final themeModeProvider = Provider<ThemeMode>((ref) {
-  final prefs = ref.watch(preferencesProvider);
+  final prefs = ref.watch(preferencesRepositoryProvider);
   switch (prefs.theme) {
     case 'light':
       return ThemeMode.light;
@@ -218,7 +183,7 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
 });
 
 final localeProvider = Provider<Locale?>((ref) {
-  final prefs = ref.watch(preferencesProvider);
+  final prefs = ref.watch(preferencesRepositoryProvider);
   final supported = _supportedTags();
   // Return explicit Locale for supported ones; if not supported, null to follow device
   if (supported.contains(prefs.language)) {

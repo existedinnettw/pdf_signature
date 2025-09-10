@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../../data/services/export_providers.dart';
-import 'package:pdf_signature/data/repositories/pdf_repository.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 
 class PdfPagesOverview extends ConsumerWidget {
   const PdfPagesOverview({super.key});

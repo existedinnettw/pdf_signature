@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../../../domain/models/model.dart';
-import 'package:pdf_signature/data/repositories/signature_repository.dart';
-import 'package:pdf_signature/data/repositories/pdf_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'image_editor_dialog.dart';
 import '../../signature/widgets/rotated_signature_image.dart';

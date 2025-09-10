@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:pdf_signature/data/repositories/signature_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import '../../../../domain/models/model.dart';
-import 'package:pdf_signature/data/repositories/pdf_repository.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'signature_overlay.dart';
 
 /// Builds all overlays for a given page: placed signatures and the active one.
@@ -36,7 +36,7 @@ class PdfPageOverlays extends ConsumerWidget {
     final widgets = <Widget>[];
 
     for (int i = 0; i < placed.length; i++) {
-      // Stored as UI-space rects (SignatureController.pageSize).
+      // Stored as UI-space rects (SignatureCardStateNotifier.pageSize).
       final uiRect = placed[i].rect;
       widgets.add(
         SignatureOverlay(

@@ -60,7 +60,9 @@ But with slight modifications.
 * `integration_test/` for integration tests. They should be volatile to follow UI layout changes.
 
 Some rule of thumb:
-* `<object>Provider` only placed at `/lib/data/repositories/` or `/lib/data/services/` to provide data source.
+* global provider 
+  * `<object>RepositoryProvider` only placed in `/lib/data/repositories/`, provide data to `/lib/ui`.
+    * `lib/data/services/*` should be stateless, and should only accessible by `Repository`.
 
 ## Abstraction
 

@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/data/services/export_service.dart';
 
 import '../../domain/models/model.dart';
 
 class DocumentStateNotifier extends StateNotifier<Document> {
   DocumentStateNotifier() : super(Document.initial());
+
+  final ExportService _service = ExportService();
 
   @visibleForTesting
   void openSample() {
@@ -57,7 +60,7 @@ class DocumentStateNotifier extends StateNotifier<Document> {
     list.add(
       SignaturePlacement(
         rect: rect,
-        asset: asset ?? SignatureAsset(id: '', bytes: Uint8List(0)),
+        asset: asset ?? SignatureAsset(bytes: Uint8List(0)),
         rotationDeg: rotationDeg,
       ),
     );
@@ -121,13 +124,28 @@ class DocumentStateNotifier extends StateNotifier<Document> {
     );
   }
 
-  // NOTE: Programmatic reassignment of images has been removed.
-
   // Convenience to get asset for a placement
   SignatureAsset? assetOfPlacement({required int page, required int index}) {
     final list = state.placementsByPage[page] ?? const [];
     if (index < 0 || index >= list.length) return null;
     return list[index].asset;
+  }
+
+  Future<void> exportDocument({
+    required String outputPath,
+    required Size uiPageSize,
+    required Uint8List? signatureImageBytes,
+  }) async {
+    if (!state.loaded || state.pickedPdfBytes == null) return;
+    final bytes = await _service.exportSignedPdfFromBytes(
+      srcBytes: state.pickedPdfBytes!,
+      uiPageSize: uiPageSize,
+      signatureImageBytes: signatureImageBytes,
+      placementsByPage: state.placementsByPage,
+    );
+    if (bytes == null) return;
+    _service.saveBytesToFile(bytes: bytes, outputPath: outputPath);
+    // await
   }
 }
 

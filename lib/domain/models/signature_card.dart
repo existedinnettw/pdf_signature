@@ -12,8 +12,8 @@ class SignatureCard {
   final GraphicAdjust graphicAdjust;
 
   const SignatureCard({
-    required this.rotationDeg,
     required this.asset,
+    required this.rotationDeg,
     this.graphicAdjust = const GraphicAdjust(),
   });
 
@@ -28,8 +28,8 @@ class SignatureCard {
   );
 
   factory SignatureCard.initial() => SignatureCard(
+    asset: SignatureAsset(bytes: Uint8List(0)),
     rotationDeg: 0.0,
-    asset: SignatureAsset(id: '', bytes: Uint8List(0)),
     graphicAdjust: const GraphicAdjust(),
   );
 }

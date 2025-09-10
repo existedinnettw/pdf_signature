@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/data/services/export_service.dart';
 import 'package:pdf_signature/data/services/export_providers.dart';
-import 'package:pdf_signature/data/repositories/signature_repository.dart';
-import 'package:pdf_signature/data/repositories/pdf_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
@@ -30,7 +30,7 @@ void main() {
             (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
           ),
           signatureProvider.overrideWith(
-            (ref) => SignatureController()..placeDefaultRect(),
+            (ref) => SignatureCardStateNotifier()..placeDefaultRect(),
           ),
           useMockViewerProvider.overrideWith((ref) => true),
           exportServiceProvider.overrideWith((_) => fake),

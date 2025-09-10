@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import 'package:pdf_signature/data/repositories/signature_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'adjustments_panel.dart';
 import '../../signature/widgets/rotated_signature_image.dart';
 

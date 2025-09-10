@@ -3,6 +3,8 @@ import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/data/repositories/preferences_repository.dart';
+import 'package:pdf_signature/domain/models/preferences.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:printing/printing.dart' as printing;
 import 'package:pdfrx/pdfrx.dart';
@@ -10,8 +12,8 @@ import 'package:multi_split_view/multi_split_view.dart';
 
 import '../../../../data/services/export_providers.dart';
 import 'package:image/image.dart' as img;
-import 'package:pdf_signature/data/repositories/signature_repository.dart';
-import 'package:pdf_signature/data/repositories/pdf_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
@@ -28,7 +30,7 @@ class PdfSignatureHomePage extends ConsumerStatefulWidget {
 }
 
 class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
-  static const Size _pageSize = SignatureController.pageSize;
+  static const Size _pageSize = SignatureCardStateNotifier.pageSize;
   final PdfViewerController _viewerController = PdfViewerController();
   bool _showPagesSidebar = true;
   bool _showSignaturesSidebar = true;
@@ -142,7 +144,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         return;
       }
       final exporter = ref.read(exportServiceProvider);
-      final targetDpi = ref.read(exportDpiProvider);
+
+      // get DPI from preferences
+      final targetDpi = ref.read(preferencesRepositoryProvider).select(
+            (p) => p.exportDpi,
+      );
       final useMock = ref.read(useMockViewerProvider);
       bool ok = false;
       String? savedPath;
@@ -177,7 +183,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             srcBytes: src,
             signedPage: pdf.signedPage,
             signatureRectUi: sig.rect,
-            uiPageSize: SignatureController.pageSize,
+            uiPageSize: SignatureCardStateNotifier.pageSize,
             signatureImageBytes: rotated,
             placementsByPage: pdf.placementsByPage,
             libraryBytes: {
@@ -214,7 +220,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             srcBytes: pdf.pickedPdfBytes!,
             signedPage: pdf.signedPage,
             signatureRectUi: sig.rect,
-            uiPageSize: SignatureController.pageSize,
+            uiPageSize: SignatureCardStateNotifier.pageSize,
             signatureImageBytes: rotated,
             placementsByPage: pdf.placementsByPage,
             libraryBytes: {
@@ -245,7 +251,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               outputPath: fullPath,
               signedPage: pdf.signedPage,
               signatureRectUi: sig.rect,
-              uiPageSize: SignatureController.pageSize,
+              uiPageSize: SignatureCardStateNotifier.pageSize,
               signatureImageBytes: rotated,
               placementsByPage: pdf.placementsByPage,
               libraryBytes: {
@@ -466,4 +472,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       ),
     );
   }
+}
+
+extension on PreferencesState {
+  select(Function(dynamic p) param0) {}
 }

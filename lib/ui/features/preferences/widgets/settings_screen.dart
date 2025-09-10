@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import '../../../../data/services/preferences_providers.dart';
+import '../../../../data/repositories/preferences_repository.dart';
 
 class SettingsDialog extends ConsumerStatefulWidget {
   const SettingsDialog({super.key});
@@ -19,7 +19,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   @override
   void initState() {
     super.initState();
-    final prefs = ref.read(preferencesProvider);
+    final prefs = ref.read(preferencesRepositoryProvider);
     _theme = prefs.theme;
     _language = prefs.language;
     _exportDpi = prefs.exportDpi;
@@ -186,7 +186,9 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: () async {
-                      final n = ref.read(preferencesProvider.notifier);
+                      final n = ref.read(
+                        preferencesRepositoryProvider.notifier,
+                      );
                       if (_theme != null) await n.setTheme(_theme!);
                       if (_language != null) await n.setLanguage(_language!);
                       if (_exportDpi != null) await n.setExportDpi(_exportDpi!);

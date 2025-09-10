@@ -2,8 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
-import 'package:pdf_signature/data/repositories/pdf_repository.dart';
-import 'package:pdf_signature/data/repositories/signature_repository.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import '_world.dart';
 
