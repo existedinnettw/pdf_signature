@@ -138,6 +138,14 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                                 final aspectLocked = ref.watch(
                                   aspectLockedProvider,
                                 );
+                                // Publish rect for tests/other UI to observe
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  if (!mounted) return;
+                                  ref.read(activeRectProvider.notifier).state =
+                                      _activeRect;
+                                });
                                 return Stack(
                                   children: [
                                     Positioned(

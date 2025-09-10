@@ -143,20 +143,16 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         if (path == null || path.trim().isEmpty) return;
         final fullPath = _ensurePdfExtension(path.trim());
         savedPath = fullPath;
-        if (pdf.pickedPdfBytes != null) {
-          final out = await exporter.exportSignedPdfFromBytes(
-            srcBytes: pdf.pickedPdfBytes!,
-            uiPageSize: _pageSize,
-            signatureImageBytes: null,
-            placementsByPage: pdf.placementsByPage,
-            targetDpi: targetDpi,
-          );
-          if (out != null) {
-            ok = await exporter.saveBytesToFile(
-              bytes: out,
-              outputPath: fullPath,
-            );
-          }
+        final src = pdf.pickedPdfBytes ?? Uint8List(0);
+        final out = await exporter.exportSignedPdfFromBytes(
+          srcBytes: src,
+          uiPageSize: _pageSize,
+          signatureImageBytes: null,
+          placementsByPage: pdf.placementsByPage,
+          targetDpi: targetDpi,
+        );
+        if (out != null) {
+          ok = await exporter.saveBytesToFile(bytes: out, outputPath: fullPath);
         }
       }
       if (!kIsWeb) {

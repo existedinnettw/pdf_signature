@@ -33,6 +33,7 @@ class SignatureOverlay extends StatelessWidget {
               width: width,
               height: height,
               child: DecoratedBox(
+                key: Key('placed_signature_$placedIndex'),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.red, width: 2),
                 ),
@@ -41,7 +42,6 @@ class SignatureOverlay extends StatelessWidget {
                   child: RotatedSignatureImage(
                     bytes: placement.asset.bytes,
                     rotationDeg: placement.rotationDeg,
-                    key: Key('placed_signature_$placedIndex'),
                   ),
                 ),
               ),

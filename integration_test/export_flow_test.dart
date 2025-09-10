@@ -8,9 +8,12 @@ import 'package:image/image.dart' as img;
 import 'package:pdf_signature/data/services/export_service.dart';
 
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
-import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 class RecordingExporter extends ExportService {
@@ -29,14 +32,18 @@ void main() {
     tester,
   ) async {
     final fake = RecordingExporter();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          documentRepositoryProvider.overrideWith(
-            (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
           ),
-          signatureProvider.overrideWith(
-            (ref) => SignatureCardStateNotifier()..placeDefaultRect(),
+          documentRepositoryProvider.overrideWith(
+            (ref) =>
+                DocumentStateNotifier()
+                  ..openPicked(path: 'test.pdf', pageCount: 5),
           ),
           useMockViewerProvider.overrideWith((ref) => true),
           exportServiceProvider.overrideWith((_) => fake),
@@ -82,11 +89,18 @@ void main() {
   ) async {
     final sigBytes = _makeSig();
 
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
+          ),
           documentRepositoryProvider.overrideWith(
-            (ref) => DocumentStateNotifier()..openPicked(path: 'test.pdf'),
+            (ref) =>
+                DocumentStateNotifier()
+                  ..openPicked(path: 'test.pdf', pageCount: 5),
           ),
           signatureAssetRepositoryProvider.overrideWith((ref) {
             final c = SignatureAssetRepository();
@@ -119,15 +133,17 @@ void main() {
     // Programmatically simulate confirm: add placement with current rect and bound image, then clear active overlay.
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    final sigState = container.read(signatureProvider);
-    final r = sigState.rect!;
+    final r = container.read(activeRectProvider)!;
     final lib = container.read(signatureAssetRepositoryProvider);
     final asset = lib.isNotEmpty ? lib.first : null;
     final pdf = container.read(documentRepositoryProvider);
     container
         .read(documentRepositoryProvider.notifier)
         .addPlacement(page: pdf.currentPage, rect: r, asset: asset);
-    container.read(signatureProvider.notifier).clearActiveOverlay();
+    // Clear active overlay by hiding signatures temporarily
+    container.read(signatureVisibilityProvider.notifier).state = false;
+    await tester.pump();
+    container.read(signatureVisibilityProvider.notifier).state = true;
     await tester.pumpAndSettle();
 
     final placed = find.byKey(const Key('placed_signature_0'));
