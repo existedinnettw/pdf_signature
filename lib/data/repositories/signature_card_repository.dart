@@ -37,7 +37,7 @@ class SignatureCardStateNotifier extends StateNotifier<List<SignatureCard>> {
   }
 }
 
-final signatureCardProvider =
+final signatureCardRepositoryProvider =
     StateNotifierProvider<SignatureCardStateNotifier, List<SignatureCard>>(
       (ref) => SignatureCardStateNotifier(),
     );

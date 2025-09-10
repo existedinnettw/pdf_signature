@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Whether to use a mock continuous viewer (ListView) instead of a real PDF viewer.
 /// Tests will override this to true.
-final useMockViewerProvider = Provider<bool>((ref) => true);
+final useMockViewerProvider = Provider<bool>(
+  (ref) => const bool.fromEnvironment('FLUTTER_TEST', defaultValue: false),
+);
 
 /// Global visibility toggle for signature overlays (placed items). Kept simple for tests.
 final signatureVisibilityProvider = StateProvider<bool>((ref) => true);

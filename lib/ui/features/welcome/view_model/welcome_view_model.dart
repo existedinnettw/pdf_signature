@@ -22,7 +22,7 @@ class WelcomeViewModel {
     ref
         .read(documentRepositoryProvider.notifier)
         .openPicked(path: path, pageCount: pageCount, bytes: bytes);
-    ref.read(signatureCardProvider.notifier).clearAll();
+    ref.read(signatureCardRepositoryProvider.notifier).clearAll();
   }
 }
 

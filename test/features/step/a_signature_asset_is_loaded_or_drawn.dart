@@ -14,7 +14,7 @@ Future<void> aSignatureAssetIsLoadedOrDrawn(WidgetTester tester) async {
   container.read(signatureAssetRepositoryProvider.notifier).state = [];
   container.read(documentRepositoryProvider.notifier).state =
       Document.initial();
-  container.read(signatureCardProvider.notifier).state = [
+  container.read(signatureCardRepositoryProvider.notifier).state = [
     SignatureCard.initial(),
   ];
   final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);

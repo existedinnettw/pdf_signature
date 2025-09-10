@@ -69,7 +69,12 @@ void main() {
 
     // Use a persistent container across rebuilds
     final container = ProviderContainer(
-      overrides: [useMockViewerProvider.overrideWithValue(true)],
+      overrides: [
+        useMockViewerProvider.overrideWithValue(true),
+        documentRepositoryProvider.overrideWith(
+          (ref) => DocumentStateNotifier()..openSample(),
+        ),
+      ],
     );
     addTearDown(container.dispose);
 
@@ -100,8 +105,6 @@ void main() {
     // Initial pump at base width
     await tester.pumpWidget(buildHarness(width: 480));
 
-    // Open sample
-    container.read(documentRepositoryProvider.notifier).openSample();
     // Add a tiny non-empty asset to avoid decode errors
     final canvas = img.Image(width: 10, height: 5);
     img.fill(canvas, color: img.ColorUint8.rgb(0, 0, 0));
@@ -117,6 +120,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    // Verify we're using the mock viewer
+    expect(find.byKey(const Key('pdf_continuous_mock_list')), findsOneWidget);
+
     // Find the first page stack and the placed signature widget
     final pageStackFinder = find.byKey(const ValueKey('page_stack_1'));
     expect(pageStackFinder, findsOneWidget);
@@ -124,13 +130,13 @@ void main() {
     final placedFinder = find.byKey(const Key('placed_signature_0'));
     expect(placedFinder, findsOneWidget);
 
+    // Ensure the widget is fully laid out
+    await tester.pumpAndSettle();
+
     final pageBox = tester.getRect(pageStackFinder);
-    // Measure the positioned overlay area via its DecoratedBox ancestor
-    final placedBox1 = tester.getRect(
-      find
-          .ancestor(of: placedFinder, matching: find.byType(DecoratedBox))
-          .first,
-    );
+
+    // The placed signature widget itself is a DecoratedBox
+    final placedBox1 = tester.getRect(placedFinder);
 
     // Compute normalized position within the page container
     final relX1 = (placedBox1.left - pageBox.left) / pageBox.width;
@@ -142,11 +148,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final pageBox2 = tester.getRect(pageStackFinder);
-    final placedBox2 = tester.getRect(
-      find
-          .ancestor(of: placedFinder, matching: find.byType(DecoratedBox))
-          .first,
-    );
+    final placedBox2 = tester.getRect(placedFinder);
 
     final relX2 = (placedBox2.left - pageBox2.left) / pageBox2.width;
     final relY2 = (placedBox2.top - pageBox2.top) / pageBox2.height;

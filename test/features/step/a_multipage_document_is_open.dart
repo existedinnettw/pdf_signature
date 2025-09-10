@@ -13,7 +13,7 @@ Future<void> aMultipageDocumentIsOpen(WidgetTester tester) async {
   container.read(signatureAssetRepositoryProvider.notifier).state = [];
   container.read(documentRepositoryProvider.notifier).state =
       Document.initial();
-  container.read(signatureCardProvider.notifier).state = [
+  container.read(signatureCardRepositoryProvider.notifier).state = [
     SignatureCard.initial(),
   ];
   container

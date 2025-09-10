@@ -3,6 +3,7 @@ import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdfrx/pdfrx.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:multi_split_view/multi_split_view.dart';
@@ -62,10 +63,14 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       }
       // infer page count if possible
       int pageCount = 1;
-      try {
-        // printing.raster can detect page count lazily; leave 1 for tests
-        pageCount = 5;
-      } catch (_) {}
+      if (bytes != null) {
+        try {
+          final doc = await PdfDocument.openData(bytes);
+          pageCount = doc.pages.length;
+        } catch (_) {
+          // ignore
+        }
+      }
       ref
           .read(documentRepositoryProvider.notifier)
           .openPicked(path: file.path, pageCount: pageCount, bytes: bytes);

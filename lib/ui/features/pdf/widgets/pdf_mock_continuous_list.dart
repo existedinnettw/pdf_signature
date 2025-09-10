@@ -9,6 +9,7 @@ import 'package:pdf_signature/data/repositories/signature_asset_repository.dart'
 // using only adjusted overlay, no direct model imports needed
 
 /// Mocked continuous viewer for tests or platforms without real viewer.
+@visibleForTesting
 class PdfMockContinuousList extends ConsumerStatefulWidget {
   const PdfMockContinuousList({
     super.key,
@@ -54,6 +55,9 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
     final pendingPage = widget.pendingPage;
     final scrollToPage = widget.scrollToPage;
     final clearPending = widget.clearPending;
+    final visible = ref.watch(signatureVisibilityProvider);
+    final assets = ref.watch(signatureAssetRepositoryProvider);
+    final aspectLocked = ref.watch(aspectLockedProvider);
     if (pendingPage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final p = pendingPage;
@@ -101,165 +105,157 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                         ),
                       ),
                     ),
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final visible = ref.watch(signatureVisibilityProvider);
-                        if (!visible) return const SizedBox.shrink();
-                        final overlays = <Widget>[];
-                        // Existing placed overlays
-                        overlays.add(
-                          PdfPageOverlays(
-                            pageSize: pageSize,
-                            pageNumber: pageNum,
-                            onDragSignature: widget.onDragSignature,
-                            onResizeSignature: widget.onResizeSignature,
-                            onConfirmSignature: widget.onConfirmSignature,
-                            onClearActiveOverlay: widget.onClearActiveOverlay,
-                            onSelectPlaced: widget.onSelectPlaced,
-                          ),
-                        );
-                        // For tests expecting an active overlay, draw a mock
-                        // overlay on page 1 when library has at least one asset
-                        if (pageNum == 1 &&
-                            (ref
-                                .watch(signatureAssetRepositoryProvider)
-                                .isNotEmpty)) {
-                          overlays.add(
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final left =
-                                    _activeRect.left * constraints.maxWidth;
-                                final top =
-                                    _activeRect.top * constraints.maxHeight;
-                                final width =
-                                    _activeRect.width * constraints.maxWidth;
-                                final height =
-                                    _activeRect.height * constraints.maxHeight;
-                                final aspectLocked = ref.watch(
-                                  aspectLockedProvider,
-                                );
-                                // Publish rect for tests/other UI to observe
-                                WidgetsBinding.instance.addPostFrameCallback((
-                                  _,
-                                ) {
-                                  if (!mounted) return;
-                                  ref.read(activeRectProvider.notifier).state =
-                                      _activeRect;
-                                });
-                                return Stack(
-                                  children: [
-                                    Positioned(
-                                      left: left,
-                                      top: top,
-                                      width: width,
-                                      height: height,
-                                      child: GestureDetector(
-                                        key: const Key('signature_overlay'),
-                                        onPanUpdate: (d) {
-                                          final dx =
-                                              d.delta.dx / constraints.maxWidth;
-                                          final dy =
-                                              d.delta.dy /
-                                              constraints.maxHeight;
-                                          setState(() {
-                                            double l = (_activeRect.left + dx)
-                                                .clamp(0.0, 1.0);
-                                            double t = (_activeRect.top + dy)
-                                                .clamp(0.0, 1.0);
-                                            // clamp so it stays within page
-                                            l = l.clamp(
-                                              0.0,
-                                              1.0 - _activeRect.width,
-                                            );
-                                            t = t.clamp(
-                                              0.0,
-                                              1.0 - _activeRect.height,
-                                            );
-                                            _activeRect = Rect.fromLTWH(
-                                              l,
-                                              t,
-                                              _activeRect.width,
-                                              _activeRect.height,
-                                            );
-                                          });
-                                        },
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                              color: Colors.red,
-                                              width: 2,
-                                            ),
-                                          ),
-                                          child: const SizedBox.expand(),
-                                        ),
-                                      ),
-                                    ),
-                                    // resize handle bottom-right
-                                    Positioned(
-                                      left: left + width - 14,
-                                      top: top + height - 14,
-                                      width: 14,
-                                      height: 14,
-                                      child: GestureDetector(
-                                        key: const Key('signature_handle'),
-                                        onPanUpdate: (d) {
-                                          final dx =
-                                              d.delta.dx / constraints.maxWidth;
-                                          final dy =
-                                              d.delta.dy /
-                                              constraints.maxHeight;
-                                          setState(() {
-                                            double newW = (_activeRect.width +
-                                                    dx)
-                                                .clamp(0.05, 1.0);
-                                            double newH = (_activeRect.height +
-                                                    dy)
-                                                .clamp(0.05, 1.0);
-                                            if (aspectLocked) {
-                                              final ratio =
-                                                  _activeRect.width /
-                                                  _activeRect.height;
-                                              // keep ratio; prefer width change driving height
-                                              newH = (newW /
-                                                      (ratio == 0 ? 1 : ratio))
-                                                  .clamp(0.05, 1.0);
-                                            }
-                                            // clamp to page bounds
-                                            newW = newW.clamp(
-                                              0.05,
-                                              1.0 - _activeRect.left,
-                                            );
-                                            newH = newH.clamp(
-                                              0.05,
-                                              1.0 - _activeRect.top,
-                                            );
-                                            _activeRect = Rect.fromLTWH(
-                                              _activeRect.left,
-                                              _activeRect.top,
-                                              newW,
-                                              newH,
-                                            );
-                                          });
-                                        },
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            border: Border.all(
-                                              color: Colors.red,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                    visible
+                        ? Stack(
+                          children: [
+                            PdfPageOverlays(
+                              pageSize: pageSize,
+                              pageNumber: pageNum,
+                              onDragSignature: widget.onDragSignature,
+                              onResizeSignature: widget.onResizeSignature,
+                              onConfirmSignature: widget.onConfirmSignature,
+                              onClearActiveOverlay: widget.onClearActiveOverlay,
+                              onSelectPlaced: widget.onSelectPlaced,
                             ),
-                          );
-                        }
-                        return Stack(children: overlays);
-                      },
-                    ),
+                            // For tests expecting an active overlay, draw a mock
+                            // overlay on page 1 when library has at least one asset
+                            if (pageNum == 1 && assets.isNotEmpty)
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final left =
+                                      _activeRect.left * constraints.maxWidth;
+                                  final top =
+                                      _activeRect.top * constraints.maxHeight;
+                                  final width =
+                                      _activeRect.width * constraints.maxWidth;
+                                  final height =
+                                      _activeRect.height *
+                                      constraints.maxHeight;
+                                  // Publish rect for tests/other UI to observe
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
+                                    if (!mounted) return;
+                                    ref
+                                        .read(activeRectProvider.notifier)
+                                        .state = _activeRect;
+                                  });
+                                  return Stack(
+                                    children: [
+                                      Positioned(
+                                        left: left,
+                                        top: top,
+                                        width: width,
+                                        height: height,
+                                        child: GestureDetector(
+                                          key: const Key('signature_overlay'),
+                                          onPanUpdate: (d) {
+                                            final dx =
+                                                d.delta.dx /
+                                                constraints.maxWidth;
+                                            final dy =
+                                                d.delta.dy /
+                                                constraints.maxHeight;
+                                            setState(() {
+                                              double l = (_activeRect.left + dx)
+                                                  .clamp(0.0, 1.0);
+                                              double t = (_activeRect.top + dy)
+                                                  .clamp(0.0, 1.0);
+                                              // clamp so it stays within page
+                                              l = l.clamp(
+                                                0.0,
+                                                1.0 - _activeRect.width,
+                                              );
+                                              t = t.clamp(
+                                                0.0,
+                                                1.0 - _activeRect.height,
+                                              );
+                                              _activeRect = Rect.fromLTWH(
+                                                l,
+                                                t,
+                                                _activeRect.width,
+                                                _activeRect.height,
+                                              );
+                                            });
+                                          },
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: Colors.red,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: const SizedBox.expand(),
+                                          ),
+                                        ),
+                                      ),
+                                      // resize handle bottom-right
+                                      Positioned(
+                                        left: left + width - 14,
+                                        top: top + height - 14,
+                                        width: 14,
+                                        height: 14,
+                                        child: GestureDetector(
+                                          key: const Key('signature_handle'),
+                                          onPanUpdate: (d) {
+                                            final dx =
+                                                d.delta.dx /
+                                                constraints.maxWidth;
+                                            final dy =
+                                                d.delta.dy /
+                                                constraints.maxHeight;
+                                            setState(() {
+                                              double newW = (_activeRect.width +
+                                                      dx)
+                                                  .clamp(0.05, 1.0);
+                                              double newH =
+                                                  (_activeRect.height + dy)
+                                                      .clamp(0.05, 1.0);
+                                              if (aspectLocked) {
+                                                final ratio =
+                                                    _activeRect.width /
+                                                    _activeRect.height;
+                                                // keep ratio; prefer width change driving height
+                                                newH = (newW /
+                                                        (ratio == 0
+                                                            ? 1
+                                                            : ratio))
+                                                    .clamp(0.05, 1.0);
+                                              }
+                                              // clamp to page bounds
+                                              newW = newW.clamp(
+                                                0.05,
+                                                1.0 - _activeRect.left,
+                                              );
+                                              newH = newH.clamp(
+                                                0.05,
+                                                1.0 - _activeRect.top,
+                                              );
+                                              _activeRect = Rect.fromLTWH(
+                                                _activeRect.left,
+                                                _activeRect.top,
+                                                newW,
+                                                newH,
+                                              );
+                                            });
+                                          },
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                          ],
+                        )
+                        : const SizedBox.shrink(),
                   ],
                 ),
               ),

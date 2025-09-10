@@ -4,7 +4,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 // Real viewer removed in migration; mock continuous list is used in tests.
 
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'pdf_mock_continuous_list.dart';
+import 'pdf_viewer_widget.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
@@ -147,24 +147,17 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
     final isContinuous = pageViewMode == 'continuous';
 
-    // Mock continuous: ListView with prebuilt children
+    // Use real PDF viewer
     if (isContinuous) {
-      final count = pdf.pageCount > 0 ? pdf.pageCount : 1;
-      return PdfMockContinuousList(
+      return PdfViewerWidget(
         pageSize: widget.pageSize,
-        count: count,
-        pageKeyBuilder: _pageKey,
-        scrollToPage: _scrollToPage,
-        pendingPage: _pendingPage,
-        clearPending: () {
-          _pendingPage = null;
-          _scrollRetryCount = 0;
-        },
-        onDragSignature: (delta) => widget.onDragSignature(delta),
-        onResizeSignature: (delta) => widget.onResizeSignature(delta),
+        onDragSignature: widget.onDragSignature,
+        onResizeSignature: widget.onResizeSignature,
         onConfirmSignature: widget.onConfirmSignature,
         onClearActiveOverlay: widget.onClearActiveOverlay,
         onSelectPlaced: widget.onSelectPlaced,
+        pageKeyBuilder: _pageKey,
+        scrollToPage: _scrollToPage,
       );
     }
     return const SizedBox.shrink();
