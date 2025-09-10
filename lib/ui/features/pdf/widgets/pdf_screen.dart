@@ -10,7 +10,6 @@ import 'package:printing/printing.dart' as printing;
 import 'package:pdfrx/pdfrx.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 
-import '../../../../data/services/export_providers.dart';
 import 'package:image/image.dart' as img;
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
@@ -146,9 +145,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       final exporter = ref.read(exportServiceProvider);
 
       // get DPI from preferences
-      final targetDpi = ref.read(preferencesRepositoryProvider).select(
-            (p) => p.exportDpi,
-      );
+      final targetDpi = ref
+          .read(preferencesRepositoryProvider)
+          .select((p) => p.exportDpi);
       final useMock = ref.read(useMockViewerProvider);
       bool ok = false;
       String? savedPath;

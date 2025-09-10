@@ -6,7 +6,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:pdf_signature/data/services/export_service.dart';
-import 'package:pdf_signature/data/services/export_providers.dart';
+
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';

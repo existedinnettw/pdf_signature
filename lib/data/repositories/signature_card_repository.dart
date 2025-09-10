@@ -1,6 +1,4 @@
-import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image/image.dart' as img;
 import '../../domain/models/model.dart';
 
 class SignatureCardStateNotifier extends StateNotifier<List<SignatureCard>> {

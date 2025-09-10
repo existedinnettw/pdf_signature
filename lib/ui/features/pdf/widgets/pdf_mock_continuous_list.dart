@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../../../data/services/export_providers.dart';
 import 'pdf_page_overlays.dart';
 
 /// Mocked continuous viewer for tests or platforms without real viewer.
