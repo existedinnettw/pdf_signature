@@ -62,10 +62,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       } catch (_) {
         bytes = null;
       }
-      ref
-          .read(documentRepositoryProvider.notifier)
-          .openPicked(path: file.path, bytes: bytes);
-      ref.read(signatureProvider.notifier).resetForNewPage();
+      await ref
+          .read(pdfViewModelProvider)
+          .openPdf(path: file.path, bytes: bytes);
     }
   }
 

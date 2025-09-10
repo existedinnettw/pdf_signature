@@ -6,10 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-
-import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
-// Settings dialog is provided via global AppBar in MyApp
+import 'package:pdf_signature/ui/features/welcome/view_model/welcome_view_model.dart';
 
 // Abstraction to make drop handling testable without constructing
 // platform-specific DropItem types in widget tests.
@@ -50,10 +47,7 @@ Future<void> handleDroppedFiles(
     bytes = null;
   }
   final String path = pdf.path ?? pdf.name;
-  read(
-    documentRepositoryProvider.notifier,
-  ).openPicked(path: path, bytes: bytes);
-  read(signatureProvider.notifier).resetForNewPage();
+  await read(welcomeViewModelProvider).openPdf(path: path, bytes: bytes);
 }
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -76,10 +70,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       } catch (_) {
         bytes = null;
       }
-      ref
-          .read(documentRepositoryProvider.notifier)
-          .openPicked(path: file.path, bytes: bytes);
-      ref.read(signatureProvider.notifier).resetForNewPage();
+      await ref
+          .read(welcomeViewModelProvider)
+          .openPdf(path: file.path, bytes: bytes);
     }
   }
 
