@@ -26,12 +26,12 @@ Future<void> aSignatureAssetIsPlacedOnThePage(WidgetTester tester) async {
     asset = library.first;
   } else {
     final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
-    final id = container
+    container
         .read(signatureAssetRepositoryProvider.notifier)
         .add(bytes, name: 'test.png');
     asset = container
         .read(signatureAssetRepositoryProvider)
-        .firstWhere((a) => a.id == id);
+        .firstWhere((a) => a.name == 'test.png');
   }
 
   // Place it on the current page

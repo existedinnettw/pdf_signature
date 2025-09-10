@@ -13,11 +13,9 @@ Future<void> aMultipageDocumentIsOpen(WidgetTester tester) async {
   container.read(signatureAssetRepositoryProvider.notifier).state = [];
   container.read(documentRepositoryProvider.notifier).state =
       Document.initial();
-  container.read(signatureCardProvider.notifier).state =
-      SignatureCard.initial();
-  container.read(currentRectProvider.notifier).state = null;
-  container.read(editingEnabledProvider.notifier).state = false;
-  container.read(aspectLockedProvider.notifier).state = false;
+  container.read(signatureCardProvider.notifier).state = [
+    SignatureCard.initial(),
+  ];
   container
       .read(documentRepositoryProvider.notifier)
       .openPicked(path: 'mock.pdf', pageCount: 5);

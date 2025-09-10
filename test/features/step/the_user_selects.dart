@@ -13,7 +13,6 @@ Future<void> theUserSelects(WidgetTester tester, dynamic file) async {
   container
       .read(documentRepositoryProvider.notifier)
       .openPicked(path: 'mock.pdf', pageCount: 1);
-  container.read(documentRepositoryProvider.notifier).setSignedPage(1);
   // For invalid/unsupported/empty selections we do NOT set image bytes.
   // This simulates a failed load and keeps rect null.
   final token = file.toString();

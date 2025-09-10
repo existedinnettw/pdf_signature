@@ -16,11 +16,9 @@ Future<void> aSignatureAssetLoadedOrDrawnIsWrappedInASignatureCard(
   container.read(signatureAssetRepositoryProvider.notifier).state = [];
   container.read(documentRepositoryProvider.notifier).state =
       Document.initial();
-  container.read(signatureCardProvider.notifier).state =
-      SignatureCard.initial();
-  container.read(currentRectProvider.notifier).state = null;
-  container.read(editingEnabledProvider.notifier).state = false;
-  container.read(aspectLockedProvider.notifier).state = false;
+  container.read(signatureCardProvider.notifier).state = [
+    SignatureCard.initial(),
+  ];
   final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
   container
       .read(signatureAssetRepositoryProvider.notifier)

@@ -19,15 +19,11 @@ Future<void> theUserPlacesASignaturePlacementFromAssetOnPage(
   var asset = library.where((a) => a.name == assetName).firstOrNull;
   if (asset == null) {
     // add dummy asset
-    final id = container
+    container
         .read(signatureAssetRepositoryProvider.notifier)
-        .add(Uint8List(0), name: assetName);
+        .add(Uint8List(100), name: assetName);
     final updatedLibrary = container.read(signatureAssetRepositoryProvider);
-    asset = updatedLibrary.firstWhere(
-      (a) => a.id == id,
-      orElse:
-          () => SignatureAsset(id: id, bytes: Uint8List(0), name: assetName),
-    );
+    asset = updatedLibrary.firstWhere((a) => a.name == assetName);
   }
   container
       .read(documentRepositoryProvider.notifier)

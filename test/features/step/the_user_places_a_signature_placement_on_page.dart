@@ -19,10 +19,6 @@ Future<void> theUserPlacesASignaturePlacementOnPage(
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(20, 20, 100, 50),
-        asset: SignatureAsset(
-          id: 'test.png',
-          bytes: Uint8List(0),
-          name: 'test.png',
-        ),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'test.png'),
       );
 }

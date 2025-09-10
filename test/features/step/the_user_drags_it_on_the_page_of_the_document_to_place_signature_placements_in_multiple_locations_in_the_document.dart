@@ -17,11 +17,7 @@ theUserDragsItOnThePageOfTheDocumentToPlaceSignaturePlacementsInMultipleLocation
   final asset =
       lib.isNotEmpty
           ? lib.first
-          : SignatureAsset(
-            id: 'shared.png',
-            bytes: Uint8List(0),
-            name: 'shared.png',
-          );
+          : SignatureAsset(bytes: Uint8List(0), name: 'shared.png');
 
   // Ensure PDF is open
   if (!container.read(documentRepositoryProvider).loaded) {

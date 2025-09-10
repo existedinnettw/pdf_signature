@@ -17,11 +17,9 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
   container.read(signatureAssetRepositoryProvider.notifier).state = [];
   container.read(documentRepositoryProvider.notifier).state =
       Document.initial();
-  container.read(signatureCardProvider.notifier).state =
-      SignatureCard.initial();
-  container.read(currentRectProvider.notifier).state = null;
-  container.read(editingEnabledProvider.notifier).state = false;
-  container.read(aspectLockedProvider.notifier).state = false;
+  container.read(signatureCardProvider.notifier).state = [
+    SignatureCard.initial(),
+  ];
   container
       .read(documentRepositoryProvider.notifier)
       .openPicked(path: 'mock.pdf', pageCount: 5);
@@ -31,16 +29,16 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(10, 10, 50, 50),
-    asset: SignatureAsset(id: 'test1', bytes: Uint8List(0), name: 'test1'),
+    asset: SignatureAsset(bytes: Uint8List(0), name: 'test1'),
   );
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(70, 10, 50, 50),
-    asset: SignatureAsset(id: 'test2', bytes: Uint8List(0), name: 'test2'),
+    asset: SignatureAsset(bytes: Uint8List(0), name: 'test2'),
   );
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(130, 10, 50, 50),
-    asset: SignatureAsset(id: 'test3', bytes: Uint8List(0), name: 'test3'),
+    asset: SignatureAsset(bytes: Uint8List(0), name: 'test3'),
   );
 }

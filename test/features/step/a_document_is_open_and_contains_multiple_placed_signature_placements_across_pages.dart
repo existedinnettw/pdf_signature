@@ -21,20 +21,20 @@ aDocumentIsOpenAndContainsMultiplePlacedSignaturePlacementsAcrossPages(
       .addPlacement(
         page: 1,
         rect: Rect.fromLTWH(10, 10, 100, 50),
-        asset: SignatureAsset(id: 'sig1.png', bytes: Uint8List(0)),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'sig1.png'),
       );
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: 2,
         rect: Rect.fromLTWH(20, 20, 100, 50),
-        asset: SignatureAsset(id: 'sig2.png', bytes: Uint8List(0)),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'sig2.png'),
       );
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: 3,
         rect: Rect.fromLTWH(30, 30, 100, 50),
-        asset: SignatureAsset(id: 'sig3.png', bytes: Uint8List(0)),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'sig3.png'),
       );
 }

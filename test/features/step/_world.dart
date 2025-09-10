@@ -60,3 +60,108 @@ class TestWorld {
     placeFromPictureCallCount = 0;
   }
 }
+
+// Mock signature state for tests
+class MockSignatureState {
+  List<List<Offset>> strokes = [];
+  Uint8List? imageBytes;
+  bool bgRemoval = false;
+  Rect? rect;
+  double contrast = 1.0;
+  double brightness = 0.0;
+
+  MockSignatureState({
+    List<List<Offset>>? strokes,
+    this.imageBytes,
+    this.bgRemoval = false,
+    this.rect,
+    this.contrast = 1.0,
+    this.brightness = 0.0,
+  }) : strokes = strokes ?? [];
+}
+
+class MockSignatureNotifier extends StateNotifier<MockSignatureState> {
+  MockSignatureNotifier() : super(MockSignatureState());
+
+  void setStrokes(List<List<Offset>> strokes) {
+    state = MockSignatureState(
+      strokes: List.from(strokes),
+      imageBytes: state.imageBytes,
+      bgRemoval: state.bgRemoval,
+      rect: state.rect,
+      contrast: state.contrast,
+      brightness: state.brightness,
+    );
+  }
+
+  void setImageBytes(Uint8List bytes) {
+    state = MockSignatureState(
+      strokes: List.from(state.strokes),
+      imageBytes: bytes,
+      bgRemoval: state.bgRemoval,
+      rect: state.rect,
+      contrast: state.contrast,
+      brightness: state.brightness,
+    );
+    // Mock processing: just set the processed image to the same bytes
+    TestWorld.container?.read(processedSignatureImageProvider.notifier).state =
+        bytes;
+  }
+
+  void setBgRemoval(bool value) {
+    state = MockSignatureState(
+      strokes: List.from(state.strokes),
+      imageBytes: state.imageBytes,
+      bgRemoval: value,
+      rect: state.rect,
+      contrast: state.contrast,
+      brightness: state.brightness,
+    );
+  }
+
+  void clearImage() {
+    state = MockSignatureState(
+      strokes: List.from(state.strokes),
+      imageBytes: null,
+      bgRemoval: state.bgRemoval,
+      rect: state.rect,
+      contrast: state.contrast,
+      brightness: state.brightness,
+    );
+  }
+
+  void setContrast(double value) {
+    state = MockSignatureState(
+      strokes: List.from(state.strokes),
+      imageBytes: state.imageBytes,
+      bgRemoval: state.bgRemoval,
+      rect: state.rect,
+      contrast: value,
+      brightness: state.brightness,
+    );
+  }
+
+  void setBrightness(double value) {
+    state = MockSignatureState(
+      strokes: List.from(state.strokes),
+      imageBytes: state.imageBytes,
+      bgRemoval: state.bgRemoval,
+      rect: state.rect,
+      contrast: state.contrast,
+      brightness: value,
+    );
+  }
+}
+
+final signatureProvider =
+    StateNotifierProvider<MockSignatureNotifier, MockSignatureState>(
+      (ref) => MockSignatureNotifier(),
+    );
+
+// Mock other providers
+final currentRectProvider = StateProvider<Rect?>((ref) => null);
+final editingEnabledProvider = StateProvider<bool>((ref) => false);
+final aspectLockedProvider = StateProvider<bool>((ref) => false);
+final processedSignatureImageProvider = StateProvider<Uint8List?>(
+  (ref) => null,
+);

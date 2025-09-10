@@ -18,6 +18,6 @@ Future<void> aSignaturePlacementIsPlacedWithAPositionAndSizeRelativeToThePage(
       .addPlacement(
         page: pdf.currentPage,
         rect: Rect.fromLTWH(50, 50, 200, 100),
-        asset: SignatureAsset(id: 'test.png', bytes: Uint8List(0)),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'test.png'),
       );
 }

@@ -11,9 +11,9 @@ Future<void> adjustingOneOfTheSignaturePlacementsDoesNotAffectTheOthers(
   final placements =
       pdf.placementsByPage.values.expand((list) => list).toList();
 
-  // All placements should have the same asset ID (reusing the same asset)
-  final assetIds = placements.map((p) => p.asset.id).toSet();
-  expect(assetIds.length, 1);
+  // All placements should have the same asset (reusing the same asset)
+  final assets = placements.map((p) => p.asset).toSet();
+  expect(assets.length, 1);
 
   // All should have default rotation (0.0) since none were adjusted
   final rotations = placements.map((p) => p.rotationDeg).toSet();

@@ -20,6 +20,6 @@ Future<void> aDocumentIsOpenAndContainsAtLeastOneSignaturePlacement(
       .addPlacement(
         page: 1,
         rect: Rect.fromLTWH(10, 10, 100, 50),
-        asset: SignatureAsset(id: 'sig.png', bytes: Uint8List(0)),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'sig.png'),
       );
 }

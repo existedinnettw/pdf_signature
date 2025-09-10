@@ -10,11 +10,9 @@ Future<void> theSignaturePlacementRotatesAroundItsCenterInRealTime(
   final container = TestWorld.container ?? ProviderContainer();
   final pdf = container.read(documentRepositoryProvider);
 
-  if (pdf.selectedPlacementIndex != null) {
-    final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
-    if (pdf.selectedPlacementIndex! < placements.length) {
-      final placement = placements[pdf.selectedPlacementIndex!];
-      expect(placement.rotationDeg, 45.0);
-    }
+  final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
+  if (placements.isNotEmpty) {
+    final placement = placements[0];
+    expect(placement.rotationDeg, 45.0);
   }
 }

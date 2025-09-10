@@ -10,10 +10,8 @@ Future<void> aCreatedSignatureCard(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
   // Create a dummy signature asset
-  final asset = SignatureAsset(
-    id: 'test_card',
-    bytes: Uint8List(100),
-    name: 'Test Card',
-  );
-  container.read(signatureAssetRepositoryProvider.notifier).state = [asset];
+  final asset = SignatureAsset(bytes: Uint8List(100), name: 'Test Card');
+  container
+      .read(signatureAssetRepositoryProvider.notifier)
+      .add(asset.bytes, name: asset.name);
 }

@@ -8,11 +8,9 @@ Future<void> theSizeAndPositionUpdateInRealTime(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
   final pdf = container.read(documentRepositoryProvider);
 
-  if (pdf.selectedPlacementIndex != null) {
-    final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
-    if (pdf.selectedPlacementIndex! < placements.length) {
-      final currentRect = placements[pdf.selectedPlacementIndex!].rect;
-      expect(currentRect.center, isNot(TestWorld.prevCenter));
-    }
+  final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
+  if (placements.isNotEmpty) {
+    final currentRect = placements[0].rect;
+    expect(currentRect.center, isNot(TestWorld.prevCenter));
   }
 }

@@ -20,10 +20,6 @@ Future<void> theUserNavigatesToPageAndPlacesAnotherSignaturePlacement(
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(40, 40, 100, 50),
-        asset: SignatureAsset(
-          id: 'another.png',
-          bytes: Uint8List(0),
-          name: 'another.png',
-        ),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'another.png'),
       );
 }

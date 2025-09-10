@@ -13,24 +13,18 @@ Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
   final pdf = container.read(documentRepositoryProvider);
   final pdfN = container.read(documentRepositoryProvider.notifier);
 
-  if (pdf.selectedPlacementIndex != null) {
-    final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
-    if (pdf.selectedPlacementIndex! < placements.length) {
-      final currentRect = placements[pdf.selectedPlacementIndex!].rect;
-      TestWorld.prevCenter = currentRect.center;
+  final placements = pdfN.placementsOn(pdf.currentPage);
+  if (placements.isNotEmpty) {
+    final currentRect = placements[0].rect;
+    TestWorld.prevCenter = currentRect.center;
 
-      // Resize and move the placement
-      final newRect = Rect.fromCenter(
-        center: currentRect.center + const Offset(20, -10),
-        width: currentRect.width + 50,
-        height: currentRect.height + 30,
-      );
+    // Resize and move the placement
+    final newRect = Rect.fromCenter(
+      center: currentRect.center + const Offset(20, -10),
+      width: currentRect.width + 50,
+      height: currentRect.height + 30,
+    );
 
-      pdfN.updatePlacementRect(
-        page: pdf.currentPage,
-        index: pdf.selectedPlacementIndex!,
-        rect: newRect,
-      );
-    }
+    pdfN.updatePlacementRect(page: pdf.currentPage, index: 0, rect: newRect);
   }
 }

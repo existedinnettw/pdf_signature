@@ -20,12 +20,10 @@ Future<void> aSignatureAssetIsCreated(WidgetTester tester) async {
   }
 
   // Create a dummy signature asset
-  final asset = SignatureAsset(
-    id: 'test_asset',
-    bytes: Uint8List(100),
-    name: 'Test Asset',
-  );
-  container.read(signatureAssetRepositoryProvider.notifier).state = [asset];
+  final asset = SignatureAsset(bytes: Uint8List(100), name: 'Test Asset');
+  container
+      .read(signatureAssetRepositoryProvider.notifier)
+      .add(asset.bytes, name: asset.name);
 
   // Place it on the current page
   final pdf = container.read(documentRepositoryProvider);

@@ -19,21 +19,13 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(10, 10, 100, 50),
-        asset: SignatureAsset(
-          id: 'sig1.png',
-          bytes: Uint8List(0),
-          name: 'sig1.png',
-        ),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'sig1.png'),
       );
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(120, 10, 100, 50),
-        asset: SignatureAsset(
-          id: 'sig2.png',
-          bytes: Uint8List(0),
-          name: 'sig2.png',
-        ),
+        asset: SignatureAsset(bytes: Uint8List(0), name: 'sig2.png'),
       );
 }

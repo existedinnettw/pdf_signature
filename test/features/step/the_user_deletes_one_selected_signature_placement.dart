@@ -10,8 +10,12 @@ Future<void> theUserDeletesOneSelectedSignaturePlacement(
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
   final pdf = container.read(documentRepositoryProvider);
-  if (pdf.selectedPlacementIndex == null) {
-    container.read(documentRepositoryProvider.notifier).selectPlacement(0);
+  final placements = container
+      .read(documentRepositoryProvider.notifier)
+      .placementsOn(pdf.currentPage);
+  if (placements.isNotEmpty) {
+    container
+        .read(documentRepositoryProvider.notifier)
+        .removePlacement(page: pdf.currentPage, index: 0);
   }
-  container.read(documentRepositoryProvider.notifier).deleteSelectedPlacement();
 }
