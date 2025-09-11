@@ -9,5 +9,5 @@ Future<void> theLastPageIsDisplayedPage(WidgetTester tester, num param1) async {
   final c = TestWorld.container ?? ProviderContainer();
   final pdf = c.read(documentRepositoryProvider);
   expect(pdf.pageCount, last);
-  expect(pdf.currentPage, last);
+  expect(, last);
 }

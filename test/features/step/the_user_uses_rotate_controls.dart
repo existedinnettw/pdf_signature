@@ -9,11 +9,11 @@ Future<void> theUserUsesRotateControls(WidgetTester tester) async {
   final pdf = container.read(documentRepositoryProvider);
   final pdfN = container.read(documentRepositoryProvider.notifier);
 
-  final placements = pdfN.placementsOn(pdf.currentPage);
+  final placements = pdfN.placementsOn();
   if (placements.isNotEmpty) {
     // Rotate the first placement by 45 degrees
     pdfN.updatePlacementRotation(
-      page: pdf.currentPage,
+      page: ,
       index: 0,
       rotationDeg: 45.0,
     );

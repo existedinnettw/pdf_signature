@@ -5,17 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 
 class _TestPdfController extends DocumentStateNotifier {
   _TestPdfController() : super() {
-    state = Document.initial().copyWith(
-      loaded: true,
-      pageCount: 6,
-      currentPage: 2,
-    );
+    state = Document.initial().copyWith(loaded: true, pageCount: 6);
   }
 }
 
@@ -66,9 +63,13 @@ void main() {
       double lastPixels =
           tester.state<ScrollableState>(scrollableFinder).position.pixels;
 
+      final ctx = tester.element(find.byType(PdfPageArea));
+      final container = ProviderScope.containerOf(ctx, listen: false);
+      final vm = container.read(pdfViewModelProvider.notifier);
+
       Future<void> jumpAndVerify(int targetPage) async {
         final before = lastPixels;
-        ctrl.jumpTo(targetPage);
+        vm.jumpToPage(targetPage);
         await tester.pump();
         await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
@@ -92,6 +93,7 @@ void main() {
       }
 
       // Jump to 4 different pages and verify each
+      await jumpAndVerify(2);
       await jumpAndVerify(5);
       await jumpAndVerify(1);
       await jumpAndVerify(6);

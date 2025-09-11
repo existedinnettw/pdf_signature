@@ -8,7 +8,7 @@ Future<void> aSignaturePlacementAppearsOnThePageBasedOnTheSignatureCard(
 ) async {
   final container = TestWorld.container!;
   final pdf = container.read(documentRepositoryProvider);
-  final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
+  final placements = pdf.placementsByPage[] ?? [];
   expect(
     placements.isNotEmpty,
     true,

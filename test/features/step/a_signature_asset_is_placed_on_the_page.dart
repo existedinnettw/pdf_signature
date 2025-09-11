@@ -39,7 +39,7 @@ Future<void> aSignatureAssetIsPlacedOnThePage(WidgetTester tester) async {
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
-        page: pdf.currentPage,
+        page: ,
         rect: Rect.fromLTWH(50, 50, 100, 50),
         asset: asset,
       );

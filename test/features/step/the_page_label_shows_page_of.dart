@@ -13,6 +13,6 @@ Future<void> thePageLabelShowsPageOf(
   final total = param2.toInt();
   final c = TestWorld.container ?? ProviderContainer();
   final pdf = c.read(documentRepositoryProvider);
-  expect(pdf.currentPage, current);
+  expect(, current);
   expect(pdf.pageCount, total);
 }

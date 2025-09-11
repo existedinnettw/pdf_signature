@@ -1,37 +1,16 @@
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
-import 'package:pdf_signature/domain/models/model.dart';
 import '_world.dart';
 
 /// Usage: a signature asset is created
 Future<void> aSignatureAssetIsCreated(WidgetTester tester) async {
-  final container = TestWorld.container ?? ProviderContainer();
-  TestWorld.container = container;
+  final container = TestWorld.container!;
+  final assets = container.read(signatureAssetRepositoryProvider);
+  expect(assets, isNotEmpty);
+  // The last added should be the drawn one
+  final lastAsset = assets.last;
+  expect(lastAsset.name, 'drawing');
 
-  // Ensure PDF is open
-  if (!container.read(documentRepositoryProvider).loaded) {
-    container
-        .read(documentRepositoryProvider.notifier)
-        .openPicked(path: 'mock.pdf', pageCount: 5);
-  }
-
-  // Create a dummy signature asset
-  final asset = SignatureAsset(bytes: Uint8List(100), name: 'Test Asset');
-  container
-      .read(signatureAssetRepositoryProvider.notifier)
-      .add(asset.bytes, name: asset.name);
-
-  // Place it on the current page
-  final pdf = container.read(documentRepositoryProvider);
-  container
-      .read(documentRepositoryProvider.notifier)
-      .addPlacement(
-        page: pdf.currentPage,
-        rect: Rect.fromLTWH(50, 50, 100, 50),
-        asset: asset,
-      );
+  // Pump to ensure UI is updated
+  await tester.pump();
 }

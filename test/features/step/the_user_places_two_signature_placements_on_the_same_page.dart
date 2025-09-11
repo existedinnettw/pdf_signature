@@ -13,7 +13,7 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
   final pdf = container.read(documentRepositoryProvider);
-  final page = pdf.currentPage;
+  final page = ;
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(

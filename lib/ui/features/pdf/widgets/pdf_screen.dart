@@ -9,6 +9,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 
 import 'package:pdf_signature/data/repositories/document_repository.dart';
+import '../view_model/pdf_view_model.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
@@ -78,7 +79,13 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   void _jumpToPage(int page) {
-    ref.read(documentRepositoryProvider.notifier).jumpTo(page);
+    final vm = ref.read(pdfViewModelProvider.notifier);
+    final current = ref.read(pdfViewModelProvider);
+    if (page == -1) {
+      vm.jumpToPage(current - 1);
+    } else {
+      vm.jumpToPage(page);
+    }
   }
 
   Future<Uint8List?> _loadSignatureFromFile() async {
@@ -114,7 +121,10 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       context: context,
       isScrollControlled: true,
       enableDrag: false,
-      builder: (_) => const DrawCanvas(),
+      builder:
+          (_) => DrawCanvas(
+            onConfirm: (bytes) => Navigator.of(context).pop(bytes),
+          ),
     );
     if (result != null && result.isNotEmpty) {
       // In simplified UI, adding to library isn't implemented

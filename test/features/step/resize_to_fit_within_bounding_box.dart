@@ -8,7 +8,7 @@ Future<void> resizeToFitWithinBoundingBox(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
   final pdf = container.read(documentRepositoryProvider);
 
-  final placements = pdf.placementsByPage[pdf.currentPage] ?? [];
+  final placements = pdf.placementsByPage[] ?? [];
   for (final placement in placements) {
     // Assume page size is 800x600 for testing
     const pageWidth = 800.0;

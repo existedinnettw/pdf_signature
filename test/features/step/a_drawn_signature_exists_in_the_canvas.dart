@@ -1,12 +1,23 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '_world.dart';
 
 /// Usage: a drawn signature exists in the canvas
 Future<void> aDrawnSignatureExistsInTheCanvas(WidgetTester tester) async {
-  final container = TestWorld.container ?? ProviderContainer();
-  final sigN = container.read(signatureProvider.notifier);
-  sigN.setStrokes([
-    [const Offset(0, 0), const Offset(1, 1)],
-  ]);
+  // Tap the draw signature button to open the dialog
+  await tester.tap(find.byKey(const Key('btn_drawer_draw_signature')));
+  await tester.pumpAndSettle();
+
+  // Now the DrawCanvas dialog should be open
+  expect(find.byKey(const Key('draw_canvas')), findsOneWidget);
+
+  // Simulate drawing strokes on the canvas
+  final canvas = find.byKey(const Key('hand_signature_pad'));
+  expect(canvas, findsOneWidget);
+
+  // Draw a simple stroke
+  await tester.drag(canvas, const Offset(50, 50));
+  await tester.drag(canvas, const Offset(100, 100));
+  await tester.drag(canvas, const Offset(150, 150));
+
+  // Do not confirm, so the canvas has strokes but is not closed
 }

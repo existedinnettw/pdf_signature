@@ -8,7 +8,7 @@ Future<void> theUserCanMoveToTheNextOrPreviousPage(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
   final pdfN = container.read(documentRepositoryProvider.notifier);
   final pdf = container.read(documentRepositoryProvider);
-  expect(pdf.currentPage, 1);
+  expect(, 1);
   pdfN.jumpTo(2);
   expect(container.read(documentRepositoryProvider).currentPage, 2);
   pdfN.jumpTo(1);

@@ -51,7 +51,7 @@ theUserDragsThisSignatureCardOnThePageOfTheDocumentToPlaceASignaturePlacement(
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
-        page: pdf.currentPage,
+        page: ,
         rect: Rect.fromLTWH(100, 100, 100, 50),
         asset: drop_card.asset,
         rotationDeg: drop_card.rotationDeg,

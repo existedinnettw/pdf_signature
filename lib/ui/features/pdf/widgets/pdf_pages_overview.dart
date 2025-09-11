@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'pdf_providers.dart';
+import '../view_model/pdf_view_model.dart';
 
 class PdfPagesOverview extends ConsumerWidget {
   const PdfPagesOverview({super.key});
@@ -21,12 +22,12 @@ class PdfPagesOverview extends ConsumerWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           final pageNumber = index + 1;
-          final isSelected = pdf.currentPage == pageNumber;
+          final isSelected = ref.watch(pdfViewModelProvider) == pageNumber;
           return InkWell(
             onTap:
                 () => ref
-                    .read(documentRepositoryProvider.notifier)
-                    .jumpTo(pageNumber),
+                    .read(pdfViewModelProvider.notifier)
+                    .jumpToPage(pageNumber),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color:

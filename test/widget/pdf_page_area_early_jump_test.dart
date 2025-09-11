@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/domain/models/model.dart';
@@ -51,8 +52,11 @@ void main() {
       ),
     );
 
-    // Jump to page 5 right away
-    ctrl.jumpTo(5);
+    // Jump to page 5 right away via view model
+    final ctx = tester.element(find.byType(PdfPageArea));
+    final container = ProviderScope.containerOf(ctx, listen: false);
+    final vm = container.read(pdfViewModelProvider.notifier);
+    vm.jumpToPage(5);
     await tester.pump();
     await tester.pumpAndSettle(const Duration(milliseconds: 600));
 

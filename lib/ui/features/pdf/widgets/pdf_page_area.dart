@@ -5,6 +5,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'pdf_viewer_widget.dart';
+import '../view_model/pdf_view_model.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
@@ -49,7 +50,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
       if (!mounted) return;
       final pdf = ref.read(documentRepositoryProvider);
       if (pdf.loaded) {
-        _scrollToPage(pdf.currentPage);
+        _scrollToPage(ref.read(pdfViewModelProvider));
       }
     });
   }
@@ -117,10 +118,10 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     const pageViewMode = 'continuous';
 
     // React to provider currentPage changes (e.g., user tapped overview)
-    ref.listen(documentRepositoryProvider, (prev, next) {
+    ref.listen(pdfViewModelProvider, (prev, next) {
       if (_suppressProviderListen) return;
-      if ((prev?.currentPage != next.currentPage)) {
-        final target = next.currentPage;
+      if (prev != next) {
+        final target = next;
         // If we're already navigating to this target, ignore; otherwise allow new target.
         if (_programmaticTargetPage != null &&
             _programmaticTargetPage == target) {

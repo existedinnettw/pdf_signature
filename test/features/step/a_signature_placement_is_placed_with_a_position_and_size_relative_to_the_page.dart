@@ -16,7 +16,7 @@ Future<void> aSignaturePlacementIsPlacedWithAPositionAndSizeRelativeToThePage(
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
-        page: pdf.currentPage,
+        page: ,
         rect: Rect.fromLTWH(50, 50, 200, 100),
         asset: SignatureAsset(bytes: Uint8List(0), name: 'test.png'),
       );
