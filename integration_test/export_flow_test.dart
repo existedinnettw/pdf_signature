@@ -4,12 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:image/image.dart' as img;
+import 'dart:io';
 
 import 'package:pdf_signature/data/services/export_service.dart';
 
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
+import 'package:pdf_signature/domain/models/model.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,6 +37,8 @@ void main() {
     final fake = RecordingExporter();
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
+
+    // For this test, we don't need the PDF bytes since it's not loaded
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -44,7 +49,7 @@ void main() {
             (ref) =>
                 DocumentStateNotifier()..openPicked(
                   path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 5,
+                  pageCount: 1, // Initial value, will be updated by viewer
                 ),
           ),
           useMockViewerProvider.overrideWith((ref) => false),
@@ -90,6 +95,8 @@ void main() {
     tester,
   ) async {
     final sigBytes = _makeSig();
+    final pdfBytes =
+        await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
 
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -103,13 +110,20 @@ void main() {
             (ref) =>
                 DocumentStateNotifier()..openPicked(
                   path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 5,
+                  pageCount: 1, // Initial value, will be updated by viewer
+                  bytes: pdfBytes,
                 ),
           ),
           signatureAssetRepositoryProvider.overrideWith((ref) {
             final c = SignatureAssetRepository();
             c.add(sigBytes, name: 'image');
             return c;
+          }),
+          signatureCardRepositoryProvider.overrideWith((ref) {
+            final cardRepo = SignatureCardStateNotifier();
+            final asset = SignatureAsset(bytes: sigBytes, name: 'image');
+            cardRepo.addWithAsset(asset, 0.0);
+            return cardRepo;
           }),
           useMockViewerProvider.overrideWithValue(false),
         ],
@@ -139,10 +153,10 @@ void main() {
     final r = container.read(activeRectProvider)!;
     final lib = container.read(signatureAssetRepositoryProvider);
     final asset = lib.isNotEmpty ? lib.first : null;
-    final pdf = container.read(documentRepositoryProvider);
+    final currentPage = container.read(pdfViewModelProvider);
     container
         .read(documentRepositoryProvider.notifier)
-        .addPlacement(page: pdf.currentPage, rect: r, asset: asset);
+        .addPlacement(page: currentPage, rect: r, asset: asset);
     // Clear active overlay by hiding signatures temporarily
     container.read(signatureVisibilityProvider.notifier).state = false;
     await tester.pump();

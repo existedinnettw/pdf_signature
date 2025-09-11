@@ -6,15 +6,15 @@ import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-class PdfViewModel {
+class PdfViewModel extends StateNotifier<int> {
   final Ref ref;
 
-  PdfViewModel(this.ref);
+  PdfViewModel(this.ref) : super(1);
 
   Document get document => ref.read(documentRepositoryProvider);
 
   void jumpToPage(int page) {
-    ref.read(documentRepositoryProvider.notifier).jumpTo(page);
+    state = page.clamp(1, document.pageCount);
   }
 
   Future<void> openPdf({required String path, Uint8List? bytes}) async {
@@ -31,6 +31,7 @@ class PdfViewModel {
         .read(documentRepositoryProvider.notifier)
         .openPicked(path: path, pageCount: pageCount, bytes: bytes);
     ref.read(signatureCardRepositoryProvider.notifier).clearAll();
+    state = 1; // Reset current page to 1
   }
 
   Future<Uint8List?> loadSignatureFromFile() async {
@@ -60,6 +61,6 @@ class PdfViewModel {
   }
 }
 
-final pdfViewModelProvider = Provider<PdfViewModel>((ref) {
+final pdfViewModelProvider = StateNotifierProvider<PdfViewModel, int>((ref) {
   return PdfViewModel(ref);
 });

@@ -13,11 +13,7 @@ import 'package:pdf_signature/domain/models/model.dart';
 
 class _TestPdfController extends DocumentStateNotifier {
   _TestPdfController() : super() {
-    state = Document.initial().copyWith(
-      loaded: true,
-      pageCount: 6,
-      currentPage: 1,
-    );
+    state = Document.initial().copyWith(loaded: true, pageCount: 6);
   }
 }
 

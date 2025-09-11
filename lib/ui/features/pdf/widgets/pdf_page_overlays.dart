@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../domain/models/model.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'signature_overlay.dart';
+import 'pdf_providers.dart';
 
 /// Builds all overlays for a given page: placed signatures and the active one.
 class PdfPageOverlays extends ConsumerWidget {
@@ -43,6 +44,42 @@ class PdfPageOverlays extends ConsumerWidget {
           rect: uiRect,
           placement: p,
           placedIndex: i,
+        ),
+      );
+    }
+
+    // Add active overlay if present and not using mock (mock has its own)
+    final activeRect = ref.watch(activeRectProvider);
+    final useMock = ref.watch(useMockViewerProvider);
+    if (!useMock && activeRect != null) {
+      widgets.add(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final left = activeRect.left * constraints.maxWidth;
+            final top = activeRect.top * constraints.maxHeight;
+            final width = activeRect.width * constraints.maxWidth;
+            final height = activeRect.height * constraints.maxHeight;
+            return Stack(
+              children: [
+                Positioned(
+                  left: left,
+                  top: top,
+                  width: width,
+                  height: height,
+                  child: GestureDetector(
+                    key: const Key('signature_overlay'),
+                    // Removed onPanUpdate to allow scrolling
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.red, width: 2),
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       );
     }

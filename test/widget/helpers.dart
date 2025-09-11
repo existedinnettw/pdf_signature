@@ -9,6 +9,7 @@ import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/signature_asset.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
@@ -376,6 +377,15 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
           final repo = SignatureAssetRepository();
           repo.add(Uint8List.fromList(bytes), name: 'test');
           return repo;
+        }),
+        signatureCardRepositoryProvider.overrideWith((ref) {
+          final cardRepo = SignatureCardStateNotifier();
+          final asset = SignatureAsset(
+            bytes: Uint8List.fromList(bytes),
+            name: 'test',
+          );
+          cardRepo.addWithAsset(asset, 0.0);
+          return cardRepo;
         }),
         // In new model, interactive overlay not implemented; keep library empty
         useMockViewerProvider.overrideWithValue(true),

@@ -12,12 +12,7 @@ class DocumentStateNotifier extends StateNotifier<Document> {
 
   @visibleForTesting
   void openSample() {
-    state = state.copyWith(
-      loaded: true,
-      pageCount: 5,
-      currentPage: 1,
-      placementsByPage: {},
-    );
+    state = state.copyWith(loaded: true, pageCount: 5, placementsByPage: {});
   }
 
   void openPicked({
@@ -28,21 +23,18 @@ class DocumentStateNotifier extends StateNotifier<Document> {
     state = state.copyWith(
       loaded: true,
       pageCount: pageCount,
-      currentPage: 1,
       pickedPdfBytes: bytes,
       placementsByPage: {},
     );
   }
 
-  void jumpTo(int page) {
-    if (!state.loaded) return;
-    final clamped = page.clamp(1, state.pageCount);
-    state = state.copyWith(currentPage: clamped);
-  }
-
   void setPageCount(int count) {
     if (!state.loaded) return;
     state = state.copyWith(pageCount: count.clamp(1, 9999));
+  }
+
+  void jumpTo(int page) {
+    // currentPage is now in view model, so jumpTo does nothing here
   }
 
   // Multiple-signature helpers (rects are stored in normalized fractions 0..1
@@ -52,6 +44,7 @@ class DocumentStateNotifier extends StateNotifier<Document> {
     required Rect rect,
     SignatureAsset? asset,
     double rotationDeg = 0.0,
+    GraphicAdjust? graphicAdjust,
   }) {
     if (!state.loaded) return;
     final p = page.clamp(1, state.pageCount);
@@ -62,6 +55,7 @@ class DocumentStateNotifier extends StateNotifier<Document> {
         rect: rect,
         asset: asset ?? SignatureAsset(bytes: Uint8List(0)),
         rotationDeg: rotationDeg,
+        graphicAdjust: graphicAdjust ?? const GraphicAdjust(),
       ),
     );
     map[p] = list;

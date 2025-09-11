@@ -14,6 +14,7 @@ class SignatureCard extends StatelessWidget {
     this.onAdjust,
     this.useCurrentBytesForDrag = false,
     this.rotationDeg = 0.0,
+    this.graphicAdjust = const domain.GraphicAdjust(),
   });
   final domain.SignatureAsset asset;
   final bool disabled;
@@ -22,6 +23,7 @@ class SignatureCard extends StatelessWidget {
   final VoidCallback? onAdjust;
   final bool useCurrentBytesForDrag;
   final double rotationDeg;
+  final domain.GraphicAdjust graphicAdjust;
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +148,7 @@ class SignatureCard extends StatelessWidget {
                 card: domain.SignatureCard(
                   asset: asset,
                   rotationDeg: rotationDeg,
+                  graphicAdjust: graphicAdjust,
                 ),
               ),
       feedback: Opacity(

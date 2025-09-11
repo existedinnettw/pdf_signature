@@ -55,5 +55,6 @@ theUserDragsThisSignatureCardOnThePageOfTheDocumentToPlaceASignaturePlacement(
         rect: Rect.fromLTWH(100, 100, 100, 50),
         asset: drop_card.asset,
         rotationDeg: drop_card.rotationDeg,
+        graphicAdjust: drop_card.graphicAdjust,
       );
 }

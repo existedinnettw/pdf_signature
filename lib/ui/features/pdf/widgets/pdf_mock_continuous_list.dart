@@ -59,7 +59,6 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
     final clearPending = widget.clearPending;
     final visible = ref.watch(signatureVisibilityProvider);
     final assets = ref.watch(signatureAssetRepositoryProvider);
-    final aspectLocked = ref.watch(aspectLockedProvider);
     if (pendingPage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final p = pendingPage;
@@ -118,6 +117,7 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                                 rect: rect,
                                 asset: dragData.card?.asset,
                                 rotationDeg: dragData.card?.rotationDeg ?? 0.0,
+                                graphicAdjust: dragData.card?.graphicAdjust,
                               );
                         }
                       },
@@ -195,35 +195,7 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                                         height: height,
                                         child: GestureDetector(
                                           key: const Key('signature_overlay'),
-                                          onPanUpdate: (d) {
-                                            final dx =
-                                                d.delta.dx /
-                                                constraints.maxWidth;
-                                            final dy =
-                                                d.delta.dy /
-                                                constraints.maxHeight;
-                                            setState(() {
-                                              double l = (_activeRect.left + dx)
-                                                  .clamp(0.0, 1.0);
-                                              double t = (_activeRect.top + dy)
-                                                  .clamp(0.0, 1.0);
-                                              // clamp so it stays within page
-                                              l = l.clamp(
-                                                0.0,
-                                                1.0 - _activeRect.width,
-                                              );
-                                              t = t.clamp(
-                                                0.0,
-                                                1.0 - _activeRect.height,
-                                              );
-                                              _activeRect = Rect.fromLTWH(
-                                                l,
-                                                t,
-                                                _activeRect.width,
-                                                _activeRect.height,
-                                              );
-                                            });
-                                          },
+                                          // Removed onPanUpdate to allow scrolling
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(
                                               border: Border.all(
@@ -243,48 +215,7 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                                         height: 14,
                                         child: GestureDetector(
                                           key: const Key('signature_handle'),
-                                          onPanUpdate: (d) {
-                                            final dx =
-                                                d.delta.dx /
-                                                constraints.maxWidth;
-                                            final dy =
-                                                d.delta.dy /
-                                                constraints.maxHeight;
-                                            setState(() {
-                                              double newW = (_activeRect.width +
-                                                      dx)
-                                                  .clamp(0.05, 1.0);
-                                              double newH =
-                                                  (_activeRect.height + dy)
-                                                      .clamp(0.05, 1.0);
-                                              if (aspectLocked) {
-                                                final ratio =
-                                                    _activeRect.width /
-                                                    _activeRect.height;
-                                                // keep ratio; prefer width change driving height
-                                                newH = (newW /
-                                                        (ratio == 0
-                                                            ? 1
-                                                            : ratio))
-                                                    .clamp(0.05, 1.0);
-                                              }
-                                              // clamp to page bounds
-                                              newW = newW.clamp(
-                                                0.05,
-                                                1.0 - _activeRect.left,
-                                              );
-                                              newH = newH.clamp(
-                                                0.05,
-                                                1.0 - _activeRect.top,
-                                              );
-                                              _activeRect = Rect.fromLTWH(
-                                                _activeRect.left,
-                                                _activeRect.top,
-                                                newW,
-                                                newH,
-                                              );
-                                            });
-                                          },
+                                          // Removed onPanUpdate to allow scrolling
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(
                                               color: Colors.white,

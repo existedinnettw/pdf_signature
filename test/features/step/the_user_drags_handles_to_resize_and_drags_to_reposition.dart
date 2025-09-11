@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import '_world.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 /// Usage: the user drags handles to resize and drags to reposition
 Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
@@ -12,8 +12,9 @@ Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
   TestWorld.container = container;
   final pdf = container.read(documentRepositoryProvider);
   final pdfN = container.read(documentRepositoryProvider.notifier);
+  final currentPage = container.read(pdfViewModelProvider);
 
-  final placements = pdfN.placementsOn(pdf.currentPage);
+  final placements = pdfN.placementsOn(currentPage);
   if (placements.isNotEmpty) {
     final currentRect = placements[0].rect;
     TestWorld.prevCenter = currentRect.center;
@@ -25,6 +26,6 @@ Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
       height: currentRect.height + 30,
     );
 
-    pdfN.updatePlacementRect(page: pdf.currentPage, index: 0, rect: newRect);
+    pdfN.updatePlacementRect(page: currentPage, index: 0, rect: newRect);
   }
 }

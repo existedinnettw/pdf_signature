@@ -5,8 +5,10 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 // No direct model construction needed here
 
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'image_editor_dialog.dart';
 import '../../signature/widgets/signature_card.dart';
+import 'pdf_providers.dart';
 
 /// Data for drag-and-drop is in signature_drag_data.dart
 
@@ -32,7 +34,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final library = ref.watch(signatureAssetRepositoryProvider);
+    final library = ref.watch(signatureCardRepositoryProvider);
     // Exporting flag lives in ui_services; keep drawer interactive regardless here.
     final isExporting = false;
     final disabled = widget.disabled || isExporting;
@@ -41,20 +43,21 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (library.isNotEmpty) ...[
-          for (final a in library) ...[
+          for (final card in library) ...[
             Card(
               margin: EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: SignatureCard(
-                  key: ValueKey('sig_card_${library.indexOf(a)}'),
-                  asset: a,
-                  rotationDeg: 0.0,
+                  key: ValueKey('sig_card_${library.indexOf(card)}'),
+                  asset: card.asset,
+                  rotationDeg: card.rotationDeg,
+                  graphicAdjust: card.graphicAdjust,
                   disabled: disabled,
                   onDelete:
                       () => ref
-                          .read(signatureAssetRepositoryProvider.notifier)
-                          .remove(a),
+                          .read(signatureCardRepositoryProvider.notifier)
+                          .remove(card),
                   onAdjust: () async {
                     if (!mounted) return;
                     await showDialog(
@@ -62,7 +65,11 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                       builder: (_) => const ImageEditorDialog(),
                     );
                   },
-                  onTap: () {},
+                  onTap: () {
+                    ref
+                        .read(activeRectProvider.notifier)
+                        .state = const Rect.fromLTWH(0.2, 0.2, 0.3, 0.15);
+                  },
                 ),
               ),
             ),

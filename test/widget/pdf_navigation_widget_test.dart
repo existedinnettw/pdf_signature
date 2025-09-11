@@ -12,11 +12,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 class _TestPdfController extends DocumentStateNotifier {
   _TestPdfController() : super() {
     // Start with a loaded multi-page doc, page 1 of 5
-    state = Document.initial().copyWith(
-      loaded: true,
-      pageCount: 5,
-      currentPage: 1,
-    );
+    state = Document.initial().copyWith(loaded: true, pageCount: 5);
   }
 }
 

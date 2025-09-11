@@ -5,8 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
-import 'package:pdf_signature/domain/models/model.dart';
-import '_world.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 /// Usage: three signature placements are placed on the current page
 Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
@@ -24,8 +23,7 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
       .read(documentRepositoryProvider.notifier)
       .openPicked(path: 'mock.pdf', pageCount: 5);
   final pdfN = container.read(documentRepositoryProvider.notifier);
-  final pdf = container.read(documentRepositoryProvider);
-  final page = pdf.currentPage;
+  final page = container.read(pdfViewModelProvider);
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(10, 10, 50, 50),
