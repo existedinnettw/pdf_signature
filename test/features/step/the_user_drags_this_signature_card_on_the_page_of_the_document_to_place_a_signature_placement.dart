@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
+import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import '_world.dart';
 
@@ -37,6 +38,14 @@ theUserDragsThisSignatureCardOnThePageOfTheDocumentToPlaceASignaturePlacement(
         .firstWhere((a) => a.name == 'placement.png');
   }
 
+  // create a signature card
+  final temp_card = SignatureCard(asset: asset, rotationDeg: 0);
+  container
+      .read(signatureCardRepositoryProvider.notifier)
+      .addWithAsset(temp_card.asset, temp_card.rotationDeg);
+  // drag and drop (DragTarget<SignatureCard>, `onAccept`) it on document page
+  final drop_card = temp_card;
+
   // Place it on the current page
   final pdf = container.read(documentRepositoryProvider);
   container
@@ -44,6 +53,7 @@ theUserDragsThisSignatureCardOnThePageOfTheDocumentToPlaceASignaturePlacement(
       .addPlacement(
         page: pdf.currentPage,
         rect: Rect.fromLTWH(100, 100, 100, 50),
-        asset: asset,
+        asset: drop_card.asset,
+        rotationDeg: drop_card.rotationDeg,
       );
 }

@@ -6,6 +6,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'pdf_page_overlays.dart';
 import 'pdf_providers.dart';
 import './pdf_mock_continuous_list.dart';
+import '../../signature/widgets/signature_drag_data.dart';
 
 class PdfViewerWidget extends ConsumerStatefulWidget {
   const PdfViewerWidget({
@@ -112,6 +113,41 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
               if (page != null) {
                 ref.read(documentRepositoryProvider.notifier).jumpTo(page);
               }
+            },
+          ),
+        ),
+        // Drag target for dropping signatures
+        Positioned.fill(
+          child: DragTarget<SignatureDragData>(
+            onAcceptWithDetails: (details) {
+              final dragData = details.data;
+
+              // For real PDF viewer, we need to calculate which page was dropped on
+              // This is a simplified implementation - in a real app you'd need to
+              // determine the exact page and position within that page
+              final currentPage =
+                  ref.read(documentRepositoryProvider).currentPage;
+
+              // Create a default rect for the signature (can be adjusted later)
+              final rect = const Rect.fromLTWH(0.1, 0.1, 0.2, 0.1);
+
+              // Add placement to the document
+              ref
+                  .read(documentRepositoryProvider.notifier)
+                  .addPlacement(
+                    page: currentPage,
+                    rect: rect,
+                    asset: dragData.card?.asset,
+                    rotationDeg: dragData.card?.rotationDeg ?? 0.0,
+                  );
+            },
+            builder: (context, candidateData, rejectedData) {
+              return Container(
+                color:
+                    candidateData.isNotEmpty
+                        ? Colors.blue.withOpacity(0.1)
+                        : Colors.transparent,
+              );
             },
           ),
         ),

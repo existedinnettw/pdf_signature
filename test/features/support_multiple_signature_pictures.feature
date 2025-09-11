@@ -2,15 +2,11 @@ Feature: support multiple signature assets
 
 	Scenario: Place signature placements on different pages with different assets
 		Given a multi-page document is open
-		When the user places a signature placement from asset <first_asset> on page <first_page>
-		And the user places a signature placement from asset <second_asset> on page <second_page>
+		When the user places a signature placement from asset <firstAsset> on page <firstPage>.
+		And the user places a signature placement from asset <secondAsset> on page <secondPage>.
 		Then both signature placements are shown on their respective pages
 		Examples:
-            # Same page, same asset
-            # Same page, different assets
-            # Different pages, same asset
-            # Different pages, different assets
-			| first_asset | first_page | second_asset | second_page |
+			| firstAsset  | firstPage  | secondAsset  | secondPage  |
             | 'alice.png' | 1          | 'alice.png'  | 1           | 
             | 'alice.png' | 1          | 'bob.png'    | 1           | 
 			| 'alice.png' | 1          | 'bob.png'    | 3           | 

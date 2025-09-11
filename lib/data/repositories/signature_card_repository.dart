@@ -4,16 +4,20 @@ import '../../domain/models/model.dart';
 class SignatureCardStateNotifier extends StateNotifier<List<SignatureCard>> {
   SignatureCardStateNotifier() : super(const []);
 
-  add({required SignatureAsset asset, double rotationDeg = 0.0}) {
+  void add(SignatureCard card) {
+    state = List.of(state)..add(card);
+  }
+
+  void addWithAsset(SignatureAsset asset, double rotationDeg) {
     state = List.of(state)
       ..add(SignatureCard(asset: asset, rotationDeg: rotationDeg));
   }
 
-  void update({
-    required SignatureCard card,
+  void update(
+    SignatureCard card,
     double? rotationDeg,
     GraphicAdjust? graphicAdjust,
-  }) {
+  ) {
     final list = List<SignatureCard>.of(state);
     for (var i = 0; i < list.length; i++) {
       final c = list[i];

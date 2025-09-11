@@ -42,10 +42,12 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()
-                  ..openPicked(path: 'test.pdf', pageCount: 5),
+                DocumentStateNotifier()..openPicked(
+                  path: 'integration_test/data/sample-local-pdf.pdf',
+                  pageCount: 5,
+                ),
           ),
-          useMockViewerProvider.overrideWith((ref) => true),
+          useMockViewerProvider.overrideWith((ref) => false),
           exportServiceProvider.overrideWith((_) => fake),
           savePathPickerProvider.overrideWith(
             (_) => () async => 'C:/tmp/output.pdf',
@@ -99,16 +101,17 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()
-                  ..openPicked(path: 'test.pdf', pageCount: 5),
+                DocumentStateNotifier()..openPicked(
+                  path: 'integration_test/data/sample-local-pdf.pdf',
+                  pageCount: 5,
+                ),
           ),
           signatureAssetRepositoryProvider.overrideWith((ref) {
             final c = SignatureAssetRepository();
             c.add(sigBytes, name: 'image');
             return c;
           }),
-          // Keep mock viewer for determinism on CI/desktop devices
-          useMockViewerProvider.overrideWithValue(true),
+          useMockViewerProvider.overrideWithValue(false),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

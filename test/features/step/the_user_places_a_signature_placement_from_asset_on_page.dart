@@ -6,7 +6,7 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import '_world.dart';
 
-/// Usage: the user places a signature placement from asset <second_asset> on page <second_page>
+/// Usage: the user places a signature placement from asset <secondAsset> on page <secondPage>
 Future<void> theUserPlacesASignaturePlacementFromAssetOnPage(
   WidgetTester tester,
   String assetName,

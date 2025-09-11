@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pdf_signature/domain/models/model.dart';
+import 'package:pdf_signature/domain/models/model.dart' as domain;
 import 'signature_drag_data.dart';
 import 'rotated_signature_image.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
@@ -15,7 +15,7 @@ class SignatureCard extends StatelessWidget {
     this.useCurrentBytesForDrag = false,
     this.rotationDeg = 0.0,
   });
-  final SignatureAsset asset;
+  final domain.SignatureAsset asset;
   final bool disabled;
   final VoidCallback onDelete;
   final VoidCallback? onTap;
@@ -142,7 +142,12 @@ class SignatureCard extends StatelessWidget {
       data:
           useCurrentBytesForDrag
               ? const SignatureDragData()
-              : SignatureDragData(asset: asset),
+              : SignatureDragData(
+                card: domain.SignatureCard(
+                  asset: asset,
+                  rotationDeg: rotationDeg,
+                ),
+              ),
       feedback: Opacity(
         opacity: 0.9,
         child: ConstrainedBox(

@@ -7,6 +7,8 @@ import 'pdf_page_overlays.dart';
 import 'pdf_providers.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 // using only adjusted overlay, no direct model imports needed
+import '../../signature/widgets/signature_drag_data.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 
 /// Mocked continuous viewer for tests or platforms without real viewer.
 @visibleForTesting
@@ -81,29 +83,73 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                 child: Stack(
                   key: ValueKey('page_stack_$pageNum'),
                   children: [
-                    Container(
-                      color: Colors.grey.shade200,
-                      child: Center(
-                        child: Builder(
-                          builder: (ctx) {
-                            String label;
-                            try {
-                              label = AppLocalizations.of(
-                                ctx,
-                              ).pageInfo(pageNum, count);
-                            } catch (_) {
-                              label = 'Page $pageNum of $count';
-                            }
-                            return Text(
-                              label,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                color: Colors.black54,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                    DragTarget<SignatureDragData>(
+                      onAcceptWithDetails: (details) {
+                        final dragData = details.data;
+                        final offset = details.offset;
+                        final renderBox =
+                            context.findRenderObject() as RenderBox?;
+                        if (renderBox != null) {
+                          final localPosition = renderBox.globalToLocal(offset);
+                          final normalizedX =
+                              localPosition.dx / renderBox.size.width;
+                          final normalizedY =
+                              localPosition.dy / renderBox.size.height;
+
+                          // Create a default rect for the signature (can be adjusted later)
+                          final rect = Rect.fromLTWH(
+                            (normalizedX - 0.1).clamp(
+                              0.0,
+                              0.8,
+                            ), // Center horizontally with some margin
+                            (normalizedY - 0.05).clamp(
+                              0.0,
+                              0.9,
+                            ), // Center vertically with some margin
+                            0.2, // Default width
+                            0.1, // Default height
+                          );
+
+                          // Add placement to the document
+                          ref
+                              .read(documentRepositoryProvider.notifier)
+                              .addPlacement(
+                                page: pageNum,
+                                rect: rect,
+                                asset: dragData.card?.asset,
+                                rotationDeg: dragData.card?.rotationDeg ?? 0.0,
+                              );
+                        }
+                      },
+                      builder: (context, candidateData, rejectedData) {
+                        return Container(
+                          color:
+                              candidateData.isNotEmpty
+                                  ? Colors.blue.withOpacity(0.3)
+                                  : Colors.grey.shade200,
+                          child: Center(
+                            child: Builder(
+                              builder: (ctx) {
+                                String label;
+                                try {
+                                  label = AppLocalizations.of(
+                                    ctx,
+                                  ).pageInfo(pageNum, count);
+                                } catch (_) {
+                                  label = 'Page $pageNum of $count';
+                                }
+                                return Text(
+                                  label,
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    color: Colors.black54,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     visible
                         ? Stack(
