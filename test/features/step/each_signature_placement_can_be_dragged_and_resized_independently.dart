@@ -10,7 +10,7 @@ Future<void> eachSignaturePlacementCanBeDraggedAndResizedIndependently(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   final pdf = container.read(documentRepositoryProvider);
-  final page = container.read(pdfViewModelProvider);
-  final placements = pdf.placementsByPage[page] ?? const [];
+  final page = container.read(pdfViewModelProvider).currentPage;
+  final placements = pdf.placementsByPage[page] ?? const <dynamic>[];
   expect(placements.length, greaterThan(1));
 }

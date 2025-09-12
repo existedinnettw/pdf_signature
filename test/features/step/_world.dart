@@ -2,10 +2,24 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// A tiny shared world for BDD steps to share state within a scenario.
 class TestWorld {
-  static ProviderContainer? container;
+  static ProviderContainer? _container;
+  static ProviderContainer? get container => _container;
+  static set container(ProviderContainer? value) {
+    _container = value;
+    if (value != null) {
+      // Ensure any container created during a test is disposed at teardown
+      addTearDown(() {
+        try {
+          _container?.dispose();
+        } catch (_) {}
+        _container = null;
+      });
+    }
+  }
 
   // Signature helpers
   static Offset? prevCenter;

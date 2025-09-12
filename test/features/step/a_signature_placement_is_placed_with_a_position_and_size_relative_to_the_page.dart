@@ -13,12 +13,19 @@ Future<void> aSignaturePlacementIsPlacedWithAPositionAndSizeRelativeToThePage(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
+  if (!container.read(documentRepositoryProvider).loaded) {
+    container
+        .read(documentRepositoryProvider.notifier)
+        .openPicked(pageCount: 5);
+  }
   final currentPage = container.read(pdfViewModelProvider).currentPage;
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: currentPage,
-        rect: const Rect.fromLTWH(50, 50, 200, 100),
+        // Use normalized 0..1 fractions relative to page size as required
+        rect: const Rect.fromLTWH(0.2, 0.3, 0.4, 0.2),
         asset: SignatureAsset(bytes: Uint8List(0), name: 'test.png'),
       );
+  await tester.pumpAndSettle();
 }

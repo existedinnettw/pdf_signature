@@ -19,6 +19,7 @@ Future<void> theUserNavigatesToPageAndPlacesAnotherSignaturePlacement(
   try {
     container.read(pdfViewModelProvider.notifier).jumpToPage(page);
   } catch (_) {}
+  await tester.pumpAndSettle();
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
@@ -26,4 +27,5 @@ Future<void> theUserNavigatesToPageAndPlacesAnotherSignaturePlacement(
         rect: Rect.fromLTWH(40, 40, 100, 50),
         asset: SignatureAsset(bytes: Uint8List(0), name: 'another.png'),
       );
+  await tester.pumpAndSettle();
 }

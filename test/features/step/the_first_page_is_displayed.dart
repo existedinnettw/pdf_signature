@@ -6,6 +6,6 @@ import '_world.dart';
 /// Usage: the first page is displayed
 Future<void> theFirstPageIsDisplayed(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final currentPage = container.read(pdfViewModelProvider);
-  expect(currentPage, 1);
+  final vm = container.read(pdfViewModelProvider);
+  expect(vm.currentPage, 1);
 }

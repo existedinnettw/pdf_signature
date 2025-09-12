@@ -43,6 +43,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
   int? _pendingPage; // pending target for mock ensureVisible retry
   int _scrollRetryCount = 0;
   static const int _maxScrollRetries = 50;
+  int? _lastListenedPage;
   @override
   void initState() {
     super.initState();
@@ -121,27 +122,19 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     final pdfViewModel = ref.watch(pdfViewModelProvider);
     final pdf = pdfViewModel.document;
     const pageViewMode = 'continuous';
-    // React to PdfViewModel (source of truth for current page)
-    ref.listen(pdfViewModelProvider, (prev, next) {
-      if (prev?.currentPage != next.currentPage) {
-        _scrollToPage(next.currentPage);
-      }
-    });
-
-    // React to provider currentPage changes (e.g., user tapped overview)
+    // React to PdfViewModel currentPage changes. With ChangeNotifierProvider,
+    // prev/next are the same instance, so compare to a local cache.
     ref.listen(pdfViewModelProvider, (prev, next) {
       if (_suppressProviderListen) return;
-      if (prev?.currentPage != next.currentPage) {
-        final target = next.currentPage;
-        // If we're already navigating to this target, ignore; otherwise allow new target.
-        if (_programmaticTargetPage != null &&
-            _programmaticTargetPage == target) {
-          return;
-        }
-        // Only navigate if target differs from what viewer shows
-        if (_visiblePage != target) {
-          _scrollToPage(target);
-        }
+      final target = next.currentPage;
+      if (_lastListenedPage == target) return;
+      _lastListenedPage = target;
+      if (_programmaticTargetPage != null &&
+          _programmaticTargetPage == target) {
+        return;
+      }
+      if (_visiblePage != target) {
+        _scrollToPage(target);
       }
     });
     // No page view mode switching; always continuous.

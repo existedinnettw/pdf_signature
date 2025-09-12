@@ -85,6 +85,10 @@ final routerProvider = Provider<GoRouter>((ref) {
   // Create PdfManager with router dependency (will be set after router creation)
   late final PdfManager pdfManager;
 
+  // If tests pre-load a document, start at /pdf so sidebars and controls
+  // are present immediately.
+  final initialLocation = documentNotifier.debugState.loaded ? '/pdf' : '/';
+
   router = GoRouter(
     routes: [
       GoRoute(
@@ -107,7 +111,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
       ),
     ],
-    initialLocation: '/',
+    initialLocation: initialLocation,
   );
 
   // Now create PdfManager with the router

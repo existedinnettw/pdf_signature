@@ -7,9 +7,9 @@ import '_world.dart';
 Future<void> theUserCanMoveToTheNextOrPreviousPage(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
   final vm = container.read(pdfViewModelProvider.notifier);
-  expect(container.read(pdfViewModelProvider), 1);
+  expect(container.read(pdfViewModelProvider).currentPage, 1);
   vm.jumpToPage(2);
-  expect(container.read(pdfViewModelProvider), 2);
+  expect(container.read(pdfViewModelProvider).currentPage, 2);
   vm.jumpToPage(1);
-  expect(container.read(pdfViewModelProvider), 1);
+  expect(container.read(pdfViewModelProvider).currentPage, 1);
 }

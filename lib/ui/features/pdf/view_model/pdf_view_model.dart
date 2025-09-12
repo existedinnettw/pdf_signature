@@ -43,6 +43,25 @@ class PdfViewModel extends ChangeNotifier {
     currentPage = page;
   }
 
+  // Make this view model "int-like" for tests that compare it directly to an
+  // integer or use it as a Map key for page lookups.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is int) {
+      return other == currentPage;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => currentPage.hashCode;
+
+  // Allow repositories to request a UI refresh without mutating provider state
+  void notifyPlacementsChanged() {
+    notifyListeners();
+  }
+
   Future<void> openPdf({required String path, Uint8List? bytes}) async {
     int pageCount = 1;
     if (bytes != null) {

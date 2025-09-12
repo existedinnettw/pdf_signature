@@ -31,4 +31,5 @@ Future<void> theUserPlacesASignaturePlacementFromAssetOnPage(
         rect: Rect.fromLTWH(10, 10, 50, 50),
         asset: asset,
       );
+  await tester.pumpAndSettle();
 }

@@ -3,23 +3,26 @@ import 'signature_placement.dart';
 
 /// PDF document to be signed
 class Document {
-  final bool loaded;
-  final int pageCount;
-  final Uint8List? pickedPdfBytes;
+  bool loaded;
+  int pageCount;
+  Uint8List? pickedPdfBytes;
   // Multiple signature placements per page, each combines geometry and asset.
-  final Map<int, List<SignaturePlacement>> placementsByPage;
-  const Document({
+  Map<int, List<SignaturePlacement>> placementsByPage;
+
+  Document({
     required this.loaded,
     required this.pageCount,
     this.pickedPdfBytes,
-    this.placementsByPage = const {},
-  });
-  factory Document.initial() => const Document(
+    Map<int, List<SignaturePlacement>>? placementsByPage,
+  }) : placementsByPage = placementsByPage ?? <int, List<SignaturePlacement>>{};
+
+  factory Document.initial() => Document(
     loaded: false,
     pageCount: 0,
     pickedPdfBytes: null,
-    placementsByPage: {},
+    placementsByPage: <int, List<SignaturePlacement>>{},
   );
+
   Document copyWith({
     bool? loaded,
     int? pageCount,

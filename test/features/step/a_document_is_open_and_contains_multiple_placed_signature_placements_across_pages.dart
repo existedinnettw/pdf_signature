@@ -13,28 +13,29 @@ aDocumentIsOpenAndContainsMultiplePlacedSignaturePlacementsAcrossPages(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  container
-      .read(documentRepositoryProvider.notifier)
-      .openPicked(pageCount: 5);
+  container.read(documentRepositoryProvider.notifier).openPicked(pageCount: 5);
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: 1,
-        rect: Rect.fromLTWH(10, 10, 100, 50),
+        rect: Rect.fromLTWH(0.1, 0.1, 0.2, 0.1),
         asset: SignatureAsset(bytes: Uint8List(0), name: 'sig1.png'),
       );
+  await tester.pumpAndSettle();
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: 2,
-        rect: Rect.fromLTWH(20, 20, 100, 50),
+        rect: Rect.fromLTWH(0.2, 0.2, 0.2, 0.1),
         asset: SignatureAsset(bytes: Uint8List(0), name: 'sig2.png'),
       );
+  await tester.pumpAndSettle();
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
         page: 3,
-        rect: Rect.fromLTWH(30, 30, 100, 50),
+        rect: Rect.fromLTWH(0.3, 0.3, 0.2, 0.1),
         asset: SignatureAsset(bytes: Uint8List(0), name: 'sig3.png'),
       );
+  await tester.pumpAndSettle();
 }

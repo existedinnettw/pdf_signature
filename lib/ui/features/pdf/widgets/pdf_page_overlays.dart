@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 
 import '../../../../domain/models/model.dart';
 import 'signature_overlay.dart';
@@ -29,7 +30,8 @@ class PdfPageOverlays extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pdfViewModel = ref.watch(pdfViewModelProvider);
-    final pdf = pdfViewModel.document;
+    // Subscribe to document changes to rebuild overlays
+    final pdf = ref.watch(documentRepositoryProvider);
     final placed =
         pdf.placementsByPage[pageNumber] ?? const <SignaturePlacement>[];
     final activeRect = pdfViewModel.activeRect;

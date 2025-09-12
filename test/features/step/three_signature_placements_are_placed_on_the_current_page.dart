@@ -30,14 +30,17 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
     rect: Rect.fromLTWH(10, 10, 50, 50),
     asset: SignatureAsset(bytes: Uint8List(0), name: 'test1'),
   );
+  await tester.pumpAndSettle();
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(70, 10, 50, 50),
     asset: SignatureAsset(bytes: Uint8List(0), name: 'test2'),
   );
+  await tester.pumpAndSettle();
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(130, 10, 50, 50),
     asset: SignatureAsset(bytes: Uint8List(0), name: 'test3'),
   );
+  await tester.pumpAndSettle();
 }

@@ -23,4 +23,6 @@ Future<void> aSignatureAssetLoadedOrDrawnIsWrappedInASignatureCard(
   container
       .read(signatureAssetRepositoryProvider.notifier)
       .add(bytes, name: 'test.png');
+  // Allow provider scheduler to flush any pending timers
+  await tester.pump();
 }

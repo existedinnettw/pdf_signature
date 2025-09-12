@@ -28,12 +28,12 @@ class SignatureOverlay extends StatelessWidget {
         return Stack(
           children: [
             Positioned(
+              key: Key('placed_signature_$placedIndex'),
               left: left,
               top: top,
               width: width,
               height: height,
               child: DecoratedBox(
-                key: Key('placed_signature_$placedIndex'),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.red, width: 2),
                 ),

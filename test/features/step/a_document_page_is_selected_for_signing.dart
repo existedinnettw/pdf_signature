@@ -8,9 +8,14 @@ import '_world.dart';
 Future<void> aDocumentPageIsSelectedForSigning(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
+  // Ensure a document is open
+  final repo = container.read(documentRepositoryProvider.notifier);
+  if (!container.read(documentRepositoryProvider).loaded) {
+    repo.openPicked(pageCount: 5);
+  }
   // Ensure current page is 1 for consistent subsequent steps
   try {
     container.read(pdfViewModelProvider.notifier).jumpToPage(1);
   } catch (_) {}
-  container.read(documentRepositoryProvider.notifier).jumpTo(1);
+  repo.jumpTo(1);
 }

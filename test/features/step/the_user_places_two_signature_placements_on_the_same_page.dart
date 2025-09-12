@@ -34,6 +34,7 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
           name: 'sig1.png',
         ),
       );
+  await tester.pumpAndSettle();
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
@@ -54,4 +55,5 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
           name: 'sig2.png',
         ),
       );
+  await tester.pumpAndSettle();
 }

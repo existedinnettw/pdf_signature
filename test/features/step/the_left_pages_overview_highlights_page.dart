@@ -10,5 +10,5 @@ Future<void> theLeftPagesOverviewHighlightsPage(
 ) async {
   final n = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  expect(c.read(pdfViewModelProvider), n);
+  expect(c.read(pdfViewModelProvider).currentPage, n);
 }

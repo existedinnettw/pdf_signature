@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../view_model/pdf_view_model.dart';
 
 class ThumbnailsView extends ConsumerWidget {
   const ThumbnailsView({
@@ -33,10 +34,16 @@ class ThumbnailsView extends ConsumerWidget {
               final isSelected = currentPage == pageNumber;
               return InkWell(
                 onTap: () {
+                  // Update both controller and provider page
                   controller.goToPage(
                     pageNumber: pageNumber,
                     anchor: PdfPageAnchor.top,
                   );
+                  try {
+                    ref
+                        .read(pdfViewModelProvider.notifier)
+                        .jumpToPage(pageNumber);
+                  } catch (_) {}
                 },
                 child: DecoratedBox(
                   decoration: BoxDecoration(

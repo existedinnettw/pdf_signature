@@ -12,7 +12,12 @@ class DocumentStateNotifier extends StateNotifier<Document> {
 
   @visibleForTesting
   void openSample() {
-    state = state.copyWith(loaded: true, pageCount: 5, placementsByPage: {});
+    state = state.copyWith(
+      loaded: true,
+      pageCount: 5,
+      pickedPdfBytes: null,
+      placementsByPage: <int, List<SignaturePlacement>>{},
+    );
   }
 
   void openPicked({required int pageCount, Uint8List? bytes}) {
@@ -20,7 +25,7 @@ class DocumentStateNotifier extends StateNotifier<Document> {
       loaded: true,
       pageCount: pageCount,
       pickedPdfBytes: bytes,
-      placementsByPage: {},
+      placementsByPage: <int, List<SignaturePlacement>>{},
     );
   }
 

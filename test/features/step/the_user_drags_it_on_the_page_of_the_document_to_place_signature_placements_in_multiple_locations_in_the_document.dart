@@ -46,4 +46,5 @@ theUserDragsItOnThePageOfTheDocumentToPlaceSignaturePlacementsInMultipleLocation
         rect: Rect.fromLTWH(30, 30, 100, 50),
         asset: asset,
       );
+  await tester.pumpAndSettle();
 }

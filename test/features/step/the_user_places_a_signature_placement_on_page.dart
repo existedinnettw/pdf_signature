@@ -21,4 +21,6 @@ Future<void> theUserPlacesASignaturePlacementOnPage(
         rect: Rect.fromLTWH(20, 20, 100, 50),
         asset: SignatureAsset(bytes: Uint8List(0), name: 'test.png'),
       );
+  // Allow Riverpod's scheduler to flush any pending microtasks/timers
+  await tester.pumpAndSettle();
 }

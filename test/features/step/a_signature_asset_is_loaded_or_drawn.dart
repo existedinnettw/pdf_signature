@@ -90,4 +90,5 @@ Future<void> aSignatureAssetIsLoadedOrDrawn(WidgetTester tester) async {
   container
       .read(signatureAssetRepositoryProvider.notifier)
       .add(bytes, name: 'test.png');
+  await tester.pump();
 }

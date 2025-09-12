@@ -22,7 +22,7 @@ Future<void> signaturePlacementOccursOnTheSelectedPage(
       asset: asset,
     );
   }
-  await tester.pump();
+  await tester.pumpAndSettle();
   final updated = container.read(documentRepositoryProvider);
   expect(updated.placementsByPage[page], isNotEmpty);
 }
