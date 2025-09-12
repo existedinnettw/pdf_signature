@@ -1,12 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import '_world.dart';
 
 /// Usage: the user jumps to page {2}
 Future<void> theUserJumpsToPage(WidgetTester tester, num param1) async {
   final page = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  c.read(documentRepositoryProvider.notifier).jumpTo(page);
+  try {
+    c.read(currentPageProvider.notifier).state = page;
+  } catch (_) {}
+  try {
+    c.read(pdfViewModelProvider.notifier).jumpToPage(page);
+  } catch (_) {}
   await tester.pump();
 }

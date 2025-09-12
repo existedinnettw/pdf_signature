@@ -6,6 +6,7 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import '_world.dart';
 
 /// Usage: the user drags this signature card on the page of the document to place a signature placement
@@ -47,12 +48,12 @@ theUserDragsThisSignatureCardOnThePageOfTheDocumentToPlaceASignaturePlacement(
   final drop_card = temp_card;
 
   // Place it on the current page
-  final pdf = container.read(documentRepositoryProvider);
+  final currentPage = container.read(pdfViewModelProvider);
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
-        page: ,
-        rect: Rect.fromLTWH(100, 100, 100, 50),
+        page: currentPage,
+        rect: const Rect.fromLTWH(100, 100, 100, 50),
         asset: drop_card.asset,
         rotationDeg: drop_card.rotationDeg,
         graphicAdjust: drop_card.graphicAdjust,

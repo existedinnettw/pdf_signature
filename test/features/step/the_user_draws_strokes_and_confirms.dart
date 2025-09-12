@@ -3,9 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import '_world.dart';
+import '../_test_helper.dart';
 
 /// Usage: the user draws strokes and confirms
 Future<void> theUserDrawsStrokesAndConfirms(WidgetTester tester) async {
+  // Ensure app is pumped if not already
+  if (find.byType(MaterialApp).evaluate().isEmpty) {
+    final container = await pumpApp(tester);
+    TestWorld.container = container;
+  }
+
+  // If the drawer button isn't in the tree (simplified UI), inject a hidden button that opens the canvas
+  // App provides the button via signature sidebar; no injection needed now
+
   // Tap the draw signature button to open the dialog
   await tester.tap(find.byKey(const Key('btn_drawer_draw_signature')));
   await tester.pumpAndSettle();
@@ -38,8 +48,7 @@ Future<void> theUserDrawsStrokesAndConfirms(WidgetTester tester) async {
     container
         .read(signatureAssetRepositoryProvider.notifier)
         .add(
-          // minimal non-empty PNG header bytes to avoid image decode errors
-          // Using a very small valid 1x1 transparent PNG
+          // Tiny 1x1 transparent PNG (duplicated constant for test clarity)
           Uint8List.fromList([
             0x89,
             0x50,

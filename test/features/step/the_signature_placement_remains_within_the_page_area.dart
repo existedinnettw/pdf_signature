@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import '_world.dart';
 
 /// Usage: the signature placement remains within the page area
@@ -9,8 +10,8 @@ Future<void> theSignaturePlacementRemainsWithinThePageArea(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   final pdf = container.read(documentRepositoryProvider);
-
-  final placements = pdf.placementsByPage[] ?? [];
+  final page = container.read(pdfViewModelProvider);
+  final placements = pdf.placementsByPage[page] ?? const [];
   for (final placement in placements) {
     // Assume page size is 800x600 for testing
     const pageWidth = 800.0;

@@ -1,16 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import '_world.dart';
 
 /// Usage: the user can move to the next or previous page
 Future<void> theUserCanMoveToTheNextOrPreviousPage(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final pdfN = container.read(documentRepositoryProvider.notifier);
-  final pdf = container.read(documentRepositoryProvider);
-  expect(, 1);
-  pdfN.jumpTo(2);
-  expect(container.read(documentRepositoryProvider).currentPage, 2);
-  pdfN.jumpTo(1);
-  expect(container.read(documentRepositoryProvider).currentPage, 1);
+  final vm = container.read(pdfViewModelProvider.notifier);
+  expect(container.read(pdfViewModelProvider), 1);
+  vm.jumpToPage(2);
+  expect(container.read(pdfViewModelProvider), 2);
+  vm.jumpToPage(1);
+  expect(container.read(pdfViewModelProvider), 1);
 }

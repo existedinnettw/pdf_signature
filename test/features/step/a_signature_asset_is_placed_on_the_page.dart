@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import '_world.dart';
 
 /// Usage: a signature asset is placed on the page
@@ -35,12 +36,12 @@ Future<void> aSignatureAssetIsPlacedOnThePage(WidgetTester tester) async {
   }
 
   // Place it on the current page
-  final pdf = container.read(documentRepositoryProvider);
+  final currentPage = container.read(pdfViewModelProvider);
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
-        page: ,
-        rect: Rect.fromLTWH(50, 50, 100, 50),
+        page: currentPage,
+        rect: const Rect.fromLTWH(50, 50, 100, 50),
         asset: asset,
       );
 }

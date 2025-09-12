@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import '_world.dart';
 
@@ -12,12 +13,12 @@ Future<void> aSignaturePlacementIsPlacedWithAPositionAndSizeRelativeToThePage(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final pdf = container.read(documentRepositoryProvider);
+  final currentPage = container.read(pdfViewModelProvider);
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
-        page: ,
-        rect: Rect.fromLTWH(50, 50, 200, 100),
+        page: currentPage,
+        rect: const Rect.fromLTWH(50, 50, 200, 100),
         asset: SignatureAsset(bytes: Uint8List(0), name: 'test.png'),
       );
 }

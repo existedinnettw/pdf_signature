@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import '../view_model/pdf_view_model.dart';
+import 'pdf_providers.dart';
 
 class PdfToolbar extends ConsumerStatefulWidget {
   const PdfToolbar({
@@ -57,7 +57,7 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
   @override
   Widget build(BuildContext context) {
     final pdf = ref.watch(documentRepositoryProvider);
-    final currentPage = ref.watch(pdfViewModelProvider);
+    final currentPage = ref.watch(currentPageProvider);
     final l = AppLocalizations.of(context);
     final pageInfo = l.pageInfo(currentPage, pdf.pageCount);
 

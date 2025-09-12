@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import '_world.dart';
 
 /// Usage: the left pages overview highlights page {5}
@@ -10,5 +10,5 @@ Future<void> theLeftPagesOverviewHighlightsPage(
 ) async {
   final n = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  expect(c.read(documentRepositoryProvider).currentPage, n);
+  expect(c.read(pdfViewModelProvider), n);
 }

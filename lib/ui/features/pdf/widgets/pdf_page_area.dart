@@ -6,6 +6,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'pdf_viewer_widget.dart';
 import '../view_model/pdf_view_model.dart';
+import 'pdf_providers.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
@@ -48,10 +49,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     // is instructed to align to the provider's current page once ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final pdf = ref.read(documentRepositoryProvider);
-      if (pdf.loaded) {
-        _scrollToPage(ref.read(pdfViewModelProvider));
-      }
+      // initial scroll not needed; controller handles positioning
     });
   }
 
@@ -65,6 +63,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
   void _scrollToPage(int page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _programmaticTargetPage = page;
       // Mock continuous: try ensureVisible on the page container
       // Mock continuous: try ensureVisible on the page container
       final ctx = _pageKey(page).currentContext;
@@ -85,6 +84,8 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
                     .clamp(position.minScrollExtent, position.maxScrollExtent)
                     .toDouble();
             position.jumpTo(newPixels);
+            _visiblePage = page;
+            _programmaticTargetPage = null;
             return;
           }
         } catch (_) {
@@ -95,6 +96,8 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
             duration: Duration.zero,
             curve: Curves.linear,
           );
+          _visiblePage = page;
+          _programmaticTargetPage = null;
           return;
         }
         return;
@@ -116,9 +119,15 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
   Widget build(BuildContext context) {
     final pdf = ref.watch(documentRepositoryProvider);
     const pageViewMode = 'continuous';
+    // React to PdfViewModel (source of truth for current page)
+    ref.listen<int>(pdfViewModelProvider, (prev, next) {
+      if (prev != next) {
+        _scrollToPage(next);
+      }
+    });
 
     // React to provider currentPage changes (e.g., user tapped overview)
-    ref.listen(pdfViewModelProvider, (prev, next) {
+    ref.listen(currentPageProvider, (prev, next) {
       if (_suppressProviderListen) return;
       if (prev != next) {
         final target = next;

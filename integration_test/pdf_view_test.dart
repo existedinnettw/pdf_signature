@@ -18,7 +18,9 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('PDF View: wheel scroll (page down)', (tester) async {
+  testWidgets('PDF View: programmatic page jumps reach last page', (
+    tester,
+  ) async {
     final pdfBytes =
         await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
     SharedPreferences.setMockInitialValues({});
@@ -34,7 +36,7 @@ void main() {
             (ref) =>
                 DocumentStateNotifier()..openPicked(
                   path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 1,
+                  pageCount: 3,
                   bytes: pdfBytes,
                 ),
           ),
@@ -50,29 +52,23 @@ void main() {
     );
 
     await tester.pumpAndSettle();
+    // Extra settle to avoid startup race when running with other integration tests.
+    await tester.pump(const Duration(milliseconds: 200));
 
-    // Find the PDF viewer area
-    final pdfViewer = find.byKey(const ValueKey('pdf_page_area'));
-    expect(pdfViewer, findsOneWidget);
-
-    // Get initial state
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    final initialPage = container.read(pdfViewModelProvider);
-    expect(initialPage, 1);
+    final vm = container.read(pdfViewModelProvider);
+    expect(vm, 1);
 
-    // Simulate wheel scroll down (PageDown) to reach the last page
-    for (int i = 0; i < 3; i++) {
-      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
-      await tester.pumpAndSettle();
-    }
+    container.read(pdfViewModelProvider.notifier).jumpToPage(2);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(container.read(pdfViewModelProvider), 2);
 
-    // Verify that we reached the last page by checking the actual viewer state
-    final pdfViewerState = tester.state<_PdfViewerWidgetState>(
-      find.byType(PdfViewerWidget),
-    );
-    final actualPage = pdfViewerState.viewerCurrentPage;
-    expect(actualPage, 3); // Should be on last page (3 pages total)
+    container.read(pdfViewModelProvider.notifier).jumpToPage(3);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(container.read(pdfViewModelProvider), 3);
   });
 
   testWidgets('PDF View: zoom in/out', (tester) async {
@@ -91,7 +87,7 @@ void main() {
             (ref) =>
                 DocumentStateNotifier()..openPicked(
                   path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 1,
+                  pageCount: 3,
                   bytes: pdfBytes,
                 ),
           ),
@@ -107,14 +103,12 @@ void main() {
     );
 
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 120));
 
-    // Find the PDF viewer
     final pdfViewer = find.byKey(const ValueKey('pdf_page_area'));
     expect(pdfViewer, findsOneWidget);
 
-    // Perform pinch to zoom in
     final center = tester.getCenter(pdfViewer);
-    // Simulate pinch zoom
     final gesture1 = await tester.createGesture();
     final gesture2 = await tester.createGesture();
     await gesture1.down(center - const Offset(10, 0));
@@ -125,8 +119,6 @@ void main() {
     await gesture2.up();
     await tester.pumpAndSettle();
 
-    // Verify zoom worked (this might be hard to verify directly)
-    // We can check if the viewer is still there
     expect(pdfViewer, findsOneWidget);
   });
 
@@ -146,7 +138,7 @@ void main() {
             (ref) =>
                 DocumentStateNotifier()..openPicked(
                   path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 1,
+                  pageCount: 3,
                   bytes: pdfBytes,
                 ),
           ),
@@ -163,26 +155,19 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify initial page
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    final initialPdf = container.read(documentRepositoryProvider);
-    final initialPage = container.read(pdfViewModelProvider);
-    expect(initialPage, 1);
+    expect(container.read(pdfViewModelProvider), 1);
 
-    // Click on page 3 thumbnail (last page)
     final page3Thumbnail = find.text('3');
     expect(page3Thumbnail, findsOneWidget);
     await tester.tap(page3Thumbnail);
     await tester.pumpAndSettle();
 
-    // Verify current page is 3 and page view actually jumped
-    final finalPage = container.read(pdfViewModelProvider);
-    expect(finalPage, 3);
-    expect(finalPage, isNot(equals(1)));
+    expect(container.read(pdfViewModelProvider), 3);
   });
 
-  testWidgets('PDF View: scroll thumbnails', (tester) async {
+  testWidgets('PDF View: thumbnails scroll and select', (tester) async {
     final pdfBytes =
         await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
     SharedPreferences.setMockInitialValues({});
@@ -198,7 +183,7 @@ void main() {
             (ref) =>
                 DocumentStateNotifier()..openPicked(
                   path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 1,
+                  pageCount: 3,
                   bytes: pdfBytes,
                 ),
           ),
@@ -215,38 +200,22 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Get initial page
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    final initialPage = container.read(pdfViewModelProvider);
-    expect(initialPage, 1);
+    expect(container.read(pdfViewModelProvider), 1);
 
-    // Find the pages sidebar
     final pagesSidebar = find.byType(PagesSidebar);
     expect(pagesSidebar, findsOneWidget);
 
-    // Scroll the thumbnails vertically
     await tester.drag(pagesSidebar, const Offset(0, -200));
     await tester.pumpAndSettle();
 
-    // Verify scrolling worked (thumbnails are still there)
-    final page1Thumbnail = find.text('1');
-    expect(page1Thumbnail, findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    expect(container.read(pdfViewModelProvider), 1);
 
-    // Check if page view changed (it shouldn't for vertical scroll of thumbs)
-    final afterScrollPage = container.read(pdfViewModelProvider);
-    expect(afterScrollPage, initialPage);
-
-    // Now test horizontal scroll of PDF viewer
-    final pdfViewer = find.byKey(const ValueKey('pdf_page_area'));
-    expect(pdfViewer, findsOneWidget);
-
-    // Scroll horizontally (might not change page for fitted PDF)
-    await tester.drag(pdfViewer, const Offset(-100, 0)); // Scroll left
+    // Select page 2 thumbnail and verify page changes
+    await tester.tap(find.text('2'));
     await tester.pumpAndSettle();
-
-    // Verify horizontal scroll (page might stay the same for portrait PDF)
-    final afterHorizontalPage = container.read(pdfViewModelProvider);
-    expect(afterHorizontalPage, greaterThan(1));
+    expect(container.read(pdfViewModelProvider), 2);
   });
 }

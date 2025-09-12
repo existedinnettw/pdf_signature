@@ -4,10 +4,9 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'pdf_page_overlays.dart';
-import 'pdf_providers.dart';
 import './pdf_mock_continuous_list.dart';
 import '../../signature/widgets/signature_drag_data.dart';
-import '../view_model/pdf_view_model.dart';
+import 'pdf_providers.dart';
 
 class PdfViewerWidget extends ConsumerStatefulWidget {
   const PdfViewerWidget({
@@ -58,8 +57,9 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
   Widget build(BuildContext context) {
     final document = ref.watch(documentRepositoryProvider);
     final useMock = ref.watch(useMockViewerProvider);
-    final activeRect = ref.watch(activeRectProvider);
-    final currentPage = ref.watch(pdfViewModelProvider);
+    ref.watch(activeRectProvider); // trigger rebuild when active rect changes
+    // Watch to rebuild on page change
+    ref.watch(currentPageProvider);
 
     // Update document ref when document changes
     if (document.loaded && document.pickedPdfBytes != null) {
@@ -115,9 +115,8 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
                   .setPageCount(document.pages.length);
             },
             onPageChanged: (page) {
-              // Update current page in view model
               if (page != null) {
-                ref.read(pdfViewModelProvider.notifier).jumpToPage(page);
+                ref.read(currentPageProvider.notifier).state = page;
               }
             },
           ),
@@ -131,7 +130,7 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
               // For real PDF viewer, we need to calculate which page was dropped on
               // This is a simplified implementation - in a real app you'd need to
               // determine the exact page and position within that page
-              final currentPage = ref.read(pdfViewModelProvider);
+              final currentPage = ref.read(currentPageProvider);
 
               // Create a default rect for the signature (can be adjusted later)
               final rect = const Rect.fromLTWH(0.1, 0.1, 0.2, 0.1);
@@ -169,7 +168,7 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
               // to handle overlays for each page properly
               return PdfPageOverlays(
                 pageSize: widget.pageSize,
-                pageNumber: ref.watch(pdfViewModelProvider),
+                pageNumber: ref.watch(currentPageProvider),
                 onDragSignature: widget.onDragSignature,
                 onResizeSignature: widget.onResizeSignature,
                 onConfirmSignature: widget.onConfirmSignature,

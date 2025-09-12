@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import '_world.dart';
 
 /// Usage: the user drags handles to resize and drags to reposition
 Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
@@ -10,7 +11,6 @@ Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final pdf = container.read(documentRepositoryProvider);
   final pdfN = container.read(documentRepositoryProvider.notifier);
   final currentPage = container.read(pdfViewModelProvider);
 

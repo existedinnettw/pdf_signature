@@ -15,6 +15,8 @@ import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pages_sidebar.dart';
+import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
@@ -49,7 +51,7 @@ void main() {
             (ref) =>
                 DocumentStateNotifier()..openPicked(
                   path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 1, // Initial value, will be updated by viewer
+                  pageCount: 3,
                 ),
           ),
           useMockViewerProvider.overrideWith((ref) => false),
@@ -110,7 +112,7 @@ void main() {
             (ref) =>
                 DocumentStateNotifier()..openPicked(
                   path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 1, // Initial value, will be updated by viewer
+                  pageCount: 3,
                   bytes: pdfBytes,
                 ),
           ),
@@ -175,5 +177,183 @@ void main() {
       (sizeAfter.height - sizeBefore.height).abs() < sizeBefore.height * 0.15,
       isTrue,
     );
+  });
+
+  // ---- PDF view interaction tests (merged from pdf_view_test.dart) ----
+  testWidgets('PDF View: programmatic page jumps reach last page', (
+    tester,
+  ) async {
+    final pdfBytes =
+        await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
+          ),
+          documentRepositoryProvider.overrideWith(
+            (ref) =>
+                DocumentStateNotifier()..openPicked(
+                  path: 'integration_test/data/sample-local-pdf.pdf',
+                  pageCount: 3,
+                  bytes: pdfBytes,
+                ),
+          ),
+          useMockViewerProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: PdfSignatureHomePage(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    final ctx = tester.element(find.byType(PdfSignatureHomePage));
+    final container = ProviderScope.containerOf(ctx);
+    expect(container.read(pdfViewModelProvider), 1);
+    container.read(pdfViewModelProvider.notifier).jumpToPage(2);
+    await tester.pumpAndSettle();
+    expect(container.read(pdfViewModelProvider), 2);
+    container.read(pdfViewModelProvider.notifier).jumpToPage(3);
+    await tester.pumpAndSettle();
+    expect(container.read(pdfViewModelProvider), 3);
+  });
+
+  testWidgets('PDF View: zoom in/out', (tester) async {
+    final pdfBytes =
+        await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
+          ),
+          documentRepositoryProvider.overrideWith(
+            (ref) =>
+                DocumentStateNotifier()..openPicked(
+                  path: 'integration_test/data/sample-local-pdf.pdf',
+                  pageCount: 3,
+                  bytes: pdfBytes,
+                ),
+          ),
+          useMockViewerProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: PdfSignatureHomePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final pdfViewer = find.byKey(const ValueKey('pdf_page_area'));
+    expect(pdfViewer, findsOneWidget);
+    final center = tester.getCenter(pdfViewer);
+    final g1 = await tester.createGesture();
+    final g2 = await tester.createGesture();
+    await g1.down(center - const Offset(10, 0));
+    await g2.down(center + const Offset(10, 0));
+    await g1.moveTo(center - const Offset(20, 0));
+    await g2.moveTo(center + const Offset(20, 0));
+    await g1.up();
+    await g2.up();
+    await tester.pumpAndSettle();
+    expect(pdfViewer, findsOneWidget);
+  });
+
+  testWidgets('PDF View: jump to page by clicking thumbnail', (tester) async {
+    final pdfBytes =
+        await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
+          ),
+          documentRepositoryProvider.overrideWith(
+            (ref) =>
+                DocumentStateNotifier()..openPicked(
+                  path: 'integration_test/data/sample-local-pdf.pdf',
+                  pageCount: 3,
+                  bytes: pdfBytes,
+                ),
+          ),
+          useMockViewerProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: PdfSignatureHomePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final ctx = tester.element(find.byType(PdfSignatureHomePage));
+    final container = ProviderScope.containerOf(ctx);
+    expect(container.read(pdfViewModelProvider), 1);
+    final page3Thumb = find.text('3');
+    expect(page3Thumb, findsOneWidget);
+    await tester.tap(page3Thumb);
+    await tester.pumpAndSettle();
+    expect(container.read(pdfViewModelProvider), 3);
+  });
+
+  testWidgets('PDF View: thumbnails scroll and select', (tester) async {
+    final pdfBytes =
+        await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
+          ),
+          documentRepositoryProvider.overrideWith(
+            (ref) =>
+                DocumentStateNotifier()..openPicked(
+                  path: 'integration_test/data/sample-local-pdf.pdf',
+                  pageCount: 3,
+                  bytes: pdfBytes,
+                ),
+          ),
+          useMockViewerProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: PdfSignatureHomePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final ctx = tester.element(find.byType(PdfSignatureHomePage));
+    final container = ProviderScope.containerOf(ctx);
+    expect(container.read(pdfViewModelProvider), 1);
+    final sidebar = find.byType(PagesSidebar);
+    expect(sidebar, findsOneWidget);
+    await tester.drag(sidebar, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.text('1'), findsOneWidget);
+    expect(container.read(pdfViewModelProvider), 1);
+    await tester.tap(find.text('2'));
+    await tester.pumpAndSettle();
+    expect(container.read(pdfViewModelProvider), 2);
   });
 }

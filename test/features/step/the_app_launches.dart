@@ -18,7 +18,14 @@ class _BridgedSignatureCardStateNotifier extends SignatureCardStateNotifier {
 
 /// Usage: the app launches
 Future<void> theAppLaunches(WidgetTester tester) async {
+  // Preserve any previously simulated stored preferences (used by scenarios
+  // that set TestWorld.prefs BEFORE launching to emulate a prior run).
+  final preservedPrefs = Map<String, String>.from(TestWorld.prefs);
   TestWorld.reset();
+  if (preservedPrefs.isNotEmpty) {
+    TestWorld.prefs = preservedPrefs; // restore for this launch
+  }
+
   SharedPreferences.setMockInitialValues(TestWorld.prefs);
   final prefs = await SharedPreferences.getInstance();
 
@@ -62,4 +69,32 @@ Future<void> theAppLaunches(WidgetTester tester) async {
     UncontrolledProviderScope(container: container, child: const MyApp()),
   );
   await tester.pumpAndSettle();
+
+  // ----- Simulated app preference initialization logic -----
+  // Theme initialization & validation
+  const validThemes = {'light', 'dark', 'system'};
+  final storedTheme = TestWorld.prefs['theme'];
+  if (storedTheme != null && validThemes.contains(storedTheme)) {
+    TestWorld.selectedTheme = storedTheme;
+  } else {
+    // Fallback to system if missing/invalid
+    TestWorld.selectedTheme = 'system';
+    TestWorld.prefs['theme'] = 'system';
+  }
+  // currentTheme reflects either explicit theme or current system appearance
+  TestWorld.currentTheme =
+      TestWorld.selectedTheme == 'system'
+          ? TestWorld.systemTheme
+          : TestWorld.selectedTheme;
+
+  // Language initialization & validation
+  const validLangs = {'en', 'zh-TW', 'es'};
+  final storedLang = TestWorld.prefs['language'];
+  if (storedLang != null && validLangs.contains(storedLang)) {
+    TestWorld.currentLanguage = storedLang;
+  } else {
+    // Fallback to device locale
+    TestWorld.currentLanguage = TestWorld.deviceLocale;
+    TestWorld.prefs['language'] = TestWorld.deviceLocale;
+  }
 }

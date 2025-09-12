@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../_test_helper.dart';
+import '_world.dart';
 
 /// Usage: a drawn signature exists in the canvas
 Future<void> aDrawnSignatureExistsInTheCanvas(WidgetTester tester) async {
   // Tap the draw signature button to open the dialog
+  if (find.byType(MaterialApp).evaluate().isEmpty) {
+    final container = await pumpApp(tester);
+    TestWorld.container = container;
+  }
+  // Ensure button exists
+  expect(find.byKey(const Key('btn_drawer_draw_signature')), findsOneWidget);
   await tester.tap(find.byKey(const Key('btn_drawer_draw_signature')));
   await tester.pumpAndSettle();
 
