@@ -4,11 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import 'pdf_page_overlays.dart';
-import '../view_model/pdf_providers.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 // using only adjusted overlay, no direct model imports needed
 import '../../signature/widgets/signature_drag_data.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
+import '../view_model/pdf_view_model.dart';
 
 /// Mocked continuous viewer for tests or platforms without real viewer.
 @visibleForTesting
@@ -57,7 +56,6 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
     final pendingPage = widget.pendingPage;
     final scrollToPage = widget.scrollToPage;
     final clearPending = widget.clearPending;
-    final visible = ref.watch(signatureVisibilityProvider);
     final assets = ref.watch(signatureAssetRepositoryProvider);
     if (pendingPage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,7 +109,7 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
 
                           // Add placement to the document
                           ref
-                              .read(documentRepositoryProvider.notifier)
+                              .read(pdfViewModelProvider.notifier)
                               .addPlacement(
                                 page: pageNum,
                                 rect: rect,
@@ -151,88 +149,75 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                         );
                       },
                     ),
-                    visible
-                        ? Stack(
-                          children: [
-                            PdfPageOverlays(
-                              pageSize: pageSize,
-                              pageNumber: pageNum,
-                              onDragSignature: widget.onDragSignature,
-                              onResizeSignature: widget.onResizeSignature,
-                              onConfirmSignature: widget.onConfirmSignature,
-                              onClearActiveOverlay: widget.onClearActiveOverlay,
-                              onSelectPlaced: widget.onSelectPlaced,
-                            ),
-                            // For tests expecting an active overlay, draw a mock
-                            // overlay on page 1 when library has at least one asset
-                            if (pageNum == 1 && assets.isNotEmpty)
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final left =
-                                      _activeRect.left * constraints.maxWidth;
-                                  final top =
-                                      _activeRect.top * constraints.maxHeight;
-                                  final width =
-                                      _activeRect.width * constraints.maxWidth;
-                                  final height =
-                                      _activeRect.height *
-                                      constraints.maxHeight;
-                                  // Publish rect for tests/other UI to observe
-                                  WidgetsBinding.instance.addPostFrameCallback((
-                                    _,
-                                  ) {
-                                    if (!mounted) return;
-                                    ref
-                                        .read(activeRectProvider.notifier)
-                                        .state = _activeRect;
-                                  });
-                                  return Stack(
-                                    children: [
-                                      Positioned(
-                                        left: left,
-                                        top: top,
-                                        width: width,
-                                        height: height,
-                                        child: GestureDetector(
-                                          key: const Key('signature_overlay'),
-                                          // Removed onPanUpdate to allow scrolling
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color: Colors.red,
-                                                width: 2,
-                                              ),
-                                            ),
-                                            child: const SizedBox.expand(),
+                    Stack(
+                      children: [
+                        PdfPageOverlays(
+                          pageSize: pageSize,
+                          pageNumber: pageNum,
+                          onDragSignature: widget.onDragSignature,
+                          onResizeSignature: widget.onResizeSignature,
+                          onConfirmSignature: widget.onConfirmSignature,
+                          onClearActiveOverlay: widget.onClearActiveOverlay,
+                          onSelectPlaced: widget.onSelectPlaced,
+                        ),
+                        // For tests expecting an active overlay, draw a mock
+                        // overlay on page 1 when library has at least one asset
+                        if (pageNum == 1 && assets.isNotEmpty)
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final left =
+                                  _activeRect.left * constraints.maxWidth;
+                              final top =
+                                  _activeRect.top * constraints.maxHeight;
+                              final width =
+                                  _activeRect.width * constraints.maxWidth;
+                              final height =
+                                  _activeRect.height * constraints.maxHeight;
+                              // Publish rect for tests/other UI to observe
+                              return Stack(
+                                children: [
+                                  Positioned(
+                                    left: left,
+                                    top: top,
+                                    width: width,
+                                    height: height,
+                                    child: GestureDetector(
+                                      key: const Key('signature_overlay'),
+                                      // Removed onPanUpdate to allow scrolling
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: Colors.red,
+                                            width: 2,
                                           ),
                                         ),
+                                        child: const SizedBox.expand(),
                                       ),
-                                      // resize handle bottom-right
-                                      Positioned(
-                                        left: left + width - 14,
-                                        top: top + height - 14,
-                                        width: 14,
-                                        height: 14,
-                                        child: GestureDetector(
-                                          key: const Key('signature_handle'),
-                                          // Removed onPanUpdate to allow scrolling
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              border: Border.all(
-                                                color: Colors.red,
-                                              ),
-                                            ),
-                                          ),
+                                    ),
+                                  ),
+                                  // resize handle bottom-right
+                                  Positioned(
+                                    left: left + width - 14,
+                                    top: top + height - 14,
+                                    width: 14,
+                                    height: 14,
+                                    child: GestureDetector(
+                                      key: const Key('signature_handle'),
+                                      // Removed onPanUpdate to allow scrolling
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          border: Border.all(color: Colors.red),
                                         ),
                                       ),
-                                    ],
-                                  );
-                                },
-                              ),
-                          ],
-                        )
-                        : const SizedBox.shrink(),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),

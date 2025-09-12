@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
+
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import '_world.dart';
 
@@ -11,9 +11,6 @@ Future<void> theUserClicksTheThumbnailForPage(
 ) async {
   final page = param1.toInt();
   final c = TestWorld.container ?? ProviderContainer();
-  try {
-    c.read(currentPageProvider.notifier).state = page;
-  } catch (_) {}
   try {
     c.read(pdfViewModelProvider.notifier).jumpToPage(page);
   } catch (_) {}

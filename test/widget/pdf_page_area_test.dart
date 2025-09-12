@@ -6,7 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/domain/models/model.dart';
@@ -24,7 +25,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          useMockViewerProvider.overrideWithValue(true),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: true),
+          ),
           documentRepositoryProvider.overrideWith(
             (ref) => _TestPdfController(),
           ),
@@ -33,18 +36,19 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('en'),
-          home: const Scaffold(
+          home: Scaffold(
             body: Center(
               child: SizedBox(
                 width: 800,
                 height: 520,
                 child: PdfPageArea(
-                  pageSize: Size(676, 400),
+                  pageSize: const Size(676, 400),
                   onDragSignature: _noopOffset,
                   onResizeSignature: _noopOffset,
                   onConfirmSignature: _noop,
                   onClearActiveOverlay: _noop,
                   onSelectPlaced: _noopInt,
+                  controller: PdfViewerController(),
                 ),
               ),
             ),
@@ -66,7 +70,9 @@ void main() {
     // Use a persistent container across rebuilds
     final container = ProviderContainer(
       overrides: [
-        useMockViewerProvider.overrideWithValue(true),
+        pdfViewModelProvider.overrideWith(
+          (ref) => PdfViewModel(ref, useMockViewer: true),
+        ),
         documentRepositoryProvider.overrideWith(
           (ref) => DocumentStateNotifier()..openSample(),
         ),
@@ -83,13 +89,14 @@ void main() {
               child: SizedBox(
                 width: width,
                 // Keep aspect ratio consistent with uiPageSize
-                child: const PdfPageArea(
+                child: PdfPageArea(
                   pageSize: uiPageSize,
                   onDragSignature: _noopOffset,
                   onResizeSignature: _noopOffset,
                   onConfirmSignature: _noop,
                   onClearActiveOverlay: _noop,
                   onSelectPlaced: _noopInt,
+                  controller: PdfViewerController(),
                 ),
               ),
             ),

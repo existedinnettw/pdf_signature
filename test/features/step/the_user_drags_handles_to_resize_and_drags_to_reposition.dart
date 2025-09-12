@@ -12,7 +12,7 @@ Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
   final pdfN = container.read(documentRepositoryProvider.notifier);
-  final currentPage = container.read(pdfViewModelProvider);
+  final currentPage = container.read(pdfViewModelProvider).currentPage;
 
   final placements = pdfN.placementsOn(currentPage);
   if (placements.isNotEmpty) {

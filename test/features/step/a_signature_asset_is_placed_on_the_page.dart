@@ -36,7 +36,7 @@ Future<void> aSignatureAssetIsPlacedOnThePage(WidgetTester tester) async {
   }
 
   // Place it on the current page
-  final currentPage = container.read(pdfViewModelProvider);
+  final currentPage = container.read(pdfViewModelProvider).currentPage;
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(

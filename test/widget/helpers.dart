@@ -1,11 +1,12 @@
 import 'dart:typed_data';
+import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
@@ -22,13 +23,19 @@ Future<void> pumpWithOpenPdf(WidgetTester tester) async {
         documentRepositoryProvider.overrideWith(
           (ref) => DocumentStateNotifier()..openSample(),
         ),
-        useMockViewerProvider.overrideWithValue(true),
+        pdfViewModelProvider.overrideWith(
+          (ref) => PdfViewModel(ref, useMockViewer: true),
+        ),
         exportingProvider.overrideWith((ref) => false),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const PdfSignatureHomePage(),
+        home: PdfSignatureHomePage(
+          onPickPdf: () async {},
+          onClosePdf: () {},
+          currentFile: fs.XFile(''),
+        ),
       ),
     ),
   );
@@ -388,13 +395,19 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
           return cardRepo;
         }),
         // In new model, interactive overlay not implemented; keep library empty
-        useMockViewerProvider.overrideWithValue(true),
+        pdfViewModelProvider.overrideWith(
+          (ref) => PdfViewModel(ref, useMockViewer: true),
+        ),
         exportingProvider.overrideWith((ref) => false),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const PdfSignatureHomePage(),
+        home: PdfSignatureHomePage(
+          onPickPdf: () async {},
+          onClosePdf: () {},
+          currentFile: fs.XFile(''),
+        ),
       ),
     ),
   );

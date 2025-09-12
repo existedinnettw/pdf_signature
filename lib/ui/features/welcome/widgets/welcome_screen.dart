@@ -1,12 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:desktop_drop/desktop_drop.dart';
-import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/ui/features/welcome/view_model/welcome_view_model.dart';
 
 // Abstraction to make drop handling testable without constructing
 // platform-specific DropItem types in widget tests.
@@ -32,7 +30,8 @@ typedef Reader = T Function<T>(ProviderListenable<T> provider);
 
 // Select first .pdf file (case-insensitive) or fall back to first entry.
 Future<void> handleDroppedFiles(
-  Reader read,
+  Future<void> Function({String? path, Uint8List? bytes, String? fileName})
+  onOpenPdf,
   Iterable<DropReadable> files,
 ) async {
   if (files.isEmpty) return;
@@ -47,11 +46,23 @@ Future<void> handleDroppedFiles(
     bytes = null;
   }
   final String path = pdf.path ?? pdf.name;
-  await read(welcomeViewModelProvider).openPdf(path: path, bytes: bytes);
+  await onOpenPdf(path: path, bytes: bytes);
 }
 
 class WelcomeScreen extends ConsumerStatefulWidget {
-  const WelcomeScreen({super.key});
+  final Future<void> Function() onPickPdf;
+  final Future<void> Function({
+    String? path,
+    Uint8List? bytes,
+    String? fileName,
+  })
+  onOpenPdf;
+
+  const WelcomeScreen({
+    super.key,
+    required this.onPickPdf,
+    required this.onOpenPdf,
+  });
 
   @override
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -61,19 +72,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   bool _dragging = false;
 
   Future<void> _pickPdf() async {
-    final typeGroup = const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
-    final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
-    if (file != null) {
-      Uint8List? bytes;
-      try {
-        bytes = await file.readAsBytes();
-      } catch (_) {
-        bytes = null;
-      }
-      await ref
-          .read(welcomeViewModelProvider)
-          .openPdf(path: file.path, bytes: bytes);
-    }
+    await widget.onPickPdf();
   }
 
   @override
@@ -113,7 +112,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         final adapters = desktopFiles.map<DropReadable>(
           (f) => _DropReadableFromDesktop(f),
         );
-        await handleDroppedFiles(ref.read, adapters);
+        await handleDroppedFiles(widget.onOpenPdf, adapters);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),

@@ -7,8 +7,6 @@ import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 
-import 'package:pdf_signature/data/repositories/document_repository.dart';
-import '../view_model/pdf_providers.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
@@ -19,7 +17,16 @@ import 'ui_services.dart';
 import '../view_model/pdf_view_model.dart';
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
-  const PdfSignatureHomePage({super.key});
+  final Future<void> Function() onPickPdf;
+  final VoidCallback onClosePdf;
+  final fs.XFile currentFile;
+
+  const PdfSignatureHomePage({
+    super.key,
+    required this.onPickPdf,
+    required this.onClosePdf,
+    required this.currentFile,
+  });
 
   @override
   ConsumerState<PdfSignatureHomePage> createState() =>
@@ -31,7 +38,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   bool _showPagesSidebar = true;
   bool _showSignaturesSidebar = true;
   int _zoomLevel = 100; // percentage for display only
-  fs.XFile _file = fs.XFile('');
 
   // Split view controller to manage resizable sidebars without remounting the center area.
   late final MultiSplitViewController _splitController;
@@ -43,6 +49,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   final double _pagesMax = 250;
   final double _signaturesMin = 140;
   final double _signaturesMax = 250;
+  late PdfViewModel _viewModel;
 
   // Exposed for tests to trigger the invalid-file SnackBar without UI.
   @visibleForTesting
@@ -55,38 +62,17 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   Future<void> _pickPdf() async {
-    final typeGroup = const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
-    final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
-    if (file != null) {
-      setState(() {
-        _file = file;
-      });
-      Uint8List? bytes;
-      try {
-        bytes = await file.readAsBytes();
-      } catch (_) {
-        bytes = null;
-      }
-      // infer page count if possible
-      int pageCount = 1;
-      if (bytes != null) {
-        try {
-          final doc = await PdfDocument.openData(bytes);
-          pageCount = doc.pages.length;
-        } catch (_) {
-          // ignore
-        }
-      }
-      ref
-          .read(documentRepositoryProvider.notifier)
-          .openPicked(pageCount: pageCount, bytes: bytes);
-    }
+    await widget.onPickPdf();
+  }
+
+  void _closePdf() {
+    widget.onClosePdf();
   }
 
   void _jumpToPage(int page) {
-    final controller = ref.read(pdfViewerControllerProvider);
-    final current = ref.read(currentPageProvider);
-    final pdf = ref.read(documentRepositoryProvider);
+    final controller = _viewModel.controller;
+    final current = _viewModel.currentPage;
+    final pdf = _viewModel.document;
     int target;
     if (page == -1) {
       target = (current - 1).clamp(1, pdf.pageCount);
@@ -95,10 +81,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     }
     // Update reactive page providers so UI/tests reflect navigation even if controller is a stub
     if (current != target) {
-      ref.read(currentPageProvider.notifier).state = target;
       // Also notify view model (if used elsewhere) via its public API
       try {
-        ref.read(pdfViewModelProvider.notifier).jumpToPage(target);
+        _viewModel.jumpToPage(target);
       } catch (_) {
         // ignore if provider not available
       }
@@ -153,7 +138,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   Future<void> _saveSignedPdf() async {
     ref.read(exportingProvider.notifier).state = true;
     try {
-      final pdf = ref.read(documentRepositoryProvider);
+      final pdf = _viewModel.document;
       final messenger = ScaffoldMessenger.of(context);
       if (!pdf.loaded) {
         messenger.showSnackBar(
@@ -219,6 +204,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   void initState() {
     super.initState();
     // Build areas once with builders; keep these instances stable.
+    _viewModel = ref.read(pdfViewModelProvider.notifier);
     _areas = [
       Area(
         size: _lastPagesWidth,
@@ -227,7 +213,26 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         builder:
             (context, area) => Offstage(
               offstage: !_showPagesSidebar,
-              child: const PagesSidebar(),
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final pdfViewModel = ref.watch(pdfViewModelProvider);
+                  final pdf = pdfViewModel.document;
+
+                  final documentRef =
+                      pdf.loaded && pdf.pickedPdfBytes != null
+                          ? PdfDocumentRefData(
+                            pdf.pickedPdfBytes!,
+                            sourceName: 'document.pdf',
+                          )
+                          : null;
+
+                  return PagesSidebar(
+                    documentRef: documentRef,
+                    controller: _viewModel.controller,
+                    currentPage: _viewModel.currentPage,
+                  );
+                },
+              ),
             ),
       ),
       Area(
@@ -235,6 +240,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         builder:
             (context, area) => RepaintBoundary(
               child: PdfPageArea(
+                controller: _viewModel.controller,
                 key: const ValueKey('pdf_page_area'),
                 pageSize: _pageSize,
                 onDragSignature: _onDragSignature,
@@ -300,14 +306,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Provide controller override so descendants can access it.
-    return ProviderScope(
-      overrides: [pdfViewerControllerProvider.overrideWithValue(_controller)],
-      child: _buildScaffold(context),
-    );
+    return _buildScaffold(context);
   }
-
-  late final PdfViewerController _controller = PdfViewerController();
 
   Widget _buildScaffold(BuildContext context) {
     final isExporting = ref.watch(exportingProvider);
@@ -323,6 +323,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                 PdfToolbar(
                   disabled: isExporting,
                   onPickPdf: _pickPdf,
+                  onClosePdf: _closePdf,
                   onJumpToPage: _jumpToPage,
                   onZoomOut: () {
                     setState(() {
@@ -335,7 +336,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                     });
                   },
                   zoomLevel: _zoomLevel,
-                  fileName: _file.name,
+                  filePath: widget.currentFile.path,
                   showPagesSidebar: _showPagesSidebar,
                   showSignaturesSidebar: _showSignaturesSidebar,
                   onTogglePagesSidebar:

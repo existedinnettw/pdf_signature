@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:file_selector/file_selector.dart' as fs;
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pages_sidebar.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,13 +37,19 @@ void main() {
                 DocumentStateNotifier()
                   ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
-          useMockViewerProvider.overrideWithValue(false),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: false),
+          ),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: Locale('en'),
-          home: PdfSignatureHomePage(),
+          home: PdfSignatureHomePage(
+            onPickPdf: () async {},
+            onClosePdf: () {},
+            currentFile: fs.XFile('test.pdf'),
+          ),
         ),
       ),
     );
@@ -85,13 +91,19 @@ void main() {
                 DocumentStateNotifier()
                   ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
-          useMockViewerProvider.overrideWithValue(false),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: false),
+          ),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: Locale('en'),
-          home: PdfSignatureHomePage(),
+          home: PdfSignatureHomePage(
+            onPickPdf: () async {},
+            onClosePdf: () {},
+            currentFile: fs.XFile('test.pdf'),
+          ),
         ),
       ),
     );
@@ -133,13 +145,19 @@ void main() {
                 DocumentStateNotifier()
                   ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
-          useMockViewerProvider.overrideWithValue(false),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: false),
+          ),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: Locale('en'),
-          home: PdfSignatureHomePage(),
+          home: PdfSignatureHomePage(
+            onPickPdf: () async {},
+            onClosePdf: () {},
+            currentFile: fs.XFile('test.pdf'),
+          ),
         ),
       ),
     );
@@ -182,13 +200,19 @@ void main() {
                 DocumentStateNotifier()
                   ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
-          useMockViewerProvider.overrideWithValue(false),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: false),
+          ),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: Locale('en'),
-          home: PdfSignatureHomePage(),
+          home: PdfSignatureHomePage(
+            onPickPdf: () async {},
+            onClosePdf: () {},
+            currentFile: fs.XFile('test.pdf'),
+          ),
         ),
       ),
     );

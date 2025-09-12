@@ -6,9 +6,8 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
-import 'image_editor_dialog.dart';
-import '../../signature/widgets/signature_card.dart';
-import '../view_model/pdf_providers.dart';
+import '../../pdf/widgets/image_editor_dialog.dart';
+import 'signature_card.dart';
 
 /// Data for drag-and-drop is in signature_drag_data.dart
 
@@ -66,9 +65,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                     );
                   },
                   onTap: () {
-                    ref
-                        .read(activeRectProvider.notifier)
-                        .state = const Rect.fromLTWH(0.2, 0.2, 0.3, 0.15);
+                    // state = const Rect.fromLTWH(0.2, 0.2, 0.3, 0.15);
                   },
                 ),
               ),

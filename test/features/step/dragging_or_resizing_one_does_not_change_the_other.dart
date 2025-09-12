@@ -9,7 +9,7 @@ Future<void> draggingOrResizingOneDoesNotChangeTheOther(
   WidgetTester tester,
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
-  final page = container.read(pdfViewModelProvider);
+  final page = container.read(pdfViewModelProvider).currentPage;
   final list = container
       .read(documentRepositoryProvider.notifier)
       .placementsOn(page);

@@ -26,11 +26,15 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const ProviderScope(
+      ProviderScope(
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: WelcomeScreen(),
+          home: WelcomeScreen(
+            onPickPdf: () async {},
+            onOpenPdf:
+                ({String? path, Uint8List? bytes, String? fileName}) async {},
+          ),
         ),
       ),
     );
@@ -39,8 +43,16 @@ void main() {
     final bytes = Uint8List.fromList([1, 2, 3, 4]);
     final fake = _FakeDropReadable('sample.pdf', '/tmp/sample.pdf', bytes);
 
-    // Use the top-level helper with the WidgetRef.read function
-    await handleDroppedFiles(stateful.ref.read, [fake]);
+    // Call handleDroppedFiles with the onOpenPdf callback from the widget
+    await handleDroppedFiles(({
+      String? path,
+      Uint8List? bytes,
+      String? fileName,
+    }) async {
+      final container = ProviderScope.containerOf(stateful.context);
+      final repo = container.read(documentRepositoryProvider.notifier);
+      repo.openPicked(pageCount: 1, bytes: bytes);
+    }, [fake]);
     await tester.pump();
 
     final container = ProviderScope.containerOf(stateful.context);

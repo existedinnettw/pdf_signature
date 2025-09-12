@@ -10,7 +10,7 @@ Future<void> theUserDeletesOneSelectedSignaturePlacement(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final currentPage = container.read(pdfViewModelProvider);
+  final currentPage = container.read(pdfViewModelProvider).currentPage;
   final placements = container
       .read(documentRepositoryProvider.notifier)
       .placementsOn(currentPage);

@@ -7,7 +7,8 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+
 import '_world.dart';
 
 class _BridgedSignatureCardStateNotifier extends SignatureCardStateNotifier {
@@ -37,7 +38,9 @@ Future<void> theAppLaunches(WidgetTester tester) async {
       documentRepositoryProvider.overrideWith(
         (ref) => DocumentStateNotifier()..openSample(),
       ),
-      useMockViewerProvider.overrideWith((ref) => true),
+      pdfViewModelProvider.overrideWith(
+        (ref) => PdfViewModel(ref, useMockViewer: true),
+      ),
       // Bridge: automatically mirror assets into signature cards so legacy
       // feature steps that expect SignatureCard widgets keep working even
       // though the production UI currently only stores raw assets.

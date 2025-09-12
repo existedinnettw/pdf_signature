@@ -6,15 +6,41 @@ import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-class PdfViewModel extends StateNotifier<int> {
+class PdfViewModel extends ChangeNotifier {
   final Ref ref;
+  PdfViewerController _controller = PdfViewerController();
+  PdfViewerController get controller => _controller;
+  int _currentPage = 1;
+  late final bool _useMockViewer;
 
-  PdfViewModel(this.ref) : super(1);
+  // Active rect for signature placement overlay
+  Rect? _activeRect;
+  Rect? get activeRect => _activeRect;
+  set activeRect(Rect? value) {
+    _activeRect = value;
+    notifyListeners();
+  }
 
-  Document get document => ref.read(documentRepositoryProvider);
+  // const bool.fromEnvironment('FLUTTER_TEST', defaultValue: false);
+  PdfViewModel(this.ref, {bool? useMockViewer})
+    : _useMockViewer =
+          useMockViewer ??
+          bool.fromEnvironment('FLUTTER_TEST', defaultValue: false);
+
+  bool get useMockViewer => _useMockViewer;
+
+  int get currentPage => _currentPage;
+
+  set currentPage(int value) {
+    _currentPage = value.clamp(1, document.pageCount);
+
+    notifyListeners();
+  }
+
+  Document get document => ref.watch(documentRepositoryProvider);
 
   void jumpToPage(int page) {
-    state = page.clamp(1, document.pageCount);
+    currentPage = page;
   }
 
   Future<void> openPdf({required String path, Uint8List? bytes}) async {
@@ -30,37 +56,125 @@ class PdfViewModel extends StateNotifier<int> {
     ref
         .read(documentRepositoryProvider.notifier)
         .openPicked(pageCount: pageCount, bytes: bytes);
+    clearAllSignatureCards();
+
+    currentPage = 1; // Reset current page to 1
+  }
+
+  // Document repository methods
+  void closeDocument() {
+    ref.read(documentRepositoryProvider.notifier).close();
+  }
+
+  void setPageCount(int count) {
+    ref.read(documentRepositoryProvider.notifier).setPageCount(count);
+  }
+
+  void addPlacement({
+    required int page,
+    required Rect rect,
+    SignatureAsset? asset,
+    double rotationDeg = 0.0,
+    GraphicAdjust? graphicAdjust,
+  }) {
+    ref
+        .read(documentRepositoryProvider.notifier)
+        .addPlacement(
+          page: page,
+          rect: rect,
+          asset: asset,
+          rotationDeg: rotationDeg,
+          graphicAdjust: graphicAdjust,
+        );
+  }
+
+  void updatePlacementRotation({
+    required int page,
+    required int index,
+    required double rotationDeg,
+  }) {
+    ref
+        .read(documentRepositoryProvider.notifier)
+        .updatePlacementRotation(
+          page: page,
+          index: index,
+          rotationDeg: rotationDeg,
+        );
+  }
+
+  void removePlacement({required int page, required int index}) {
+    ref
+        .read(documentRepositoryProvider.notifier)
+        .removePlacement(page: page, index: index);
+  }
+
+  void updatePlacementRect({
+    required int page,
+    required int index,
+    required Rect rect,
+  }) {
+    ref
+        .read(documentRepositoryProvider.notifier)
+        .updatePlacementRect(page: page, index: index, rect: rect);
+  }
+
+  List<SignaturePlacement> placementsOn(int page) {
+    return ref.read(documentRepositoryProvider.notifier).placementsOn(page);
+  }
+
+  SignatureAsset? assetOfPlacement({required int page, required int index}) {
+    return ref
+        .read(documentRepositoryProvider.notifier)
+        .assetOfPlacement(page: page, index: index);
+  }
+
+  Future<void> exportDocument({
+    required String outputPath,
+    required Size uiPageSize,
+    required Uint8List? signatureImageBytes,
+  }) async {
+    await ref
+        .read(documentRepositoryProvider.notifier)
+        .exportDocument(
+          outputPath: outputPath,
+          uiPageSize: uiPageSize,
+          signatureImageBytes: signatureImageBytes,
+        );
+  }
+
+  // Signature card repository methods
+  List<SignatureCard> get signatureCards =>
+      ref.read(signatureCardRepositoryProvider);
+
+  void addSignatureCard(SignatureCard card) {
+    ref.read(signatureCardRepositoryProvider.notifier).add(card);
+  }
+
+  void addSignatureCardWithAsset(SignatureAsset asset, double rotationDeg) {
+    ref
+        .read(signatureCardRepositoryProvider.notifier)
+        .addWithAsset(asset, rotationDeg);
+  }
+
+  void updateSignatureCard(
+    SignatureCard card,
+    double? rotationDeg,
+    GraphicAdjust? graphicAdjust,
+  ) {
+    ref
+        .read(signatureCardRepositoryProvider.notifier)
+        .update(card, rotationDeg, graphicAdjust);
+  }
+
+  void removeSignatureCard(SignatureCard card) {
+    ref.read(signatureCardRepositoryProvider.notifier).remove(card);
+  }
+
+  void clearAllSignatureCards() {
     ref.read(signatureCardRepositoryProvider.notifier).clearAll();
-    state = 1; // Reset current page to 1
-  }
-
-  Future<Uint8List?> loadSignatureFromFile() async {
-    // This would need file picker, but since it's UI logic, perhaps keep in widget
-    // For now, return null
-    return null;
-  }
-
-  void confirmSignature() {
-    // Need to implement based on original logic
-  }
-
-  void onDragSignature(Offset delta) {
-    // Implement drag
-  }
-
-  void onResizeSignature(Offset delta) {
-    // Implement resize
-  }
-
-  void onSelectPlaced(int? index) {
-    // ref.read(documentRepositoryProvider.notifier).selectPlacement(index);
-  }
-
-  Future<void> saveSignedPdf() async {
-    // Implement save logic
   }
 }
 
-final pdfViewModelProvider = StateNotifierProvider<PdfViewModel, int>((ref) {
+final pdfViewModelProvider = ChangeNotifierProvider<PdfViewModel>((ref) {
   return PdfViewModel(ref);
 });

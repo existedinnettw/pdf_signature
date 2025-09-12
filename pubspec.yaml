@@ -70,6 +70,7 @@ dev_dependencies:
   freezed: ^3.0.0
   custom_lint: ^0.7.6
   riverpod_lint: ^2.6.5
+  go_router_builder: ^4.0.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -80,6 +81,7 @@ dev_dependencies:
   msix: ^3.16.12
   json_serializable: ^6.11.0
   dead_code_analyzer: ^1.1.0
+  faker_dart: ^0.2.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

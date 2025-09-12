@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localized_locales/flutter_localized_locales.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'package:pdf_signature/ui/features/welcome/widgets/welcome_screen.dart';
-import 'data/repositories/preferences_repository.dart';
+import 'package:pdf_signature/routing/router.dart';
 import 'package:pdf_signature/ui/features/preferences/widgets/settings_screen.dart';
+import 'data/repositories/preferences_repository.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -42,7 +40,7 @@ class MyApp extends StatelessWidget {
             data: (_) {
               final themeMode = ref.watch(themeModeProvider);
               final appLocale = ref.watch(localeProvider);
-              return MaterialApp(
+              return MaterialApp.router(
                 onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
                 theme: ThemeData(
                   colorScheme: ColorScheme.fromSeed(
@@ -63,45 +61,32 @@ class MyApp extends StatelessWidget {
                   ...AppLocalizations.localizationsDelegates,
                   LocaleNamesLocalizationsDelegate(),
                 ],
-                home: Builder(
-                  builder:
-                      (ctx) => Scaffold(
-                        appBar: AppBar(
-                          title: Text(AppLocalizations.of(ctx).appTitle),
-                          actions: [
-                            OutlinedButton.icon(
-                              key: const Key('btn_appbar_settings'),
-                              icon: const Icon(Icons.settings),
-                              label: Text(AppLocalizations.of(ctx).settings),
-                              onPressed:
-                                  () => showDialog<bool>(
-                                    context: ctx,
-                                    builder: (_) => const SettingsDialog(),
-                                  ),
-                            ),
-                          ],
+                routerConfig: ref.watch(routerProvider),
+                builder: (context, child) {
+                  return Scaffold(
+                    appBar: AppBar(
+                      title: Text(AppLocalizations.of(context).appTitle),
+                      actions: [
+                        OutlinedButton.icon(
+                          key: const Key('btn_appbar_settings'),
+                          icon: const Icon(Icons.settings),
+                          label: Text(AppLocalizations.of(context).settings),
+                          onPressed:
+                              () => showDialog<bool>(
+                                context: context,
+                                builder: (_) => const SettingsDialog(),
+                              ),
                         ),
-                        body: const _RootHomeSwitcher(),
-                      ),
-                ),
+                      ],
+                    ),
+                    body: child,
+                  );
+                },
               );
             },
           );
         },
       ),
     );
-  }
-}
-
-class _RootHomeSwitcher extends ConsumerWidget {
-  const _RootHomeSwitcher();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pdf = ref.watch(documentRepositoryProvider);
-    if (!pdf.loaded) {
-      return const WelcomeScreen();
-    }
-    return const PdfSignatureHomePage();
   }
 }

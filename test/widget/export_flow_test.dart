@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:file_selector/file_selector.dart' as fs;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf_signature/data/services/export_service.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
@@ -58,7 +59,9 @@ void main() {
                 DocumentStateNotifier()
                   ..openPicked(pageCount: 5, bytes: Uint8List(0)),
           ),
-          useMockViewerProvider.overrideWith((ref) => true),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: true),
+          ),
           exportServiceProvider.overrideWith((_) => fake),
           savePathPickerProvider.overrideWith(
             (_) => () async => 'C:/tmp/output.pdf',
@@ -67,7 +70,11 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const PdfSignatureHomePage(),
+          home: PdfSignatureHomePage(
+            onPickPdf: () async {},
+            onClosePdf: () {},
+            currentFile: fs.XFile(''),
+          ),
         ),
       ),
     );

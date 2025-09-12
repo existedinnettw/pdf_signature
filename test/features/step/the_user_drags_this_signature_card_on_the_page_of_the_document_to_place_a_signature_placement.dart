@@ -48,7 +48,7 @@ theUserDragsThisSignatureCardOnThePageOfTheDocumentToPlaceASignaturePlacement(
   final drop_card = temp_card;
 
   // Place it on the current page
-  final currentPage = container.read(pdfViewModelProvider);
+  final currentPage = container.read(pdfViewModelProvider).currentPage;
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(

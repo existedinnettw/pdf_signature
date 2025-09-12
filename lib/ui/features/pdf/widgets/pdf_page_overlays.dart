@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 import '../../../../domain/models/model.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'signature_overlay.dart';
-import '../view_model/pdf_providers.dart';
 
 /// Builds all overlays for a given page: placed signatures and the active one.
 class PdfPageOverlays extends ConsumerWidget {
@@ -29,9 +28,11 @@ class PdfPageOverlays extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pdf = ref.watch(documentRepositoryProvider);
+    final pdfViewModel = ref.watch(pdfViewModelProvider);
+    final pdf = pdfViewModel.document;
     final placed =
         pdf.placementsByPage[pageNumber] ?? const <SignaturePlacement>[];
+    final activeRect = pdfViewModel.activeRect;
     final widgets = <Widget>[];
 
     for (int i = 0; i < placed.length; i++) {
@@ -48,9 +49,9 @@ class PdfPageOverlays extends ConsumerWidget {
       );
     }
 
-    // Add active overlay if present and not using mock (mock has its own)
-    final activeRect = ref.watch(activeRectProvider);
-    final useMock = ref.watch(useMockViewerProvider);
+    // TODO:Add active overlay if present and not using mock (mock has its own)
+
+    final useMock = pdfViewModel.useMockViewer;
     if (!useMock && activeRect != null) {
       widgets.add(
         LayoutBuilder(

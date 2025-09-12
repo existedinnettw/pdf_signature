@@ -15,16 +15,17 @@ class DocumentStateNotifier extends StateNotifier<Document> {
     state = state.copyWith(loaded: true, pageCount: 5, placementsByPage: {});
   }
 
-  void openPicked({
-    required int pageCount,
-    Uint8List? bytes,
-  }) {
+  void openPicked({required int pageCount, Uint8List? bytes}) {
     state = state.copyWith(
       loaded: true,
       pageCount: pageCount,
       pickedPdfBytes: bytes,
       placementsByPage: {},
     );
+  }
+
+  void close() {
+    state = Document.initial();
   }
 
   void setPageCount(int count) {

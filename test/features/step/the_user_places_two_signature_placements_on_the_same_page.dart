@@ -14,7 +14,7 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
   // pdfViewModelProvider returns 1-based current page
-  final page = container.read(pdfViewModelProvider);
+  final page = container.read(pdfViewModelProvider).currentPage;
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(

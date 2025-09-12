@@ -8,7 +8,7 @@ import '_world.dart';
 Future<void> theUserUsesRotateControls(WidgetTester tester) async {
   final container = TestWorld.container ?? ProviderContainer();
   final pdfN = container.read(documentRepositoryProvider.notifier);
-  final currentPage = container.read(pdfViewModelProvider);
+  final currentPage = container.read(pdfViewModelProvider).currentPage;
   final placements = pdfN.placementsOn(currentPage);
   if (placements.isNotEmpty) {
     pdfN.updatePlacementRotation(

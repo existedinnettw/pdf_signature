@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import '_world.dart';
 
@@ -17,9 +16,6 @@ Future<void> theUserNavigatesToPageAndPlacesAnotherSignaturePlacement(
   TestWorld.container = container;
   final page = param1.toInt();
   // Update page providers directly (repository jumpTo is a no-op now)
-  try {
-    container.read(currentPageProvider.notifier).state = page;
-  } catch (_) {}
   try {
     container.read(pdfViewModelProvider.notifier).jumpToPage(page);
   } catch (_) {}

@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 // Real viewer removed in migration; mock continuous list is used in tests.
 
-import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'pdf_viewer_widget.dart';
+import 'package:pdfrx/pdfrx.dart';
 import '../view_model/pdf_view_model.dart';
-import '../view_model/pdf_providers.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
@@ -17,6 +16,7 @@ class PdfPageArea extends ConsumerStatefulWidget {
     required this.onConfirmSignature,
     required this.onClearActiveOverlay,
     required this.onSelectPlaced,
+    required this.controller,
   });
 
   final Size pageSize;
@@ -26,6 +26,7 @@ class PdfPageArea extends ConsumerStatefulWidget {
   final VoidCallback onConfirmSignature;
   final VoidCallback onClearActiveOverlay;
   final ValueChanged<int?> onSelectPlaced;
+  final PdfViewerController controller;
   @override
   ConsumerState<PdfPageArea> createState() => _PdfPageAreaState();
 }
@@ -117,20 +118,21 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
   @override
   Widget build(BuildContext context) {
-    final pdf = ref.watch(documentRepositoryProvider);
+    final pdfViewModel = ref.watch(pdfViewModelProvider);
+    final pdf = pdfViewModel.document;
     const pageViewMode = 'continuous';
     // React to PdfViewModel (source of truth for current page)
-    ref.listen<int>(pdfViewModelProvider, (prev, next) {
-      if (prev != next) {
-        _scrollToPage(next);
+    ref.listen(pdfViewModelProvider, (prev, next) {
+      if (prev?.currentPage != next.currentPage) {
+        _scrollToPage(next.currentPage);
       }
     });
 
     // React to provider currentPage changes (e.g., user tapped overview)
-    ref.listen(currentPageProvider, (prev, next) {
+    ref.listen(pdfViewModelProvider, (prev, next) {
       if (_suppressProviderListen) return;
-      if (prev != next) {
-        final target = next;
+      if (prev?.currentPage != next.currentPage) {
+        final target = next.currentPage;
         // If we're already navigating to this target, ignore; otherwise allow new target.
         if (_programmaticTargetPage != null &&
             _programmaticTargetPage == target) {
@@ -159,7 +161,6 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
     // Use real PDF viewer
     if (isContinuous) {
-      final controller = ref.watch(pdfViewerControllerProvider);
       return PdfViewerWidget(
         pageSize: widget.pageSize,
         onDragSignature: widget.onDragSignature,
@@ -169,7 +170,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
         onSelectPlaced: widget.onSelectPlaced,
         pageKeyBuilder: _pageKey,
         scrollToPage: _scrollToPage,
-        controller: controller,
+        controller: widget.controller,
       );
     }
     return const SizedBox.shrink();

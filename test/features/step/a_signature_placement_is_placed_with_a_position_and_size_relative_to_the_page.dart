@@ -13,7 +13,7 @@ Future<void> aSignaturePlacementIsPlacedWithAPositionAndSizeRelativeToThePage(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  final currentPage = container.read(pdfViewModelProvider);
+  final currentPage = container.read(pdfViewModelProvider).currentPage;
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(

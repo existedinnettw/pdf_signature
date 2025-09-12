@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
+
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
@@ -25,14 +26,16 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          useMockViewerProvider.overrideWithValue(true),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: true),
+          ),
           documentRepositoryProvider.overrideWith((ref) => ctrl),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('en'),
-          home: const Scaffold(
+          home: Scaffold(
             body: Center(
               child: SizedBox(
                 width: 800,
@@ -44,6 +47,7 @@ void main() {
                   onConfirmSignature: _noop,
                   onClearActiveOverlay: _noop,
                   onSelectPlaced: _noopInt,
+                  controller: PdfViewerController(),
                 ),
               ),
             ),

@@ -3,19 +3,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import 'package:pdf_signature/data/repositories/document_repository.dart';
-import '../view_model/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 class PdfToolbar extends ConsumerStatefulWidget {
   const PdfToolbar({
     super.key,
     required this.disabled,
     required this.onPickPdf,
+    required this.onClosePdf,
     required this.onJumpToPage,
     required this.onZoomOut,
     required this.onZoomIn,
     this.zoomLevel,
-    this.fileName,
+    this.filePath,
     required this.showPagesSidebar,
     required this.showSignaturesSidebar,
     required this.onTogglePagesSidebar,
@@ -24,8 +24,9 @@ class PdfToolbar extends ConsumerStatefulWidget {
 
   final bool disabled;
   final VoidCallback onPickPdf;
+  final VoidCallback onClosePdf;
   final ValueChanged<int> onJumpToPage;
-  final String? fileName;
+  final String? filePath;
   final VoidCallback onZoomOut;
   final VoidCallback onZoomIn;
   // Current zoom level as a percentage (e.g., 100 for 100%)
@@ -56,8 +57,9 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
 
   @override
   Widget build(BuildContext context) {
-    final pdf = ref.watch(documentRepositoryProvider);
-    final currentPage = ref.watch(currentPageProvider);
+    final pdfViewModel = ref.watch(pdfViewModelProvider);
+    final pdf = pdfViewModel.document;
+    final currentPage = pdfViewModel.currentPage;
     final l = AppLocalizations.of(context);
     final pageInfo = l.pageInfo(currentPage, pdf.pageCount);
 
@@ -83,9 +85,9 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 220),
                     child: Text(
-                      // if filename not null
-                      widget.fileName != null
-                          ? widget.fileName!
+                      // if filePath not null
+                      widget.filePath != null
+                          ? widget.filePath!
                           : 'No file selected',
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -94,6 +96,12 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
               ),
             ),
             if (pdf.loaded) ...[
+              IconButton(
+                key: const Key('btn_close_pdf'),
+                onPressed: widget.disabled ? null : widget.onClosePdf,
+                icon: const Icon(Icons.close),
+                tooltip: l.close,
+              ),
               Wrap(
                 spacing: 8,
                 children: [

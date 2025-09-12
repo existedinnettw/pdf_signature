@@ -24,7 +24,7 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
   ];
   container.read(documentRepositoryProvider.notifier).openPicked(pageCount: 5);
   final pdfN = container.read(documentRepositoryProvider.notifier);
-  final page = container.read(pdfViewModelProvider);
+  final page = container.read(pdfViewModelProvider).currentPage;
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(10, 10, 50, 50),

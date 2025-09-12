@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
-import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'pdf_page_overlays.dart';
 import './pdf_mock_continuous_list.dart';
-import '../view_model/pdf_providers.dart';
 import '../view_model/pdf_view_model.dart';
 
 class PdfViewerWidget extends ConsumerStatefulWidget {
@@ -55,11 +53,10 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final document = ref.watch(documentRepositoryProvider);
-    final useMock = ref.watch(useMockViewerProvider);
-    ref.watch(activeRectProvider); // trigger rebuild when active rect changes
-    // Watch to rebuild on page change
-    ref.watch(currentPageProvider);
+    final pdfViewModel = ref.watch(pdfViewModelProvider);
+    final document = pdfViewModel.document;
+    final useMock = pdfViewModel.useMockViewer;
+    // trigger rebuild when active rect changes
 
     // Update document ref when document changes
     if (document.loaded && document.pickedPdfBytes != null) {
@@ -109,12 +106,11 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
         onViewerReady: (document, controller) {
           // Update page count in repository
           ref
-              .read(documentRepositoryProvider.notifier)
+              .read(pdfViewModelProvider.notifier)
               .setPageCount(document.pages.length);
         },
         onPageChanged: (page) {
           if (page != null) {
-            ref.read(currentPageProvider.notifier).state = page;
             // Also update the view model to keep them in sync
             ref.read(pdfViewModelProvider.notifier).jumpToPage(page);
           }
@@ -123,7 +119,7 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
           return [
             PdfPageOverlays(
               pageSize: widget.pageSize,
-              pageNumber: ref.watch(currentPageProvider),
+              pageNumber: pdfViewModel.currentPage,
               onDragSignature: widget.onDragSignature,
               onResizeSignature: widget.onResizeSignature,
               onConfirmSignature: widget.onConfirmSignature,
