@@ -13,7 +13,7 @@ import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pages_sidebar.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
@@ -48,11 +48,7 @@ void main() {
             (ref) => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                ),
+            (ref) => DocumentStateNotifier()..openPicked(pageCount: 3),
           ),
           useMockViewerProvider.overrideWith((ref) => false),
           exportServiceProvider.overrideWith((_) => fake),
@@ -110,11 +106,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           signatureAssetRepositoryProvider.overrideWith((ref) {
             final c = SignatureAssetRepository();
@@ -196,11 +189,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           useMockViewerProvider.overrideWithValue(false),
         ],
@@ -239,11 +229,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           useMockViewerProvider.overrideWithValue(false),
         ],
@@ -285,11 +272,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           useMockViewerProvider.overrideWithValue(false),
         ],
@@ -305,6 +289,14 @@ void main() {
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
     expect(container.read(pdfViewModelProvider), 1);
+
+    final pagesSidebar = find.byType(PagesSidebar);
+    expect(pagesSidebar, findsOneWidget);
+
+    // Scroll to make page 3 thumbnail visible
+    await tester.drag(pagesSidebar, const Offset(0, -300));
+    await tester.pumpAndSettle();
+
     final page3Thumb = find.text('3');
     expect(page3Thumb, findsOneWidget);
     await tester.tap(page3Thumb);
@@ -326,11 +318,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           useMockViewerProvider.overrideWithValue(false),
         ],

@@ -15,7 +15,7 @@ aDocumentIsOpenAndContainsMultiplePlacedSignaturePlacementsAcrossPages(
   TestWorld.container = container;
   container
       .read(documentRepositoryProvider.notifier)
-      .openPicked(path: 'multi.pdf', pageCount: 5);
+      .openPicked(pageCount: 5);
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(

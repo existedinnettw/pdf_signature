@@ -6,7 +6,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'pdf_viewer_widget.dart';
 import '../view_model/pdf_view_model.dart';
-import 'pdf_providers.dart';
+import '../view_model/pdf_providers.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
@@ -159,6 +159,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
     // Use real PDF viewer
     if (isContinuous) {
+      final controller = ref.watch(pdfViewerControllerProvider);
       return PdfViewerWidget(
         pageSize: widget.pageSize,
         onDragSignature: widget.onDragSignature,
@@ -168,6 +169,7 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
         onSelectPlaced: widget.onSelectPlaced,
         pageKeyBuilder: _pageKey,
         scrollToPage: _scrollToPage,
+        controller: controller,
       );
     }
     return const SizedBox.shrink();

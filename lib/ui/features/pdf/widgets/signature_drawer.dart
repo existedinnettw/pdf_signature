@@ -8,7 +8,7 @@ import 'package:pdf_signature/data/repositories/signature_asset_repository.dart'
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'image_editor_dialog.dart';
 import '../../signature/widgets/signature_card.dart';
-import 'pdf_providers.dart';
+import '../view_model/pdf_providers.dart';
 
 /// Data for drag-and-drop is in signature_drag_data.dart
 

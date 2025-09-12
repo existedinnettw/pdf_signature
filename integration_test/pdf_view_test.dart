@@ -6,7 +6,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pages_sidebar.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,11 +34,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           useMockViewerProvider.overrideWithValue(false),
         ],
@@ -85,11 +82,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           useMockViewerProvider.overrideWithValue(false),
         ],
@@ -136,11 +130,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           useMockViewerProvider.overrideWithValue(false),
         ],
@@ -158,6 +149,13 @@ void main() {
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
     expect(container.read(pdfViewModelProvider), 1);
+
+    final pagesSidebar = find.byType(PagesSidebar);
+    expect(pagesSidebar, findsOneWidget);
+
+    // Scroll to make page 3 thumbnail visible
+    await tester.drag(pagesSidebar, const Offset(0, -300));
+    await tester.pumpAndSettle();
 
     final page3Thumbnail = find.text('3');
     expect(page3Thumbnail, findsOneWidget);
@@ -181,11 +179,8 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()..openPicked(
-                  path: 'integration_test/data/sample-local-pdf.pdf',
-                  pageCount: 3,
-                  bytes: pdfBytes,
-                ),
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
           ),
           useMockViewerProvider.overrideWithValue(false),
         ],

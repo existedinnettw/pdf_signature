@@ -8,7 +8,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'pdf_providers.dart';
+import '../view_model/pdf_providers.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
@@ -31,6 +31,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   bool _showPagesSidebar = true;
   bool _showSignaturesSidebar = true;
   int _zoomLevel = 100; // percentage for display only
+  fs.XFile _file = fs.XFile('');
 
   // Split view controller to manage resizable sidebars without remounting the center area.
   late final MultiSplitViewController _splitController;
@@ -57,6 +58,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final typeGroup = const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
     final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
     if (file != null) {
+      setState(() {
+        _file = file;
+      });
       Uint8List? bytes;
       try {
         bytes = await file.readAsBytes();
@@ -75,7 +79,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       }
       ref
           .read(documentRepositoryProvider.notifier)
-          .openPicked(path: file.path, pageCount: pageCount, bytes: bytes);
+          .openPicked(pageCount: pageCount, bytes: bytes);
     }
   }
 
@@ -331,7 +335,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                     });
                   },
                   zoomLevel: _zoomLevel,
-                  fileName: 'mock.pdf',
+                  fileName: _file.name,
                   showPagesSidebar: _showPagesSidebar,
                   showSignaturesSidebar: _showSignaturesSidebar,
                   onTogglePagesSidebar:

@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf_signature/app.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
 import 'package:pdf_signature/data/services/export_service.dart';
 import 'package:pdf_signature/domain/models/model.dart';

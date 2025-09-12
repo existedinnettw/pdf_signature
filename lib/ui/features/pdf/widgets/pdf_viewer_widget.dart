@@ -5,8 +5,8 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'pdf_page_overlays.dart';
 import './pdf_mock_continuous_list.dart';
-import '../../signature/widgets/signature_drag_data.dart';
-import 'pdf_providers.dart';
+import '../view_model/pdf_providers.dart';
+import '../view_model/pdf_view_model.dart';
 
 class PdfViewerWidget extends ConsumerStatefulWidget {
   const PdfViewerWidget({
@@ -19,6 +19,7 @@ class PdfViewerWidget extends ConsumerStatefulWidget {
     required this.onSelectPlaced,
     this.pageKeyBuilder,
     this.scrollToPage,
+    required this.controller,
   });
 
   final Size pageSize;
@@ -29,22 +30,21 @@ class PdfViewerWidget extends ConsumerStatefulWidget {
   final ValueChanged<int?> onSelectPlaced;
   final GlobalKey Function(int page)? pageKeyBuilder;
   final void Function(int page)? scrollToPage;
+  final PdfViewerController controller;
 
   @override
   ConsumerState<PdfViewerWidget> createState() => _PdfViewerWidgetState();
 }
 
 class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
-  PdfViewerController? _controller;
   PdfDocumentRef? _documentRef;
 
   // Public getter for testing the actual viewer page
-  int? get viewerCurrentPage => _controller?.pageNumber;
+  int? get viewerCurrentPage => widget.controller.pageNumber;
 
   @override
   void initState() {
     super.initState();
-    _controller = PdfViewerController();
   }
 
   @override
@@ -99,86 +99,40 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
       );
     }
 
-    return Stack(
-      children: [
-        PdfViewer(
-          _documentRef!,
-          key: const Key(
-            'pdf_continuous_mock_list',
-          ), // Keep the same key for test compatibility
-          controller: _controller,
-          params: PdfViewerParams(
-            onViewerReady: (document, controller) {
-              // Update page count in repository
-              ref
-                  .read(documentRepositoryProvider.notifier)
-                  .setPageCount(document.pages.length);
-            },
-            onPageChanged: (page) {
-              if (page != null) {
-                ref.read(currentPageProvider.notifier).state = page;
-              }
-            },
-          ),
-        ),
-        // Drag target for dropping signatures
-        Positioned.fill(
-          child: DragTarget<SignatureDragData>(
-            onAcceptWithDetails: (details) {
-              final dragData = details.data;
-
-              // For real PDF viewer, we need to calculate which page was dropped on
-              // This is a simplified implementation - in a real app you'd need to
-              // determine the exact page and position within that page
-              final currentPage = ref.read(currentPageProvider);
-
-              // Create a default rect for the signature (can be adjusted later)
-              final rect = const Rect.fromLTWH(0.1, 0.1, 0.2, 0.1);
-
-              // Add placement to the document
-              ref
-                  .read(documentRepositoryProvider.notifier)
-                  .addPlacement(
-                    page: currentPage,
-                    rect: rect,
-                    asset: dragData.card?.asset,
-                    rotationDeg: dragData.card?.rotationDeg ?? 0.0,
-                    graphicAdjust: dragData.card?.graphicAdjust,
-                  );
-            },
-            builder: (context, candidateData, rejectedData) {
-              return Container(
-                color:
-                    candidateData.isNotEmpty
-                        ? Colors.blue.withOpacity(0.1)
-                        : Colors.transparent,
-              );
-            },
-          ),
-        ),
-        // Add signature overlays on top
-        Positioned.fill(
-          child: Consumer(
-            builder: (context, ref, _) {
-              final visible = ref.watch(signatureVisibilityProvider);
-              if (!visible) return const SizedBox.shrink();
-
-              // For now, just add a simple overlay for the first page
-              // This is a simplified version - in a real implementation you'd need
-              // to handle overlays for each page properly
-              return PdfPageOverlays(
-                pageSize: widget.pageSize,
-                pageNumber: ref.watch(currentPageProvider),
-                onDragSignature: widget.onDragSignature,
-                onResizeSignature: widget.onResizeSignature,
-                onConfirmSignature: widget.onConfirmSignature,
-                onClearActiveOverlay: widget.onClearActiveOverlay,
-                onSelectPlaced: widget.onSelectPlaced,
-              );
-            },
-          ),
-        ),
-      ],
+    return PdfViewer(
+      _documentRef!,
+      key: const Key(
+        'pdf_continuous_mock_list',
+      ), // Keep the same key for test compatibility
+      controller: widget.controller,
+      params: PdfViewerParams(
+        onViewerReady: (document, controller) {
+          // Update page count in repository
+          ref
+              .read(documentRepositoryProvider.notifier)
+              .setPageCount(document.pages.length);
+        },
+        onPageChanged: (page) {
+          if (page != null) {
+            ref.read(currentPageProvider.notifier).state = page;
+            // Also update the view model to keep them in sync
+            ref.read(pdfViewModelProvider.notifier).jumpToPage(page);
+          }
+        },
+        viewerOverlayBuilder: (context, size, handle) {
+          return [
+            PdfPageOverlays(
+              pageSize: widget.pageSize,
+              pageNumber: ref.watch(currentPageProvider),
+              onDragSignature: widget.onDragSignature,
+              onResizeSignature: widget.onResizeSignature,
+              onConfirmSignature: widget.onConfirmSignature,
+              onClearActiveOverlay: widget.onClearActiveOverlay,
+              onSelectPlaced: widget.onSelectPlaced,
+            ),
+          ];
+        },
+      ),
     );
   }
 }

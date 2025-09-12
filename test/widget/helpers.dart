@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';

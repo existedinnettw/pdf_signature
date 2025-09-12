@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/pdf_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_providers.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';

@@ -16,7 +16,6 @@ class DocumentStateNotifier extends StateNotifier<Document> {
   }
 
   void openPicked({
-    required String path,
     required int pageCount,
     Uint8List? bytes,
   }) {

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../domain/models/model.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'signature_overlay.dart';
-import 'pdf_providers.dart';
+import '../view_model/pdf_providers.dart';
 
 /// Builds all overlays for a given page: placed signatures and the active one.
 class PdfPageOverlays extends ConsumerWidget {

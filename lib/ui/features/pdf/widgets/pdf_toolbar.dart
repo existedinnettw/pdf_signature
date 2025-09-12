@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'pdf_providers.dart';
+import '../view_model/pdf_providers.dart';
 
 class PdfToolbar extends ConsumerStatefulWidget {
   const PdfToolbar({

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import 'pdf_page_overlays.dart';
-import 'pdf_providers.dart';
+import '../view_model/pdf_providers.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 // using only adjusted overlay, no direct model imports needed
 import '../../signature/widgets/signature_drag_data.dart';

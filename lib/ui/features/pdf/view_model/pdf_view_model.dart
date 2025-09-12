@@ -29,7 +29,7 @@ class PdfViewModel extends StateNotifier<int> {
     }
     ref
         .read(documentRepositoryProvider.notifier)
-        .openPicked(path: path, pageCount: pageCount, bytes: bytes);
+        .openPicked(pageCount: pageCount, bytes: bytes);
     ref.read(signatureCardRepositoryProvider.notifier).clearAll();
     state = 1; // Reset current page to 1
   }

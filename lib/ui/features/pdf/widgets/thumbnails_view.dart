@@ -4,8 +4,8 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import '../view_model/pdf_providers.dart';
 
-class PdfPagesOverview extends ConsumerWidget {
-  const PdfPagesOverview({super.key});
+class ThumbnailsView extends ConsumerWidget {
+  const ThumbnailsView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

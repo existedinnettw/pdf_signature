@@ -17,7 +17,7 @@ Future<void> aSignatureAssetIsPlacedOnThePage(WidgetTester tester) async {
   if (!container.read(documentRepositoryProvider).loaded) {
     container
         .read(documentRepositoryProvider.notifier)
-        .openPicked(path: 'mock.pdf', pageCount: 5);
+        .openPicked(pageCount: 5);
   }
 
   // Get or create an asset
