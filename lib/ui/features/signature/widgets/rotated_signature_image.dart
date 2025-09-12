@@ -112,6 +112,13 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
       filterQuality: widget.filterQuality,
       alignment: widget.alignment,
       semanticLabel: widget.semanticLabel,
+      errorBuilder: (context, error, stackTrace) {
+        // Return a placeholder for invalid images
+        return Container(
+          color: Colors.grey[300],
+          child: const Icon(Icons.broken_image, color: Colors.grey),
+        );
+      },
     );
 
     if (angle != 0.0) {

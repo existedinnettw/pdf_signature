@@ -1,22 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'adjustments_panel.dart';
-// No live preview wiring in simplified dialog
+import '../../pdf/widgets/adjustments_panel.dart';
+import '../../../../domain/models/model.dart' as domain;
+import 'rotated_signature_image.dart';
+
+class ImageEditorResult {
+  final double rotation;
+  final domain.GraphicAdjust graphicAdjust;
+
+  const ImageEditorResult({
+    required this.rotation,
+    required this.graphicAdjust,
+  });
+}
 
 class ImageEditorDialog extends StatefulWidget {
-  const ImageEditorDialog({super.key});
+  const ImageEditorDialog({
+    super.key,
+    required this.asset,
+    required this.initialRotation,
+    required this.initialGraphicAdjust,
+  });
+
+  final domain.SignatureAsset asset;
+  final double initialRotation;
+  final domain.GraphicAdjust initialGraphicAdjust;
 
   @override
   State<ImageEditorDialog> createState() => _ImageEditorDialogState();
 }
 
 class _ImageEditorDialogState extends State<ImageEditorDialog> {
-  // Local-only state for demo/tests; no persistence to repositories.
-  bool _aspectLocked = false;
-  bool _bgRemoval = false;
-  double _contrast = 1.0; // 0..2
-  double _brightness = 0.0; // -1..1
-  double _rotation = 0.0; // -180..180
+  late bool _aspectLocked;
+  late bool _bgRemoval;
+  late double _contrast;
+  late double _brightness;
+  late double _rotation;
+
+  @override
+  void initState() {
+    super.initState();
+    _aspectLocked = false; // Not persisted in GraphicAdjust
+    _bgRemoval = widget.initialGraphicAdjust.bgRemoval;
+    _contrast = widget.initialGraphicAdjust.contrast;
+    _brightness = widget.initialGraphicAdjust.brightness;
+    _rotation = widget.initialRotation;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +66,7 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                // Preview placeholder; no actual processed bytes wired
+                // Preview with actual signature image
                 SizedBox(
                   height: 160,
                   child: DecoratedBox(
@@ -45,7 +74,13 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                       border: Border.all(color: Theme.of(context).dividerColor),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Center(child: Text('No signature loaded')),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: RotatedSignatureImage(
+                        bytes: widget.asset.bytes,
+                        rotationDeg: _rotation,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -84,7 +119,17 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                   children: [
                     TextButton(
                       key: const Key('btn_image_editor_close'),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed:
+                          () => Navigator.of(context).pop(
+                            ImageEditorResult(
+                              rotation: _rotation,
+                              graphicAdjust: domain.GraphicAdjust(
+                                contrast: _contrast,
+                                brightness: _brightness,
+                                bgRemoval: _bgRemoval,
+                              ),
+                            ),
+                          ),
                       child: Text(
                         MaterialLocalizations.of(context).closeButtonLabel,
                       ),

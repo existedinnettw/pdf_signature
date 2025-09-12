@@ -63,6 +63,7 @@ class MyApp extends StatelessWidget {
                 ],
                 routerConfig: ref.watch(routerProvider),
                 builder: (context, child) {
+                  final router = ref.watch(routerProvider);
                   return Scaffold(
                     appBar: AppBar(
                       title: Text(AppLocalizations.of(context).appTitle),
@@ -73,7 +74,11 @@ class MyApp extends StatelessWidget {
                           label: Text(AppLocalizations.of(context).settings),
                           onPressed:
                               () => showDialog<bool>(
-                                context: context,
+                                context:
+                                    router
+                                        .routerDelegate
+                                        .navigatorKey
+                                        .currentContext!,
                                 builder: (_) => const SettingsDialog(),
                               ),
                         ),

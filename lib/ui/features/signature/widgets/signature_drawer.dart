@@ -2,11 +2,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-// No direct model construction needed here
+// Direct model construction is needed for creating SignatureAssets
 
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
-import '../../pdf/widgets/image_editor_dialog.dart';
+import 'package:pdf_signature/domain/models/model.dart' hide SignatureCard;
+import 'image_editor_dialog.dart';
 import 'signature_card.dart';
 
 /// Data for drag-and-drop is in signature_drag_data.dart
@@ -59,10 +60,20 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                           .remove(card),
                   onAdjust: () async {
                     if (!mounted) return;
-                    await showDialog(
+                    final result = await showDialog<ImageEditorResult>(
                       context: context,
-                      builder: (_) => const ImageEditorDialog(),
+                      builder:
+                          (_) => ImageEditorDialog(
+                            asset: card.asset,
+                            initialRotation: card.rotationDeg,
+                            initialGraphicAdjust: card.graphicAdjust,
+                          ),
                     );
+                    if (result != null && mounted) {
+                      ref
+                          .read(signatureCardRepositoryProvider.notifier)
+                          .update(card, result.rotation, result.graphicAdjust);
+                    }
                   },
                   onTap: () {
                     // state = const Rect.fromLTWH(0.2, 0.2, 0.3, 0.15);
@@ -107,12 +118,22 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                     await widget.onLoadSignatureFromFile();
                                 final b = loaded;
                                 if (b != null) {
+                                  final asset = SignatureAsset(
+                                    bytes: b,
+                                    name: 'image',
+                                  );
                                   ref
                                       .read(
                                         signatureAssetRepositoryProvider
                                             .notifier,
                                       )
                                       .add(b, name: 'image');
+                                  ref
+                                      .read(
+                                        signatureCardRepositoryProvider
+                                            .notifier,
+                                      )
+                                      .addWithAsset(asset, 0.0);
                                 }
                               },
                       icon: const Icon(Icons.image_outlined),
@@ -127,12 +148,22 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                 final drawn = await widget.onOpenDrawCanvas();
                                 final b = drawn;
                                 if (b != null) {
+                                  final asset = SignatureAsset(
+                                    bytes: b,
+                                    name: 'drawing',
+                                  );
                                   ref
                                       .read(
                                         signatureAssetRepositoryProvider
                                             .notifier,
                                       )
                                       .add(b, name: 'drawing');
+                                  ref
+                                      .read(
+                                        signatureCardRepositoryProvider
+                                            .notifier,
+                                      )
+                                      .addWithAsset(asset, 0.0);
                                 }
                               },
                       icon: const Icon(Icons.gesture),

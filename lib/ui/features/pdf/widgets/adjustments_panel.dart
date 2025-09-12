@@ -33,13 +33,6 @@ class AdjustmentsPanel extends StatelessWidget {
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Checkbox(
-              key: const Key('chk_aspect_lock'),
-              value: aspectLocked,
-              onChanged: (v) => onAspectLockedChanged(v ?? false),
-            ),
-            Text(AppLocalizations.of(context).lockAspectRatio),
-            const SizedBox(width: 16),
             Switch(
               key: const Key('swt_bg_removal'),
               value: bgRemoval,

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
@@ -79,6 +80,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     signatureCardRepositoryProvider.notifier,
   );
 
+  // Create a navigator key for the router
+  final navigatorKey = GlobalKey<NavigatorState>();
+
   // Create a late variable for the router
   late final GoRouter router;
 
@@ -90,6 +94,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final initialLocation = documentNotifier.debugState.loaded ? '/pdf' : '/';
 
   router = GoRouter(
+    navigatorKey: navigatorKey,
     routes: [
       GoRoute(
         path: '/',
