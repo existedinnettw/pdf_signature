@@ -71,8 +71,8 @@ class AdjustmentsPanel extends StatelessWidget {
             ),
             Slider(
               key: const Key('sld_brightness'),
-              min: -1.0,
-              max: 1.0,
+              min: 0.0,
+              max: 2.0,
               value: brightness,
               onChanged: onBrightnessChanged,
             ),

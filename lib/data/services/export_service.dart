@@ -66,7 +66,7 @@ class ExportService {
     required Uint8List? signatureImageBytes,
     Map<int, List<SignaturePlacement>>? placementsByPage,
     Map<String, Uint8List>? libraryBytes,
-    double targetDpi = 144.0
+    double targetDpi = 144.0,
   }) async {
     final out = pw.Document(version: pdf.PdfVersion.pdf_1_4, compress: false);
     int pageIndex = 0;
@@ -85,7 +85,6 @@ class ExportService {
 
         final bgPng = await raster.toPng();
         final bgImg = pw.MemoryImage(bgPng);
-
 
         final hasMulti =
             (placementsByPage != null && placementsByPage.isNotEmpty);
@@ -122,9 +121,42 @@ class ExportService {
                   final top = r.top / uiPageSize.height * heightPts;
                   final w = r.width / uiPageSize.width * widthPts;
                   final h = r.height / uiPageSize.height * heightPts;
-                  Uint8List? bytes;
-                  
-                  bytes ??= signatureImageBytes; // fallback
+
+                  // Process the signature asset with its graphic adjustments
+                  Uint8List? bytes = placement.asset.bytes;
+                  if (bytes != null && bytes.isNotEmpty) {
+                    try {
+                      // Decode the image
+                      final decoded = img.decodeImage(bytes);
+                      if (decoded != null) {
+                        img.Image processed = decoded;
+
+                        // Apply contrast and brightness first
+                        if (placement.graphicAdjust.contrast != 1.0 ||
+                            placement.graphicAdjust.brightness != 0.0) {
+                          processed = img.adjustColor(
+                            processed,
+                            contrast: placement.graphicAdjust.contrast,
+                            brightness: placement.graphicAdjust.brightness,
+                          );
+                        }
+
+                        // Apply background removal after color adjustments
+                        if (placement.graphicAdjust.bgRemoval) {
+                          processed = _removeBackground(processed);
+                        }
+
+                        // Encode back to PNG to preserve transparency
+                        bytes = Uint8List.fromList(img.encodePng(processed));
+                      }
+                    } catch (e) {
+                      // If processing fails, use original bytes
+                    }
+                  }
+
+                  // Use fallback if no bytes available
+                  bytes ??= signatureImageBytes;
+
                   if (bytes != null && bytes.isNotEmpty) {
                     pw.MemoryImage? imgObj;
                     try {
@@ -201,9 +233,42 @@ class ExportService {
                 final top = r.top / uiPageSize.height * heightPts;
                 final w = r.width / uiPageSize.width * widthPts;
                 final h = r.height / uiPageSize.height * heightPts;
-                Uint8List? bytes;
-                
-                bytes ??= signatureImageBytes; // fallback
+
+                // Process the signature asset with its graphic adjustments
+                Uint8List? bytes = placement.asset.bytes;
+                if (bytes != null && bytes.isNotEmpty) {
+                  try {
+                    // Decode the image
+                    final decoded = img.decodeImage(bytes);
+                    if (decoded != null) {
+                      img.Image processed = decoded;
+
+                      // Apply contrast and brightness first
+                      if (placement.graphicAdjust.contrast != 1.0 ||
+                          placement.graphicAdjust.brightness != 0.0) {
+                        processed = img.adjustColor(
+                          processed,
+                          contrast: placement.graphicAdjust.contrast,
+                          brightness: placement.graphicAdjust.brightness,
+                        );
+                      }
+
+                      // Apply background removal after color adjustments
+                      if (placement.graphicAdjust.bgRemoval) {
+                        processed = _removeBackground(processed);
+                      }
+
+                      // Encode back to PNG to preserve transparency
+                      bytes = Uint8List.fromList(img.encodePng(processed));
+                    }
+                  } catch (e) {
+                    // If processing fails, use original bytes
+                  }
+                }
+
+                // Use fallback if no bytes available
+                bytes ??= signatureImageBytes;
+
                 if (bytes != null && bytes.isNotEmpty) {
                   pw.MemoryImage? imgObj;
                   try {
@@ -273,5 +338,32 @@ class ExportService {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Remove near-white background by making pixels with high brightness transparent
+  img.Image _removeBackground(img.Image image) {
+    final result =
+        image.hasAlpha ? img.Image.from(image) : image.convert(numChannels: 4);
+
+    const int threshold = 245; // Near-white threshold (0-255)
+
+    for (int y = 0; y < result.height; y++) {
+      for (int x = 0; x < result.width; x++) {
+        final pixel = result.getPixel(x, y);
+
+        // Get RGB values
+        final r = pixel.r;
+        final g = pixel.g;
+        final b = pixel.b;
+
+        // Check if pixel is near-white (all channels above threshold)
+        if (r >= threshold && g >= threshold && b >= threshold) {
+          // Make transparent
+          result.setPixelRgba(x, y, r, g, b, 0);
+        }
+      }
+    }
+
+    return result;
   }
 }

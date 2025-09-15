@@ -32,7 +32,9 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
   ImageStreamListener? _listener;
   double? _derivedAspectRatio; // width / height
 
-  MemoryImage get _provider => MemoryImage(widget.bytes);
+  MemoryImage get _provider {
+    return MemoryImage(widget.bytes);
+  }
 
   @override
   void didChangeDependencies() {
@@ -43,7 +45,8 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
   @override
   void didUpdateWidget(covariant RotatedSignatureImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.bytes, widget.bytes)) {
+    if (!identical(oldWidget.bytes, widget.bytes) ||
+        oldWidget.rotationDeg != widget.rotationDeg) {
       _derivedAspectRatio = null;
       _resolveImage();
     }

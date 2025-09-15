@@ -47,10 +47,16 @@ class _DrawCanvasState extends State<DrawCanvas> {
               children: [
                 ElevatedButton(
                   key: const Key('btn_canvas_confirm'),
-                  onPressed: () {
+                  onPressed: () async {
                     // Export signature to PNG bytes
-                    // In test, use dummy bytes
-                    final bytes = Uint8List.fromList([1, 2, 3]);
+                    final byteData = await _control.toImage(
+                      width: 1024,
+                      height: 512,
+                      fit: true,
+                      color: Colors.black,
+                      background: Colors.transparent,
+                    );
+                    final bytes = byteData?.buffer.asUint8List();
                     widget.debugBytesSink?.value = bytes;
                     if (widget.onConfirm != null) {
                       widget.onConfirm!(bytes);

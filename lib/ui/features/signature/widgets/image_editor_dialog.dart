@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import '../../pdf/widgets/adjustments_panel.dart';
 import '../../../../domain/models/model.dart' as domain;
@@ -36,6 +38,7 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
   late double _contrast;
   late double _brightness;
   late double _rotation;
+  late Uint8List _processedBytes;
 
   @override
   void initState() {
@@ -43,8 +46,64 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
     _aspectLocked = false; // Not persisted in GraphicAdjust
     _bgRemoval = widget.initialGraphicAdjust.bgRemoval;
     _contrast = widget.initialGraphicAdjust.contrast;
-    _brightness = widget.initialGraphicAdjust.brightness;
+    _brightness = 1.0; // Changed from 0.0 to 1.0
     _rotation = widget.initialRotation;
+    _processedBytes = widget.asset.bytes; // Initialize with original bytes
+  }
+
+  /// Update processed image bytes when processing parameters change
+  void _updateProcessedBytes() {
+    try {
+      final decoded = img.decodeImage(widget.asset.bytes);
+      if (decoded != null) {
+        img.Image processed = decoded;
+
+        // Apply contrast and brightness first
+        if (_contrast != 1.0 || _brightness != 1.0) {
+          processed = img.adjustColor(
+            processed,
+            contrast: _contrast,
+            brightness: _brightness,
+          );
+        }
+
+        // Apply background removal after color adjustments
+        if (_bgRemoval) {
+          processed = _removeBackground(processed);
+        }
+
+        // Encode back to PNG to preserve transparency
+        _processedBytes = Uint8List.fromList(img.encodePng(processed));
+      }
+    } catch (e) {
+      // If processing fails, keep original bytes
+      _processedBytes = widget.asset.bytes;
+    }
+  }
+
+  /// Remove near-white background using simple threshold approach for maximum speed
+  /// TODO: remove double loops with SIMD matrix 
+  img.Image _removeBackground(img.Image image) {
+    final result =
+        image.hasAlpha ? img.Image.from(image) : image.convert(numChannels: 4);
+
+    // Simple and fast: single pass through all pixels
+    for (int y = 0; y < result.height; y++) {
+      for (int x = 0; x < result.width; x++) {
+        final pixel = result.getPixel(x, y);
+        final r = pixel.r;
+        final g = pixel.g;
+        final b = pixel.b;
+
+        // Simple threshold: if pixel is close to white, make it transparent
+        const int threshold = 240; // Very close to white
+        if (r >= threshold && g >= threshold && b >= threshold) {
+          result.setPixelRgba(x, y, r, g, b, 0);
+        }
+      }
+    }
+
+    return result;
   }
 
   @override
@@ -77,7 +136,7 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: RotatedSignatureImage(
-                        bytes: widget.asset.bytes,
+                        bytes: _processedBytes,
                         rotationDeg: _rotation,
                       ),
                     ),
@@ -92,9 +151,21 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                   brightness: _brightness,
                   onAspectLockedChanged:
                       (v) => setState(() => _aspectLocked = v),
-                  onBgRemovalChanged: (v) => setState(() => _bgRemoval = v),
-                  onContrastChanged: (v) => setState(() => _contrast = v),
-                  onBrightnessChanged: (v) => setState(() => _brightness = v),
+                  onBgRemovalChanged:
+                      (v) => setState(() {
+                        _bgRemoval = v;
+                        _updateProcessedBytes();
+                      }),
+                  onContrastChanged:
+                      (v) => setState(() {
+                        _contrast = v;
+                        _updateProcessedBytes();
+                      }),
+                  onBrightnessChanged:
+                      (v) => setState(() {
+                        _brightness = v;
+                        _updateProcessedBytes();
+                      }),
                 ),
                 const SizedBox(height: 8),
                 Row(

@@ -59,7 +59,6 @@ void main() {
     final aspect = sizeBefore.width / sizeBefore.height;
     // Open image editor via right-click context menu and toggle aspect lock there
     await openEditorViaContextMenu(tester);
-    await tester.tap(find.byKey(const Key('chk_aspect_lock')));
     await tester.pump();
     await tester.drag(
       find.byKey(const Key('signature_handle')),

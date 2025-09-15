@@ -117,9 +117,7 @@ class MockSignatureNotifier extends StateNotifier<MockSignatureState> {
       contrast: state.contrast,
       brightness: state.brightness,
     );
-    // Mock processing: just set the processed image to the same bytes
-    TestWorld.container?.read(processedSignatureImageProvider.notifier).state =
-        bytes;
+    // Processing now happens locally in widgets, not stored in repository
   }
 
   void setBgRemoval(bool value) {
@@ -131,6 +129,7 @@ class MockSignatureNotifier extends StateNotifier<MockSignatureState> {
       contrast: state.contrast,
       brightness: state.brightness,
     );
+    // Processing now happens locally in widgets
   }
 
   void clearImage() {
@@ -153,6 +152,7 @@ class MockSignatureNotifier extends StateNotifier<MockSignatureState> {
       contrast: value,
       brightness: state.brightness,
     );
+    // Processing now happens locally in widgets
   }
 
   void setBrightness(double value) {
@@ -164,6 +164,7 @@ class MockSignatureNotifier extends StateNotifier<MockSignatureState> {
       contrast: state.contrast,
       brightness: value,
     );
+    // Processing now happens locally in widgets
   }
 }
 
@@ -176,6 +177,3 @@ final signatureProvider =
 final currentRectProvider = StateProvider<Rect?>((ref) => null);
 final editingEnabledProvider = StateProvider<bool>((ref) => false);
 final aspectLockedProvider = StateProvider<bool>((ref) => false);
-final processedSignatureImageProvider = StateProvider<Uint8List?>(
-  (ref) => null,
-);
