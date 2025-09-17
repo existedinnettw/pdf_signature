@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart' as fs;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
@@ -124,7 +124,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       context: context,
       isScrollControlled: true,
       enableDrag: false,
-      builder: (_) => const DrawCanvas(closeOnConfirmImmediately: true),
+      builder: (_) => const DrawCanvas(closeOnConfirmImmediately: false),
     );
     if (result != null && result.isNotEmpty) {
       // In simplified UI, adding to library isn't implemented
