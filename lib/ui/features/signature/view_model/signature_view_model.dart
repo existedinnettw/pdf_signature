@@ -17,6 +17,14 @@ class SignatureViewModel {
     return notifier.getProcessedBytes(asset, adjust);
   }
 
+  repo.DisplaySignatureData getDisplaySignatureData(
+    domain.SignatureAsset asset,
+    domain.GraphicAdjust adjust,
+  ) {
+    final notifier = ref.read(repo.signatureCardRepositoryProvider.notifier);
+    return notifier.getDisplayData(asset, adjust);
+  }
+
   void clearCache() {
     final notifier = ref.read(repo.signatureCardRepositoryProvider.notifier);
     notifier.clearProcessedCache();

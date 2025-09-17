@@ -29,15 +29,22 @@ class SignatureCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final processedBytes = ref
+    final displayData = ref
         .watch(signatureViewModelProvider)
-        .getProcessedBytes(asset, graphicAdjust);
+        .getDisplaySignatureData(asset, graphicAdjust);
     // Fit inside 96x64 with 6px padding using the shared rotated image widget
     const boxW = 96.0, boxH = 64.0, pad = 6.0;
-    Widget img = RotatedSignatureImage(
-      bytes: processedBytes,
+    Widget coreImage = RotatedSignatureImage(
+      bytes: displayData.bytes,
       rotationDeg: rotationDeg,
     );
+    Widget img =
+        (displayData.colorMatrix != null)
+            ? ColorFiltered(
+              colorFilter: ColorFilter.matrix(displayData.colorMatrix!),
+              child: coreImage,
+            )
+            : coreImage;
     Widget base = SizedBox(
       width: 96,
       height: 64,
@@ -170,10 +177,21 @@ class SignatureCard extends ConsumerWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(6.0),
-              child: RotatedSignatureImage(
-                bytes: processedBytes,
-                rotationDeg: rotationDeg,
-              ),
+              child:
+                  (displayData.colorMatrix != null)
+                      ? ColorFiltered(
+                        colorFilter: ColorFilter.matrix(
+                          displayData.colorMatrix!,
+                        ),
+                        child: RotatedSignatureImage(
+                          bytes: displayData.bytes,
+                          rotationDeg: rotationDeg,
+                        ),
+                      )
+                      : RotatedSignatureImage(
+                        bytes: displayData.bytes,
+                        rotationDeg: rotationDeg,
+                      ),
             ),
           ),
         ),

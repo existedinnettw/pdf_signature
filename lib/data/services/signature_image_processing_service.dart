@@ -1,9 +1,42 @@
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
+import 'package:colorfilter_generator/colorfilter_generator.dart';
+import 'package:colorfilter_generator/addons.dart';
 import '../../domain/models/model.dart' as domain;
 
 /// Service for processing signature images with graphic adjustments
 class SignatureImageProcessingService {
+  /// Build a GPU color matrix (brightness/contrast) using colorfilter_generator.
+  /// Domain neutral value is 1.0; addon neutral is 0. Map by (value-1.0).
+  List<double>? buildColorMatrix(domain.GraphicAdjust adjust) {
+    final bAddon = adjust.brightness - 1.0;
+    final cAddon = adjust.contrast - 1.0;
+    if (bAddon == 0 && cAddon == 0) return null; // identity
+    final gen = ColorFilterGenerator(
+      name: 'signature_adjust',
+      filters: [
+        if (bAddon != 0) ColorFilterAddons.brightness(bAddon),
+        if (cAddon != 0) ColorFilterAddons.contrast(cAddon),
+      ],
+    );
+    return gen.matrix;
+  }
+
+  /// For display: if bgRemoval not requested, return original bytes + matrix.
+  /// If bgRemoval requested, perform full CPU pipeline (brightness/contrast then bg removal)
+  /// and return processed bytes with null matrix (already baked in).
+  Uint8List processForDisplay(Uint8List bytes, domain.GraphicAdjust adjust) {
+    if (!adjust.bgRemoval) {
+      // No CPU processing unless any color adjust combined with bg removal.
+      if (adjust.contrast == 1.0 && adjust.brightness == 1.0) {
+        return bytes; // identity
+      }
+      // We let GPU handle; return original bytes.
+      return bytes;
+    }
+    return processImage(bytes, adjust);
+  }
+
   /// Decode image bytes once and reuse the decoded image for preview processing.
   img.Image? decode(Uint8List bytes) {
     try {

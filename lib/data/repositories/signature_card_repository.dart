@@ -3,6 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/model.dart';
 import '../../data/services/signature_image_processing_service.dart';
 
+class DisplaySignatureData {
+  final Uint8List bytes; // bytes to render
+  final List<double>? colorMatrix; // optional GPU color matrix
+  const DisplaySignatureData({required this.bytes, this.colorMatrix});
+}
+
 /// CachedSignatureCard extends SignatureCard with an internal processed cache
 class CachedSignatureCard extends SignatureCard {
   Uint8List? _cachedProcessed;
@@ -127,6 +133,31 @@ class SignatureCardStateNotifier
     }
     // Asset not found among cards (e.g., preview in dialog): compute on-the-fly
     return _processingService.processImage(asset.bytes, adjust);
+  }
+
+  /// Provide display data optimized: if bgRemoval false, returns original bytes + matrix;
+  /// if bgRemoval true, returns processed bytes with baked adjustments and null matrix.
+  DisplaySignatureData getDisplayData(
+    SignatureAsset asset,
+    GraphicAdjust adjust,
+  ) {
+    if (!adjust.bgRemoval) {
+      // Find card for potential original bytes (identical object) - no CPU processing.
+      for (final c in state) {
+        if (c.asset == asset) {
+          final matrix = _processingService.buildColorMatrix(adjust);
+          return DisplaySignatureData(
+            bytes: c.asset.bytes,
+            colorMatrix: matrix,
+          );
+        }
+      }
+      final matrix = _processingService.buildColorMatrix(adjust);
+      return DisplaySignatureData(bytes: asset.bytes, colorMatrix: matrix);
+    }
+    // bgRemoval path: need CPU processed bytes (includes brightness/contrast first)
+    final processed = getProcessedBytes(asset, adjust);
+    return DisplaySignatureData(bytes: processed, colorMatrix: null);
   }
 
   /// Clears all cached processed images.

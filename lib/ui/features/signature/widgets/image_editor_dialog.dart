@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:colorfilter_generator/colorfilter_generator.dart';
+import 'package:colorfilter_generator/addons.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import '../../pdf/widgets/adjustments_panel.dart';
 import '../../../../domain/models/model.dart' as domain;
@@ -33,12 +36,21 @@ class ImageEditorDialog extends StatefulWidget {
 }
 
 class _ImageEditorDialogState extends State<ImageEditorDialog> {
+  // UI state
   late bool _aspectLocked;
   late bool _bgRemoval;
   late double _contrast;
   late double _brightness;
   late double _rotation;
-  late Uint8List _processedBytes;
+
+  // Cached image data
+  late Uint8List _originalBytes; // Original asset bytes (never mutated)
+  Uint8List?
+  _processedBgRemovedBytes; // Cached brightness/contrast adjusted then bg-removed bytes
+  img.Image? _decodedBase; // Decoded original for processing
+
+  // Debounce for background removal (in case we later tie it to brightness/contrast)
+  Timer? _bgRemovalDebounce;
 
   @override
   void initState() {
@@ -48,63 +60,120 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
     _contrast = widget.initialGraphicAdjust.contrast;
     _brightness = widget.initialGraphicAdjust.brightness;
     _rotation = widget.initialRotation;
-    _processedBytes = widget.asset.bytes; // Initialize with original bytes
-    _updateProcessedBytes(); // Apply initial adjustments to preview
-  }
-
-  /// Update processed image bytes when processing parameters change
-  void _updateProcessedBytes() {
-    try {
-      final decoded = img.decodeImage(widget.asset.bytes);
-      if (decoded != null) {
-        img.Image processed = decoded;
-
-        // Apply contrast and brightness first
-        if (_contrast != 1.0 || _brightness != 1.0) {
-          processed = img.adjustColor(
-            processed,
-            contrast: _contrast,
-            brightness: _brightness,
-          );
-        }
-
-        // Apply background removal after color adjustments
-        if (_bgRemoval) {
-          processed = _removeBackground(processed);
-        }
-
-        // Encode back to PNG to preserve transparency
-        _processedBytes = Uint8List.fromList(img.encodePng(processed));
-      }
-    } catch (e) {
-      // If processing fails, keep original bytes
-      _processedBytes = widget.asset.bytes;
+    _originalBytes = widget.asset.bytes;
+    // Decode lazily only if/when background removal is needed
+    if (_bgRemoval) {
+      _scheduleBgRemovalReprocess(immediate: true);
     }
   }
 
-  /// Remove near-white background using simple threshold approach for maximum speed
-  /// TODO: remove double loops with SIMD matrix operations for better performance
-  img.Image _removeBackground(img.Image image) {
-    final result =
-        image.hasAlpha ? img.Image.from(image) : image.convert(numChannels: 4);
+  Uint8List get _displayBytes =>
+      _bgRemoval
+          ? (_processedBgRemovedBytes ?? _originalBytes)
+          : _originalBytes;
 
-    // Simple and fast: single pass through all pixels
-    for (int y = 0; y < result.height; y++) {
-      for (int x = 0; x < result.width; x++) {
-        final pixel = result.getPixel(x, y);
-        final r = pixel.r;
-        final g = pixel.g;
-        final b = pixel.b;
+  void _onBgRemovalChanged(bool value) {
+    setState(() {
+      _bgRemoval = value;
+      if (value) {
+        _scheduleBgRemovalReprocess(immediate: true);
+      }
+    });
+  }
 
-        // Simple threshold: if pixel is close to white, make it transparent
-        const int threshold = 240; // Very close to white
+  void _scheduleBgRemovalReprocess({bool immediate = false}) {
+    if (!_bgRemoval) return; // Only when enabled
+    _bgRemovalDebounce?.cancel();
+    if (immediate) {
+      _recomputeBgRemoval();
+    } else {
+      _bgRemovalDebounce = Timer(
+        const Duration(milliseconds: 120),
+        _recomputeBgRemoval,
+      );
+    }
+  }
+
+  void _recomputeBgRemoval() {
+    _decodedBase ??= img.decodeImage(_originalBytes);
+    final base = _decodedBase;
+    if (base == null) return;
+    // Apply brightness & contrast first (domain uses 1.0 neutral)
+    img.Image working = img.Image.from(base);
+    final needAdjust = _brightness != 1.0 || _contrast != 1.0;
+    if (needAdjust) {
+      working = img.adjustColor(
+        working,
+        brightness: _brightness,
+        contrast: _contrast,
+      );
+    }
+    // Then remove background on adjusted pixels
+    const int threshold = 240;
+    if (!working.hasAlpha) {
+      working = working.convert(numChannels: 4);
+    }
+    for (int y = 0; y < working.height; y++) {
+      for (int x = 0; x < working.width; x++) {
+        final p = working.getPixel(x, y);
+        final r = p.r, g = p.g, b = p.b;
         if (r >= threshold && g >= threshold && b >= threshold) {
-          result.setPixelRgba(x, y, r, g, b, 0);
+          working.setPixelRgba(x, y, r, g, b, 0);
         }
       }
     }
+    final bytes = Uint8List.fromList(img.encodePng(working));
+    if (!mounted) return;
+    setState(() => _processedBgRemovedBytes = bytes);
+  }
 
-    return result;
+  ColorFilter _currentColorFilter() {
+    // The original domain model uses 1.0 as neutral for brightness/contrast.
+    // colorfilter_generator expects values between -1..1 for adjustments when using addons.
+    // We'll map: domain brightness (default 1.0) -> addon brightness(value-1)
+    // Same for contrast.
+    final bAddon = _brightness - 1.0; // so 1.0 => 0
+    final cAddon = _contrast - 1.0; // so 1.0 => 0
+    final generator = ColorFilterGenerator(
+      name: 'dynamic_adjust',
+      filters: [
+        if (bAddon != 0) ColorFilterAddons.brightness(bAddon),
+        if (cAddon != 0) ColorFilterAddons.contrast(cAddon),
+      ],
+    );
+    // If neutral, return identity filter to avoid unnecessary matrix mul
+    if (bAddon == 0 && cAddon == 0) {
+      // Identity matrix
+      return const ColorFilter.matrix(<double>[
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+      ]);
+    }
+    return ColorFilter.matrix(generator.matrix);
+  }
+
+  @override
+  void dispose() {
+    _bgRemovalDebounce?.cancel();
+    super.dispose();
   }
 
   @override
@@ -126,7 +195,8 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                // Preview with actual signature image
+                // Preview: if bg removal active we already applied adjustments in CPU pipeline,
+                // otherwise apply brightness/contrast via GPU ColorFilter.
                 SizedBox(
                   height: 160,
                   child: DecoratedBox(
@@ -136,10 +206,19 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: RotatedSignatureImage(
-                        bytes: _processedBytes,
-                        rotationDeg: _rotation,
-                      ),
+                      child:
+                          _bgRemoval
+                              ? RotatedSignatureImage(
+                                bytes: _displayBytes,
+                                rotationDeg: _rotation,
+                              )
+                              : ColorFiltered(
+                                colorFilter: _currentColorFilter(),
+                                child: RotatedSignatureImage(
+                                  bytes: _displayBytes,
+                                  rotationDeg: _rotation,
+                                ),
+                              ),
                     ),
                   ),
                 ),
@@ -152,20 +231,16 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                   brightness: _brightness,
                   onAspectLockedChanged:
                       (v) => setState(() => _aspectLocked = v),
-                  onBgRemovalChanged:
-                      (v) => setState(() {
-                        _bgRemoval = v;
-                        _updateProcessedBytes();
-                      }),
+                  onBgRemovalChanged: (v) => _onBgRemovalChanged(v),
                   onContrastChanged:
                       (v) => setState(() {
                         _contrast = v;
-                        _updateProcessedBytes();
+                        if (_bgRemoval) _scheduleBgRemovalReprocess();
                       }),
                   onBrightnessChanged:
                       (v) => setState(() {
                         _brightness = v;
-                        _updateProcessedBytes();
+                        if (_bgRemoval) _scheduleBgRemovalReprocess();
                       }),
                 ),
                 const SizedBox(height: 8),
