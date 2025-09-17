@@ -1,10 +1,13 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as img;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import '../../pdf/widgets/adjustments_panel.dart';
 import '../../../../domain/models/model.dart' as domain;
+import '../view_model/signature_view_model.dart';
 import 'rotated_signature_image.dart';
+import '../../../../data/services/signature_image_processing_service.dart';
+import 'package:image/image.dart' as img;
 
 class ImageEditorResult {
   final double rotation;
@@ -16,7 +19,7 @@ class ImageEditorResult {
   });
 }
 
-class ImageEditorDialog extends StatefulWidget {
+class ImageEditorDialog extends ConsumerStatefulWidget {
   const ImageEditorDialog({
     super.key,
     required this.asset,
@@ -29,16 +32,20 @@ class ImageEditorDialog extends StatefulWidget {
   final domain.GraphicAdjust initialGraphicAdjust;
 
   @override
-  State<ImageEditorDialog> createState() => _ImageEditorDialogState();
+  ConsumerState<ImageEditorDialog> createState() => _ImageEditorDialogState();
 }
 
-class _ImageEditorDialogState extends State<ImageEditorDialog> {
+class _ImageEditorDialogState extends ConsumerState<ImageEditorDialog> {
   late bool _aspectLocked;
   late bool _bgRemoval;
   late double _contrast;
   late double _brightness;
   late double _rotation;
   late Uint8List _processedBytes;
+  img.Image? _decodedSource; // Reused decoded source for fast previews
+  bool _previewScheduled = false;
+  bool _previewDirty = false;
+  late final SignatureImageProcessingService _svc;
 
   @override
   void initState() {
@@ -48,62 +55,47 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
     _contrast = widget.initialGraphicAdjust.contrast;
     _brightness = 1.0; // Changed from 0.0 to 1.0
     _rotation = widget.initialRotation;
-    _processedBytes = widget.asset.bytes; // Initialize with original bytes
+    _processedBytes = widget.asset.bytes; // initial preview
+    _svc = SignatureImageProcessingService();
+    // Decode once for preview reuse
+    // Note: package:image lives in service; expose decode via service
+    _decodedSource = _svc.decode(widget.asset.bytes);
   }
 
-  /// Update processed image bytes when processing parameters change
+  @override
+  void dispose() {
+    // Frame callbacks are tied to mounting; nothing to cancel explicitly
+    super.dispose();
+  }
+
+  /// Update processed image bytes when processing parameters change.
+  /// Coalesce rapid changes once per frame to keep UI responsive and tests stable.
   void _updateProcessedBytes() {
-    try {
-      final decoded = img.decodeImage(widget.asset.bytes);
+    _previewDirty = true;
+    if (_previewScheduled) return;
+    _previewScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _previewScheduled = false;
+      if (!mounted || !_previewDirty) return;
+      _previewDirty = false;
+      final adjust = domain.GraphicAdjust(
+        contrast: _contrast,
+        brightness: _brightness,
+        bgRemoval: _bgRemoval,
+      );
+      // Fast preview path: reuse decoded, downscale, low-compression encode
+      final decoded = _decodedSource;
       if (decoded != null) {
-        img.Image processed = decoded;
-
-        // Apply contrast and brightness first
-        if (_contrast != 1.0 || _brightness != 1.0) {
-          processed = img.adjustColor(
-            processed,
-            contrast: _contrast,
-            brightness: _brightness,
-          );
-        }
-
-        // Apply background removal after color adjustments
-        if (_bgRemoval) {
-          processed = _removeBackground(processed);
-        }
-
-        // Encode back to PNG to preserve transparency
-        _processedBytes = Uint8List.fromList(img.encodePng(processed));
+        final preview = _svc.processPreviewFromDecoded(decoded, adjust);
+        if (mounted) setState(() => _processedBytes = preview);
+      } else {
+        // Fallback to repository path if decode failed
+        final bytes = ref
+            .read(signatureViewModelProvider)
+            .getProcessedBytes(widget.asset, adjust);
+        if (mounted) setState(() => _processedBytes = bytes);
       }
-    } catch (e) {
-      // If processing fails, keep original bytes
-      _processedBytes = widget.asset.bytes;
-    }
-  }
-
-  /// Remove near-white background using simple threshold approach for maximum speed
-  /// TODO: remove double loops with SIMD matrix 
-  img.Image _removeBackground(img.Image image) {
-    final result =
-        image.hasAlpha ? img.Image.from(image) : image.convert(numChannels: 4);
-
-    // Simple and fast: single pass through all pixels
-    for (int y = 0; y < result.height; y++) {
-      for (int x = 0; x < result.width; x++) {
-        final pixel = result.getPixel(x, y);
-        final r = pixel.r;
-        final g = pixel.g;
-        final b = pixel.b;
-
-        // Simple threshold: if pixel is close to white, make it transparent
-        const int threshold = 240; // Very close to white
-        if (r >= threshold && g >= threshold && b >= threshold) {
-          result.setPixelRgba(x, y, r, g, b, 0);
-        }
-      }
-    }
-
-    return result;
+    });
   }
 
   @override

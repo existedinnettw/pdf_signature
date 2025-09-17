@@ -20,7 +20,7 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
   container.read(documentRepositoryProvider.notifier).state =
       Document.initial();
   container.read(signatureCardRepositoryProvider.notifier).state = [
-    SignatureCard.initial(),
+    CachedSignatureCard.initial(),
   ];
   container.read(documentRepositoryProvider.notifier).openPicked(pageCount: 5);
   final pdfN = container.read(documentRepositoryProvider.notifier);

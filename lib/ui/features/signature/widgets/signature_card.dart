@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/domain/models/model.dart' as domain;
 import 'signature_drag_data.dart';
 import 'rotated_signature_image.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
+import '../view_model/signature_view_model.dart';
 
-class SignatureCard extends StatelessWidget {
+class SignatureCard extends ConsumerWidget {
   const SignatureCard({
     super.key,
     required this.asset,
@@ -26,11 +28,14 @@ class SignatureCard extends StatelessWidget {
   final domain.GraphicAdjust graphicAdjust;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final processedBytes = ref
+        .watch(signatureViewModelProvider)
+        .getProcessedBytes(asset, graphicAdjust);
     // Fit inside 96x64 with 6px padding using the shared rotated image widget
     const boxW = 96.0, boxH = 64.0, pad = 6.0;
     Widget img = RotatedSignatureImage(
-      bytes: asset.bytes,
+      bytes: processedBytes,
       rotationDeg: rotationDeg,
     );
     Widget base = SizedBox(
@@ -166,7 +171,7 @@ class SignatureCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(6.0),
               child: RotatedSignatureImage(
-                bytes: asset.bytes,
+                bytes: processedBytes,
                 rotationDeg: rotationDeg,
               ),
             ),

@@ -15,7 +15,7 @@ Future<void> aSignatureAssetIsLoadedOrDrawn(WidgetTester tester) async {
   container.read(documentRepositoryProvider.notifier).state =
       Document.initial();
   container.read(signatureCardRepositoryProvider.notifier).state = [
-    SignatureCard.initial(),
+    CachedSignatureCard.initial(),
   ];
   // Use a tiny valid PNG so any later image decoding succeeds.
   final bytes = Uint8List.fromList([

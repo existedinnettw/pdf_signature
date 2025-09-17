@@ -18,4 +18,17 @@ class GraphicAdjust {
     brightness: brightness ?? this.brightness,
     bgRemoval: bgRemoval ?? this.bgRemoval,
   );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GraphicAdjust &&
+          runtimeType == other.runtimeType &&
+          contrast == other.contrast &&
+          brightness == other.brightness &&
+          bgRemoval == other.bgRemoval;
+
+  @override
+  int get hashCode =>
+      contrast.hashCode ^ brightness.hashCode ^ bgRemoval.hashCode;
 }

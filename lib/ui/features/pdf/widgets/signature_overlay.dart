@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../domain/models/model.dart';
 import '../../signature/widgets/rotated_signature_image.dart';
+import '../../signature/view_model/signature_view_model.dart';
 
 /// Minimal overlay widget for rendering a placed signature.
-class SignatureOverlay extends StatelessWidget {
+class SignatureOverlay extends ConsumerWidget {
   const SignatureOverlay({
     super.key,
     required this.pageSize,
@@ -18,7 +20,10 @@ class SignatureOverlay extends StatelessWidget {
   final int placedIndex;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final processedBytes = ref
+        .watch(signatureViewModelProvider)
+        .getProcessedBytes(placement.asset, placement.graphicAdjust);
     return LayoutBuilder(
       builder: (context, constraints) {
         final left = rect.left * constraints.maxWidth;
@@ -40,7 +45,7 @@ class SignatureOverlay extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.contain,
                   child: RotatedSignatureImage(
-                    bytes: placement.asset.bytes,
+                    bytes: processedBytes,
                     rotationDeg: placement.rotationDeg,
                   ),
                 ),

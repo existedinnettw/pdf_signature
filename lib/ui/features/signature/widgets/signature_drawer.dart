@@ -62,6 +62,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                     if (!mounted) return;
                     final result = await showDialog<ImageEditorResult>(
                       context: context,
+                      barrierDismissible: false,
                       builder:
                           (_) => ImageEditorDialog(
                             asset: card.asset,

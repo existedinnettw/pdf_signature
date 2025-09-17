@@ -124,10 +124,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       context: context,
       isScrollControlled: true,
       enableDrag: false,
-      builder:
-          (_) => DrawCanvas(
-            onConfirm: (bytes) => Navigator.of(context).pop(bytes),
-          ),
+      builder: (_) => const DrawCanvas(closeOnConfirmImmediately: true),
     );
     if (result != null && result.isNotEmpty) {
       // In simplified UI, adding to library isn't implemented

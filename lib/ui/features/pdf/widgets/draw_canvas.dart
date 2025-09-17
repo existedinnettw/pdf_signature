@@ -10,6 +10,7 @@ class DrawCanvas extends StatefulWidget {
     this.control,
     this.onConfirm,
     this.debugBytesSink,
+    this.closeOnConfirmImmediately = false,
   });
 
   final hand.HandSignatureControl? control;
@@ -17,6 +18,9 @@ class DrawCanvas extends StatefulWidget {
   // For tests: allows observing exported bytes without relying on Navigator
   @visibleForTesting
   final ValueNotifier<Uint8List?>? debugBytesSink;
+  // When true (used by bottom sheet), the sheet will be closed immediately
+  // on confirm without waiting for export to finish.
+  final bool closeOnConfirmImmediately;
 
   @override
   State<DrawCanvas> createState() => _DrawCanvasState();
@@ -48,6 +52,12 @@ class _DrawCanvasState extends State<DrawCanvas> {
                 ElevatedButton(
                   key: const Key('btn_canvas_confirm'),
                   onPressed: () async {
+                    // If requested, close the sheet immediately without waiting
+                    // for the potentially heavy export.
+                    if (widget.closeOnConfirmImmediately &&
+                        Navigator.canPop(context)) {
+                      Navigator.of(context).pop();
+                    }
                     // Export signature to PNG bytes
                     final byteData = await _control.toImage(
                       width: 1024,
@@ -60,7 +70,7 @@ class _DrawCanvasState extends State<DrawCanvas> {
                     widget.debugBytesSink?.value = bytes;
                     if (widget.onConfirm != null) {
                       widget.onConfirm!(bytes);
-                    } else {
+                    } else if (!widget.closeOnConfirmImmediately) {
                       if (context.mounted) {
                         Navigator.of(context).pop(bytes);
                       }
