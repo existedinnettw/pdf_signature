@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -197,11 +196,37 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     return name;
   }
 
+  void _onControllerChanged() {
+    if (mounted) {
+      if (_viewModel.controller.isReady) {
+        final newZoomLevel = (_viewModel.controller.currentZoom * 100)
+            .round()
+            .clamp(10, 800);
+        if (newZoomLevel != _zoomLevel) {
+          setState(() {
+            _zoomLevel = newZoomLevel;
+          });
+        }
+      } else {
+        // Reset to default zoom level when controller is not ready
+        if (_zoomLevel != 100) {
+          setState(() {
+            _zoomLevel = 100;
+          });
+        }
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Build areas once with builders; keep these instances stable.
     _viewModel = ref.read(pdfViewModelProvider.notifier);
+
+    // Add listener to update zoom level when controller zoom changes
+    _viewModel.controller.addListener(_onControllerChanged);
+
     _areas = [
       Area(
         size: _lastPagesWidth,
@@ -270,6 +295,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   @override
   void dispose() {
+    _viewModel.controller.removeListener(_onControllerChanged);
     _splitController.dispose();
     super.dispose();
   }
@@ -323,14 +349,36 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                   onClosePdf: _closePdf,
                   onJumpToPage: _jumpToPage,
                   onZoomOut: () {
-                    setState(() {
-                      _zoomLevel = (_zoomLevel - 10).clamp(10, 800);
-                    });
+                    if (_viewModel.controller.isReady) {
+                      _viewModel.controller.zoomDown();
+                      // Update display zoom level after controller zoom
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _zoomLevel = (_viewModel.controller.currentZoom *
+                                    100)
+                                .round()
+                                .clamp(10, 800);
+                          });
+                        }
+                      });
+                    }
                   },
                   onZoomIn: () {
-                    setState(() {
-                      _zoomLevel = (_zoomLevel + 10).clamp(10, 800);
-                    });
+                    if (_viewModel.controller.isReady) {
+                      _viewModel.controller.zoomUp();
+                      // Update display zoom level after controller zoom
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _zoomLevel = (_viewModel.controller.currentZoom *
+                                    100)
+                                .round()
+                                .clamp(10, 800);
+                          });
+                        }
+                      });
+                    }
                   },
                   zoomLevel: _zoomLevel,
                   filePath: widget.currentFile.path,

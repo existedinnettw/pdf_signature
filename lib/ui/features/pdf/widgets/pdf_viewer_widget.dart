@@ -126,6 +126,44 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
               onClearActiveOverlay: widget.onClearActiveOverlay,
               onSelectPlaced: widget.onSelectPlaced,
             ),
+            // Vertical scroll thumb on the right
+            PdfViewerScrollThumb(
+              controller: widget.controller,
+              orientation: ScrollbarOrientation.right,
+              thumbSize: const Size(40, 25),
+              thumbBuilder:
+                  (context, thumbSize, pageNumber, controller) => Container(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    child: Center(
+                      child: Text(
+                        pageNumber.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+            ),
+            // Horizontal scroll thumb on the bottom
+            PdfViewerScrollThumb(
+              controller: widget.controller,
+              orientation: ScrollbarOrientation.bottom,
+              thumbSize: const Size(40, 25),
+              thumbBuilder:
+                  (context, thumbSize, pageNumber, controller) => Container(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    child: Center(
+                      child: Text(
+                        pageNumber.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+            ),
           ];
         },
       ),
