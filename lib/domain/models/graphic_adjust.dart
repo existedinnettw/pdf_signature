@@ -5,7 +5,7 @@ class GraphicAdjust {
 
   const GraphicAdjust({
     this.contrast = 1.0,
-    this.brightness = 0.0,
+    this.brightness = 1.0,
     this.bgRemoval = false,
   });
 

@@ -61,17 +61,17 @@ void main() {
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
     final vm = container.read(pdfViewModelProvider);
-    expect(vm, 1);
+    expect(vm.currentPage, 1);
 
     container.read(pdfViewModelProvider.notifier).jumpToPage(2);
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 120));
-    expect(container.read(pdfViewModelProvider), 2);
+    expect(container.read(pdfViewModelProvider).currentPage, 2);
 
     container.read(pdfViewModelProvider.notifier).jumpToPage(3);
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 120));
-    expect(container.read(pdfViewModelProvider), 3);
+    expect(container.read(pdfViewModelProvider).currentPage, 3);
   });
 
   testWidgets('PDF View: zoom in/out', (tester) async {
@@ -166,7 +166,7 @@ void main() {
 
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    expect(container.read(pdfViewModelProvider), 1);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
 
     final pagesSidebar = find.byType(PagesSidebar);
     expect(pagesSidebar, findsOneWidget);
@@ -180,7 +180,7 @@ void main() {
     await tester.tap(page3Thumbnail);
     await tester.pumpAndSettle();
 
-    expect(container.read(pdfViewModelProvider), 3);
+    expect(container.read(pdfViewModelProvider).currentPage, 3);
   });
 
   testWidgets('PDF View: thumbnails scroll and select', (tester) async {
@@ -221,7 +221,7 @@ void main() {
 
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    expect(container.read(pdfViewModelProvider), 1);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
 
     final pagesSidebar = find.byType(PagesSidebar);
     expect(pagesSidebar, findsOneWidget);
@@ -229,14 +229,85 @@ void main() {
     await tester.drag(pagesSidebar, const Offset(0, -200));
     await tester.pumpAndSettle();
 
-    expect(find.text('1'), findsOneWidget);
-    expect(container.read(pdfViewModelProvider), 1);
+    // Page number '1' may appear in multiple text widgets (e.g., overlay/toolbar); restrict to sidebar.
+    final page1InSidebar = find.descendant(
+      of: pagesSidebar,
+      matching: find.text('1'),
+    );
+    expect(page1InSidebar, findsOneWidget);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
 
     // Select page 2 thumbnail and verify page changes
-    await tester.tap(find.text('2'));
+    final page2InSidebar = find.descendant(
+      of: pagesSidebar,
+      matching: find.text('2'),
+    );
+    await tester.tap(page2InSidebar);
     await tester.pumpAndSettle();
-    expect(container.read(pdfViewModelProvider), 2);
+    expect(container.read(pdfViewModelProvider).currentPage, 2);
   });
 
-  //TODO: Scroll Thumbs 
+  testWidgets('PDF View: scroll thumbnails to reveal and select last page', (
+    tester,
+  ) async {
+    final pdfBytes =
+        await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
+          ),
+          documentRepositoryProvider.overrideWith(
+            (ref) =>
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
+          ),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: false),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: PdfSignatureHomePage(
+            onPickPdf: () async {},
+            onClosePdf: () {},
+            currentFile: fs.XFile('test.pdf'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final ctx = tester.element(find.byType(PdfSignatureHomePage));
+    final container = ProviderScope.containerOf(ctx);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
+
+    final pagesSidebar = find.byType(PagesSidebar);
+    expect(pagesSidebar, findsOneWidget);
+
+    // Ensure page 3 not initially in view by trying to find it and allowing that it might be offstage.
+    // Perform a scroll/drag to bring page 3 into view.
+    await tester.drag(pagesSidebar, const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    final page3 = find.descendant(of: pagesSidebar, matching: find.text('3'));
+    expect(page3, findsOneWidget);
+    await tester.tap(page3);
+    await tester.pumpAndSettle();
+    expect(container.read(pdfViewModelProvider).currentPage, 3);
+
+    // Scroll back upward and verify selection persists.
+    await tester.drag(pagesSidebar, const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(container.read(pdfViewModelProvider).currentPage, 3);
+  });
+
+  //TODO: Scroll Thumbs
 }

@@ -5,6 +5,8 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:file_selector/file_selector.dart' as fs;
+import 'package:go_router/go_router.dart';
 
 class PdfViewModel extends ChangeNotifier {
   final Ref ref;
@@ -62,28 +64,8 @@ class PdfViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> openPdf({required String path, Uint8List? bytes}) async {
-    int pageCount = 1;
-    if (bytes != null) {
-      try {
-        final doc = await PdfDocument.openData(bytes);
-        pageCount = doc.pages.length;
-      } catch (_) {
-        // ignore
-      }
-    }
-    ref
-        .read(documentRepositoryProvider.notifier)
-        .openPicked(pageCount: pageCount, bytes: bytes);
-    clearAllSignatureCards();
-
-    currentPage = 1; // Reset current page to 1
-  }
-
   // Document repository methods
-  void closeDocument() {
-    ref.read(documentRepositoryProvider.notifier).close();
-  }
+  // Lifecycle (open/close) removed: handled exclusively by PdfSessionViewModel.
 
   void setPageCount(int count) {
     ref.read(documentRepositoryProvider.notifier).setPageCount(count);
@@ -197,3 +179,63 @@ class PdfViewModel extends ChangeNotifier {
 final pdfViewModelProvider = ChangeNotifierProvider<PdfViewModel>((ref) {
   return PdfViewModel(ref);
 });
+
+/// ViewModel managing PDF session lifecycle (file picking/open/close) and
+/// navigation. Replaces the previous PdfManager helper.
+class PdfSessionViewModel extends ChangeNotifier {
+  final Ref ref;
+  final GoRouter router;
+  fs.XFile _currentFile = fs.XFile('');
+
+  PdfSessionViewModel({required this.ref, required this.router});
+
+  fs.XFile get currentFile => _currentFile;
+
+  Future<void> pickAndOpenPdf() async {
+    final typeGroup = const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
+    final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
+    if (file != null) {
+      Uint8List? bytes;
+      try {
+        bytes = await file.readAsBytes();
+      } catch (_) {
+        bytes = null;
+      }
+      await openPdf(path: file.path, bytes: bytes);
+    }
+  }
+
+  Future<void> openPdf({String? path, Uint8List? bytes}) async {
+    int pageCount = 1; // default
+    if (bytes != null) {
+      try {
+        final doc = await PdfDocument.openData(bytes);
+        pageCount = doc.pages.length;
+      } catch (_) {
+        // ignore invalid bytes
+      }
+    }
+    if (path != null) {
+      _currentFile = fs.XFile(path);
+    }
+    ref
+        .read(documentRepositoryProvider.notifier)
+        .openPicked(pageCount: pageCount, bytes: bytes);
+    ref.read(signatureCardRepositoryProvider.notifier).clearAll();
+    router.go('/pdf');
+    notifyListeners();
+  }
+
+  void closePdf() {
+    ref.read(documentRepositoryProvider.notifier).close();
+    ref.read(signatureCardRepositoryProvider.notifier).clearAll();
+    _currentFile = fs.XFile('');
+    router.go('/');
+    notifyListeners();
+  }
+}
+
+final pdfSessionViewModelProvider =
+    ChangeNotifierProvider.family<PdfSessionViewModel, GoRouter>((ref, router) {
+      return PdfSessionViewModel(ref: ref, router: router);
+    });
