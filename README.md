@@ -23,6 +23,7 @@ flutter analyze
 flutter test
 # > run integration tests
 flutter test integration_test/ -d <device_id>
+# dart run tool/run_integration_tests.dart --device=linux
 
 # dart run tool/gen_view_wireframe_md.dart
 # flutter pub run dead_code_analyzer

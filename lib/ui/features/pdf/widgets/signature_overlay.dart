@@ -40,6 +40,45 @@ class SignatureOverlay extends ConsumerWidget {
           rect.height * pageH,
         );
 
+        Future<void> _showContextMenu(Offset position) async {
+          final pdfViewModel = ref.read(pdfViewModelProvider.notifier);
+          final isLocked = ref
+              .watch(pdfViewModelProvider)
+              .isPlacementLocked(page: pageNumber, index: placedIndex);
+          final selected = await showMenu<String>(
+            context: context,
+            position: RelativeRect.fromLTRB(
+              position.dx,
+              position.dy,
+              position.dx,
+              position.dy,
+            ),
+            items: [
+              PopupMenuItem(
+                key: const Key('mi_placement_lock'),
+                value: isLocked ? 'unlock' : 'lock',
+                child: Text(
+                  isLocked
+                      ? AppLocalizations.of(context).unlock
+                      : AppLocalizations.of(context).lock,
+                ),
+              ),
+              PopupMenuItem(
+                key: const Key('mi_placement_delete'),
+                value: 'delete',
+                child: Text(AppLocalizations.of(context).delete),
+              ),
+            ],
+          );
+          if (selected == 'lock') {
+            pdfViewModel.lockPlacement(page: pageNumber, index: placedIndex);
+          } else if (selected == 'unlock') {
+            pdfViewModel.unlockPlacement(page: pageNumber, index: placedIndex);
+          } else if (selected == 'delete') {
+            pdfViewModel.removePlacement(page: pageNumber, index: placedIndex);
+          }
+        }
+
         return Stack(
           children: [
             TransformableBox(
@@ -110,55 +149,10 @@ class SignatureOverlay extends ConsumerWidget {
               height: rectPx.height,
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
-                onSecondaryTapDown: (details) async {
-                  final pdfViewModel = ref.read(pdfViewModelProvider.notifier);
-                  final isLocked = ref
-                      .watch(pdfViewModelProvider)
-                      .isPlacementLocked(page: pageNumber, index: placedIndex);
-
-                  final selected = await showMenu<String>(
-                    context: context,
-                    position: RelativeRect.fromLTRB(
-                      details.globalPosition.dx,
-                      details.globalPosition.dy,
-                      details.globalPosition.dx,
-                      details.globalPosition.dy,
-                    ),
-                    items: [
-                      PopupMenuItem(
-                        key: const Key('mi_placement_lock'),
-                        value: isLocked ? 'unlock' : 'lock',
-                        child: Text(
-                          isLocked
-                              ? AppLocalizations.of(context).unlock
-                              : AppLocalizations.of(context).lock,
-                        ),
-                      ),
-                      PopupMenuItem(
-                        key: const Key('mi_placement_delete'),
-                        value: 'delete',
-                        child: Text(AppLocalizations.of(context).delete),
-                      ),
-                    ],
-                  );
-
-                  if (selected == 'lock') {
-                    pdfViewModel.lockPlacement(
-                      page: pageNumber,
-                      index: placedIndex,
-                    );
-                  } else if (selected == 'unlock') {
-                    pdfViewModel.unlockPlacement(
-                      page: pageNumber,
-                      index: placedIndex,
-                    );
-                  } else if (selected == 'delete') {
-                    pdfViewModel.removePlacement(
-                      page: pageNumber,
-                      index: placedIndex,
-                    );
-                  }
-                },
+                onSecondaryTapDown:
+                    (details) => _showContextMenu(details.globalPosition),
+                onLongPressStart:
+                    (details) => _showContextMenu(details.globalPosition),
               ),
             ),
           ],

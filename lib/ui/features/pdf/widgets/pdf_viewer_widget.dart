@@ -127,7 +127,7 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
                     color: Colors.black.withValues(alpha: 0.7),
                     child: Center(
                       child: Text(
-                        pageNumber.toString(),
+                        'Pg $pageNumber',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -146,7 +146,7 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
                     color: Colors.black.withValues(alpha: 0.7),
                     child: Center(
                       child: Text(
-                        pageNumber.toString(),
+                        'Pg $pageNumber',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,

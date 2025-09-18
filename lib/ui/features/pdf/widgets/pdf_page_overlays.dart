@@ -112,7 +112,9 @@ class PdfPageOverlays extends ConsumerWidget {
     // TODO:Add active overlay if present and not using mock (mock has its own)
 
     final useMock = pdfViewModel.useMockViewer;
-    if (!useMock && activeRect != null) {
+    if (!useMock &&
+        activeRect != null &&
+        pageNumber == pdfViewModel.currentPage) {
       widgets.add(
         LayoutBuilder(
           builder: (context, constraints) {

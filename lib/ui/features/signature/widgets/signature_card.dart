@@ -27,6 +27,34 @@ class SignatureCard extends ConsumerWidget {
   final bool useCurrentBytesForDrag;
   final double rotationDeg;
   final domain.GraphicAdjust graphicAdjust;
+  Future<void> _showContextMenu(BuildContext context, Offset position) async {
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
+      items: [
+        PopupMenuItem(
+          key: const Key('mi_signature_adjust'),
+          value: 'adjust',
+          child: Text(AppLocalizations.of(context).adjustGraphic),
+        ),
+        PopupMenuItem(
+          key: const Key('mi_signature_delete'),
+          value: 'delete',
+          child: Text(AppLocalizations.of(context).delete),
+        ),
+      ],
+    );
+    if (selected == 'adjust') {
+      onAdjust?.call();
+    } else if (selected == 'delete') {
+      onDelete();
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,65 +119,11 @@ class SignatureCard extends ConsumerWidget {
       onSecondaryTapDown:
           disabled
               ? null
-              : (details) async {
-                final selected = await showMenu<String>(
-                  context: context,
-                  position: RelativeRect.fromLTRB(
-                    details.globalPosition.dx,
-                    details.globalPosition.dy,
-                    details.globalPosition.dx,
-                    details.globalPosition.dy,
-                  ),
-                  items: [
-                    PopupMenuItem(
-                      key: const Key('mi_signature_adjust'),
-                      value: 'adjust',
-                      child: Text(AppLocalizations.of(context).adjustGraphic),
-                    ),
-                    PopupMenuItem(
-                      key: const Key('mi_signature_delete'),
-                      value: 'delete',
-                      child: Text(AppLocalizations.of(context).delete),
-                    ),
-                  ],
-                );
-                if (selected == 'adjust') {
-                  onAdjust?.call();
-                } else if (selected == 'delete') {
-                  onDelete();
-                }
-              },
+              : (details) => _showContextMenu(context, details.globalPosition),
       onLongPressStart:
           disabled
               ? null
-              : (details) async {
-                final selected = await showMenu<String>(
-                  context: context,
-                  position: RelativeRect.fromLTRB(
-                    details.globalPosition.dx,
-                    details.globalPosition.dy,
-                    details.globalPosition.dx,
-                    details.globalPosition.dy,
-                  ),
-                  items: [
-                    PopupMenuItem(
-                      key: const Key('mi_signature_adjust'),
-                      value: 'adjust',
-                      child: Text(AppLocalizations.of(context).adjustGraphic),
-                    ),
-                    PopupMenuItem(
-                      key: const Key('mi_signature_delete'),
-                      value: 'delete',
-                      child: Text(AppLocalizations.of(context).delete),
-                    ),
-                  ],
-                );
-                if (selected == 'adjust') {
-                  onAdjust?.call();
-                } else if (selected == 'delete') {
-                  onDelete();
-                }
-              },
+              : (details) => _showContextMenu(context, details.globalPosition),
       child: child,
     );
     if (disabled) return child;

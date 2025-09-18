@@ -79,7 +79,10 @@ void main() {
           ),
           exportServiceProvider.overrideWith((_) => fake),
           savePathPickerProvider.overrideWith(
-            (_) => () async => 'C:/tmp/output.pdf',
+            (_) => () async {
+              final dir = Directory.systemTemp.createTempSync('pdfsig_');
+              return '${dir.path}/output.pdf';
+            },
           ),
         ],
         child: MaterialApp(
@@ -431,7 +434,10 @@ void main() {
           ),
           exportServiceProvider.overrideWith((ref) => LightweightExporter()),
           savePathPickerProvider.overrideWith(
-            (_) => () async => 'C:/tmp/output-after-export.pdf',
+            (_) => () async {
+              final dir = Directory.systemTemp.createTempSync('pdfsig_after_');
+              return '${dir.path}/output-after-export.pdf';
+            },
           ),
         ],
         child: MaterialApp(
