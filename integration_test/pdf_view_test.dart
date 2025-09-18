@@ -171,6 +171,36 @@ void main() {
     final pagesSidebar = find.byType(PagesSidebar);
     expect(pagesSidebar, findsOneWidget);
 
+    // Helper to read the background color of a thumbnail tile by page label
+    Color? tileBgForPage(int page) {
+      final pageLabel = find.descendant(
+        of: pagesSidebar,
+        matching: find.text('$page'),
+      );
+      if (pageLabel.evaluate().isEmpty) return null; // not visible yet
+      final decoratedAncestors = find.ancestor(
+        of: pageLabel,
+        matching: find.byType(DecoratedBox),
+      );
+      final decoratedBoxes =
+          decoratedAncestors
+              .evaluate()
+              .map((e) => e.widget)
+              .whereType<DecoratedBox>()
+              .toList();
+      for (final d in decoratedBoxes) {
+        final dec = d.decoration;
+        if (dec is BoxDecoration && dec.color != null) {
+          return dec.color;
+        }
+      }
+      return null;
+    }
+
+    final theme = Theme.of(tester.element(pagesSidebar));
+    // Initially, page 1 should be highlighted
+    expect(tileBgForPage(1), theme.colorScheme.primaryContainer);
+
     // Scroll to make page 3 thumbnail visible
     await tester.drag(pagesSidebar, const Offset(0, -300));
     await tester.pumpAndSettle();
@@ -181,6 +211,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(pdfViewModelProvider).currentPage, 3);
+    // After navigation completes, page 3 should be highlighted
+    expect(tileBgForPage(3), theme.colorScheme.primaryContainer);
   });
 
   testWidgets('PDF View: thumbnails scroll and select', (tester) async {

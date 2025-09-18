@@ -18,6 +18,8 @@ class ThumbnailsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // Access view model to detect mock viewer mode
+    final viewModel = ref.read(pdfViewModelProvider);
 
     return Container(
       color: theme.colorScheme.surface,
@@ -34,16 +36,24 @@ class ThumbnailsView extends ConsumerWidget {
               final isSelected = currentPage == pageNumber;
               return InkWell(
                 onTap: () {
-                  // Update both controller and provider page
-                  controller.goToPage(
-                    pageNumber: pageNumber,
-                    anchor: PdfPageAnchor.top,
-                  );
-                  try {
-                    ref
-                        .read(pdfViewModelProvider.notifier)
-                        .jumpToPage(pageNumber);
-                  } catch (_) {}
+                  // For real viewer: navigate first and wait for onPageChanged
+                  // to update provider when the page is actually reached.
+                  // For mock/unready: update provider immediately to drive scroll.
+                  final isRealViewer = !viewModel.useMockViewer;
+                  if (isRealViewer && controller.isReady) {
+                    controller.goToPage(
+                      pageNumber: pageNumber,
+                      anchor: PdfPageAnchor.top,
+                    );
+                    // Do not set provider here; let onPageChanged handle it
+                  } else {
+                    // In tests or when controller isn't ready, drive state directly
+                    try {
+                      ref
+                          .read(pdfViewModelProvider.notifier)
+                          .jumpToPage(pageNumber);
+                    } catch (_) {}
+                  }
                 },
                 child: DecoratedBox(
                   decoration: BoxDecoration(
