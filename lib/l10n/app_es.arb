@@ -23,6 +23,7 @@
   "image": "Imagen",
   "invalidOrUnsupportedFile": "Archivo inválido o no compatible",
   "language": "Idioma",
+  "lock": "Bloquear",
   "loadSignatureFromFile": "Cargar firma desde archivo",
   "lockAspectRatio": "Bloquear relación de aspecto",
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "Pulse prolongadamente o haga clic derecho en la firma para confirmar o eliminar.",
@@ -46,5 +47,6 @@
   "themeDark": "Oscuro",
   "themeLight": "Claro",
   "themeSystem": "Sistema",
-  "undo": "Deshacer"
+  "undo": "Deshacer",
+  "unlock": "Desbloquear"
 }

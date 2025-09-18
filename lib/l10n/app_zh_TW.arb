@@ -24,6 +24,7 @@
   "image": "圖片",
   "invalidOrUnsupportedFile": "無效或不支援的檔案",
   "language": "語言",
+  "lock": "鎖定",
   "loadSignatureFromFile": "從檔案載入簽名",
   "lockAspectRatio": "鎖定長寬比",
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "長按或右鍵點擊簽名以確認或刪除。",
@@ -47,5 +48,6 @@
   "themeDark": "深色",
   "themeLight": "淺色",
   "themeSystem": "系統",
-  "undo": "復原"
+  "undo": "復原",
+  "unlock": "解鎖"
 }

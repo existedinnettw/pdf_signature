@@ -55,6 +55,8 @@
   "@invalidOrUnsupportedFile": {},
   "language": "Language",
   "@language": {},
+  "lock": "Lock",
+  "@lock": {},
   "loadSignatureFromFile": "Load Signature from file",
   "@loadSignatureFromFile": {},
   "lockAspectRatio": "Lock aspect ratio",
@@ -119,5 +121,7 @@
   "themeSystem": "System",
   "@themeSystem": {},
   "undo": "Undo",
-  "@undo": {}
+  "@undo": {},
+  "unlock": "Unlock",
+  "@unlock": {}
 }

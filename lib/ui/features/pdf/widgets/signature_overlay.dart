@@ -5,6 +5,7 @@ import '../../../../domain/models/model.dart';
 import '../../signature/widgets/rotated_signature_image.dart';
 import '../../signature/view_model/signature_view_model.dart';
 import '../view_model/pdf_view_model.dart';
+import 'package:pdf_signature/l10n/app_localizations.dart';
 
 /// Minimal overlay widget for rendering a placed signature.
 class SignatureOverlay extends ConsumerWidget {
@@ -50,41 +51,115 @@ class SignatureOverlay extends ConsumerWidget {
               // Disable flips for signatures to avoid mirrored signatures
               allowFlippingWhileResizing: false,
               allowContentFlipping: false,
-              onChanged: (result, details) {
-                final r = result.rect;
-                // Persist as normalized rect (0..1)
-                final newRect = Rect.fromLTWH(
-                  (r.left / pageW).clamp(0.0, 1.0),
-                  (r.top / pageH).clamp(0.0, 1.0),
-                  (r.width / pageW).clamp(0.0, 1.0),
-                  (r.height / pageH).clamp(0.0, 1.0),
-                );
-                ref
-                    .read(pdfViewModelProvider.notifier)
-                    .updatePlacementRect(
-                      page: pageNumber,
-                      index: placedIndex,
-                      rect: newRect,
-                    );
-              },
+              onChanged:
+                  ref
+                          .watch(pdfViewModelProvider)
+                          .isPlacementLocked(
+                            page: pageNumber,
+                            index: placedIndex,
+                          )
+                      ? null
+                      : (result, details) {
+                        final r = result.rect;
+                        // Persist as normalized rect (0..1)
+                        final newRect = Rect.fromLTWH(
+                          (r.left / pageW).clamp(0.0, 1.0),
+                          (r.top / pageH).clamp(0.0, 1.0),
+                          (r.width / pageW).clamp(0.0, 1.0),
+                          (r.height / pageH).clamp(0.0, 1.0),
+                        );
+                        ref
+                            .read(pdfViewModelProvider.notifier)
+                            .updatePlacementRect(
+                              page: pageNumber,
+                              index: placedIndex,
+                              rect: newRect,
+                            );
+                      },
               // Keep default handles; you can customize later if needed
-              contentBuilder:
-                  (context, boxRect, flip) => DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.red, width: 2),
+              contentBuilder: (context, boxRect, flip) {
+                final isLocked = ref
+                    .watch(pdfViewModelProvider)
+                    .isPlacementLocked(page: pageNumber, index: placedIndex);
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isLocked ? Colors.green : Colors.red,
+                      width: 2,
                     ),
-                    child: SizedBox(
-                      width: boxRect.width,
-                      height: boxRect.height,
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: RotatedSignatureImage(
-                          bytes: processedBytes,
-                          rotationDeg: placement.rotationDeg,
-                        ),
+                  ),
+                  child: SizedBox(
+                    width: boxRect.width,
+                    height: boxRect.height,
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: RotatedSignatureImage(
+                        bytes: processedBytes,
+                        rotationDeg: placement.rotationDeg,
                       ),
                     ),
                   ),
+                );
+              },
+            ),
+            // Invisible overlay for right-click context menu
+            Positioned(
+              left: rectPx.left,
+              top: rectPx.top,
+              width: rectPx.width,
+              height: rectPx.height,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onSecondaryTapDown: (details) async {
+                  final pdfViewModel = ref.read(pdfViewModelProvider.notifier);
+                  final isLocked = ref
+                      .watch(pdfViewModelProvider)
+                      .isPlacementLocked(page: pageNumber, index: placedIndex);
+
+                  final selected = await showMenu<String>(
+                    context: context,
+                    position: RelativeRect.fromLTRB(
+                      details.globalPosition.dx,
+                      details.globalPosition.dy,
+                      details.globalPosition.dx,
+                      details.globalPosition.dy,
+                    ),
+                    items: [
+                      PopupMenuItem(
+                        key: const Key('mi_placement_lock'),
+                        value: isLocked ? 'unlock' : 'lock',
+                        child: Text(
+                          isLocked
+                              ? AppLocalizations.of(context).unlock
+                              : AppLocalizations.of(context).lock,
+                        ),
+                      ),
+                      PopupMenuItem(
+                        key: const Key('mi_placement_delete'),
+                        value: 'delete',
+                        child: Text(AppLocalizations.of(context).delete),
+                      ),
+                    ],
+                  );
+
+                  if (selected == 'lock') {
+                    pdfViewModel.lockPlacement(
+                      page: pageNumber,
+                      index: placedIndex,
+                    );
+                  } else if (selected == 'unlock') {
+                    pdfViewModel.unlockPlacement(
+                      page: pageNumber,
+                      index: placedIndex,
+                    );
+                  } else if (selected == 'delete') {
+                    pdfViewModel.removePlacement(
+                      page: pageNumber,
+                      index: placedIndex,
+                    );
+                  }
+                },
+              ),
             ),
           ],
         );

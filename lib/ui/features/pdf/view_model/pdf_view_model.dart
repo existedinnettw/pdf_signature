@@ -14,14 +14,21 @@ class PdfViewModel extends ChangeNotifier {
   PdfViewerController get controller => _controller;
   int _currentPage = 1;
   late final bool _useMockViewer;
+  bool _isDisposed = false;
 
   // Active rect for signature placement overlay
   Rect? _activeRect;
   Rect? get activeRect => _activeRect;
   set activeRect(Rect? value) {
     _activeRect = value;
-    notifyListeners();
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
+
+  // Locked placements: Set of (page, index) tuples
+  final Set<String> _lockedPlacements = {};
+  Set<String> get lockedPlacements => Set.unmodifiable(_lockedPlacements);
 
   // const bool.fromEnvironment('FLUTTER_TEST', defaultValue: false);
   PdfViewModel(this.ref, {bool? useMockViewer})
@@ -35,8 +42,9 @@ class PdfViewModel extends ChangeNotifier {
 
   set currentPage(int value) {
     _currentPage = value.clamp(1, document.pageCount);
-
-    notifyListeners();
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   Document get document => ref.watch(documentRepositoryProvider);
@@ -61,7 +69,9 @@ class PdfViewModel extends ChangeNotifier {
 
   // Allow repositories to request a UI refresh without mutating provider state
   void notifyPlacementsChanged() {
-    notifyListeners();
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   // Document repository methods
@@ -107,6 +117,11 @@ class PdfViewModel extends ChangeNotifier {
     ref
         .read(documentRepositoryProvider.notifier)
         .removePlacement(page: page, index: index);
+    // Also remove from locked placements if it was locked
+    _lockedPlacements.remove(_placementKey(page, index));
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   void updatePlacementRect({
@@ -127,6 +142,39 @@ class PdfViewModel extends ChangeNotifier {
     return ref
         .read(documentRepositoryProvider.notifier)
         .assetOfPlacement(page: page, index: index);
+  }
+
+  // Helper method to create a unique key for a placement
+  String _placementKey(int page, int index) => '${page}_${index}';
+
+  // Check if a placement is locked
+  bool isPlacementLocked({required int page, required int index}) {
+    return _lockedPlacements.contains(_placementKey(page, index));
+  }
+
+  // Lock a placement
+  void lockPlacement({required int page, required int index}) {
+    _lockedPlacements.add(_placementKey(page, index));
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
+  // Unlock a placement
+  void unlockPlacement({required int page, required int index}) {
+    _lockedPlacements.remove(_placementKey(page, index));
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
+  // Toggle lock state of a placement
+  void togglePlacementLock({required int page, required int index}) {
+    if (isPlacementLocked(page: page, index: index)) {
+      unlockPlacement(page: page, index: index);
+    } else {
+      lockPlacement(page: page, index: index);
+    }
   }
 
   Future<void> exportDocument({
@@ -173,6 +221,12 @@ class PdfViewModel extends ChangeNotifier {
 
   void clearAllSignatureCards() {
     ref.read(signatureCardRepositoryProvider.notifier).clearAll();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 }
 

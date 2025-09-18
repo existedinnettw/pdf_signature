@@ -23,6 +23,7 @@
   "image": "图片",
   "invalidOrUnsupportedFile": "无效或不支持的文件",
   "language": "语言",
+  "lock": "锁定",
   "loadSignatureFromFile": "从文件加载签名",
   "lockAspectRatio": "锁定纵横比",
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "长按或右键单击签名以确认或删除。",
@@ -46,5 +47,6 @@
   "themeDark": "深色",
   "themeLight": "浅色",
   "themeSystem": "系统",
-  "undo": "撤销"
+  "undo": "撤销",
+  "unlock": "解锁"
 }
