@@ -47,7 +47,10 @@ class PdfViewModel extends ChangeNotifier {
     }
   }
 
-  Document get document => ref.watch(documentRepositoryProvider);
+  // Do not watch the document repository here; watching would cause this
+  // ChangeNotifier to be disposed/recreated on every document change, which
+  // resets transient UI state like locked placements. Read instead.
+  Document get document => ref.read(documentRepositoryProvider);
 
   void jumpToPage(int page) {
     currentPage = page;

@@ -117,14 +117,15 @@ class ExportService {
                 for (var i = 0; i < pagePlacements.length; i++) {
                   final placement = pagePlacements[i];
                   final r = placement.rect;
-                  final left = r.left / uiPageSize.width * widthPts;
-                  final top = r.top / uiPageSize.height * heightPts;
-                  final w = r.width / uiPageSize.width * widthPts;
-                  final h = r.height / uiPageSize.height * heightPts;
+                  // rect is stored in normalized units (0..1) relative to page
+                  final left = r.left * widthPts;
+                  final top = r.top * heightPts;
+                  final w = r.width * widthPts;
+                  final h = r.height * heightPts;
 
                   // Process the signature asset with its graphic adjustments
-                  Uint8List? bytes = placement.asset.bytes;
-                  if (bytes != null && bytes.isNotEmpty) {
+                  Uint8List bytes = placement.asset.bytes;
+                  if (bytes.isNotEmpty) {
                     try {
                       // Decode the image
                       final decoded = img.decodeImage(bytes);
@@ -155,9 +156,11 @@ class ExportService {
                   }
 
                   // Use fallback if no bytes available
-                  bytes ??= signatureImageBytes;
+                  if (bytes.isEmpty && signatureImageBytes != null) {
+                    bytes = signatureImageBytes;
+                  }
 
-                  if (bytes != null && bytes.isNotEmpty) {
+                  if (bytes.isNotEmpty) {
                     pw.MemoryImage? imgObj;
                     try {
                       imgObj = pw.MemoryImage(bytes);
@@ -229,14 +232,15 @@ class ExportService {
               for (var i = 0; i < pagePlacements.length; i++) {
                 final placement = pagePlacements[i];
                 final r = placement.rect;
-                final left = r.left / uiPageSize.width * widthPts;
-                final top = r.top / uiPageSize.height * heightPts;
-                final w = r.width / uiPageSize.width * widthPts;
-                final h = r.height / uiPageSize.height * heightPts;
+                // rect is stored in normalized units (0..1) relative to page
+                final left = r.left * widthPts;
+                final top = r.top * heightPts;
+                final w = r.width * widthPts;
+                final h = r.height * heightPts;
 
                 // Process the signature asset with its graphic adjustments
-                Uint8List? bytes = placement.asset.bytes;
-                if (bytes != null && bytes.isNotEmpty) {
+                Uint8List bytes = placement.asset.bytes;
+                if (bytes.isNotEmpty) {
                   try {
                     // Decode the image
                     final decoded = img.decodeImage(bytes);
@@ -267,9 +271,11 @@ class ExportService {
                 }
 
                 // Use fallback if no bytes available
-                bytes ??= signatureImageBytes;
+                if (bytes.isEmpty && signatureImageBytes != null) {
+                  bytes = signatureImageBytes;
+                }
 
-                if (bytes != null && bytes.isNotEmpty) {
+                if (bytes.isNotEmpty) {
                   pw.MemoryImage? imgObj;
                   try {
                     // Ensure PNG for transparency if not already
