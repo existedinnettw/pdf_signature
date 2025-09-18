@@ -13,6 +13,7 @@ import 'pdf_page_area.dart';
 import 'pages_sidebar.dart';
 import 'signatures_sidebar.dart';
 import 'ui_services.dart';
+import 'package:pdf_signature/utils/download.dart';
 import '../view_model/pdf_view_model.dart';
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
@@ -168,6 +169,21 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         if (out != null) {
           ok = await exporter.saveBytesToFile(bytes: out, outputPath: fullPath);
         }
+      } else {
+        // Web: export and trigger browser download
+        final src = pdf.pickedPdfBytes ?? Uint8List(0);
+        final out = await exporter.exportSignedPdfFromBytes(
+          srcBytes: src,
+          uiPageSize: _pageSize,
+          signatureImageBytes: null,
+          placementsByPage: pdf.placementsByPage,
+          targetDpi: targetDpi,
+        );
+        if (out != null) {
+          // Use a sensible default filename (cannot prompt path on web)
+          ok = await downloadBytes(out, filename: 'signed.pdf');
+          savedPath = 'signed.pdf';
+        }
       }
       if (!kIsWeb) {
         if (ok) {
@@ -185,6 +201,19 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
             ),
           );
         }
+      } else {
+        // Web: show a toast-like confirmation
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              ok
+                  ? AppLocalizations.of(
+                    context,
+                  ).savedWithPath(savedPath ?? 'signed.pdf')
+                  : AppLocalizations.of(context).failedToSavePdf,
+            ),
+          ),
+        );
       }
     } finally {
       ref.read(exportingProvider.notifier).state = false;

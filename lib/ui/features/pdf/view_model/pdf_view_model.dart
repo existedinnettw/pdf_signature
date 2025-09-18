@@ -34,7 +34,7 @@ class PdfViewModel extends ChangeNotifier {
   PdfViewModel(this.ref, {bool? useMockViewer})
     : _useMockViewer =
           useMockViewer ??
-          bool.fromEnvironment('FLUTTER_TEST', defaultValue: false);
+          const bool.fromEnvironment('FLUTTER_TEST', defaultValue: false);
 
   bool get useMockViewer => _useMockViewer;
 

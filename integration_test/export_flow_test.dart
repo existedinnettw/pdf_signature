@@ -30,6 +30,30 @@ class RecordingExporter extends ExportService {
   }
 }
 
+// Lightweight fake exporter to avoid invoking heavy rasterization during tests
+class LightweightExporter extends ExportService {
+  @override
+  Future<Uint8List?> exportSignedPdfFromBytes({
+    required Uint8List srcBytes,
+    required Size uiPageSize,
+    required Uint8List? signatureImageBytes,
+    Map<int, List<SignaturePlacement>>? placementsByPage,
+    Map<String, Uint8List>? libraryBytes,
+    double targetDpi = 144.0,
+  }) async {
+    // Return minimal non-empty bytes; content isn't used further in tests
+    return Uint8List.fromList([1, 2, 3]);
+  }
+
+  @override
+  Future<bool> saveBytesToFile({
+    required Uint8List bytes,
+    required String outputPath,
+  }) async {
+    return true;
+  }
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -225,13 +249,13 @@ void main() {
     await tester.pumpAndSettle();
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    expect(container.read(pdfViewModelProvider), 1);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
     container.read(pdfViewModelProvider.notifier).jumpToPage(2);
     await tester.pumpAndSettle();
-    expect(container.read(pdfViewModelProvider), 2);
+    expect(container.read(pdfViewModelProvider).currentPage, 2);
     container.read(pdfViewModelProvider.notifier).jumpToPage(3);
     await tester.pumpAndSettle();
-    expect(container.read(pdfViewModelProvider), 3);
+    expect(container.read(pdfViewModelProvider).currentPage, 3);
   });
 
   testWidgets('PDF View: zoom in/out', (tester) async {
@@ -319,7 +343,7 @@ void main() {
     await tester.pumpAndSettle();
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    expect(container.read(pdfViewModelProvider), 1);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
 
     final pagesSidebar = find.byType(PagesSidebar);
     expect(pagesSidebar, findsOneWidget);
@@ -332,7 +356,7 @@ void main() {
     expect(page3Thumb, findsOneWidget);
     await tester.tap(page3Thumb);
     await tester.pumpAndSettle();
-    expect(container.read(pdfViewModelProvider), 3);
+    expect(container.read(pdfViewModelProvider).currentPage, 3);
   });
 
   testWidgets('PDF View: thumbnails scroll and select', (tester) async {
@@ -371,15 +395,70 @@ void main() {
     await tester.pumpAndSettle();
     final ctx = tester.element(find.byType(PdfSignatureHomePage));
     final container = ProviderScope.containerOf(ctx);
-    expect(container.read(pdfViewModelProvider), 1);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
     final sidebar = find.byType(PagesSidebar);
     expect(sidebar, findsOneWidget);
     await tester.drag(sidebar, const Offset(0, -200));
     await tester.pumpAndSettle();
     expect(find.text('1'), findsOneWidget);
-    expect(container.read(pdfViewModelProvider), 1);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
     await tester.tap(find.text('2'));
     await tester.pumpAndSettle();
-    expect(container.read(pdfViewModelProvider), 2);
+    expect(container.read(pdfViewModelProvider).currentPage, 2);
+  });
+
+  testWidgets('PDF View: tap viewer after export does not crash', (
+    tester,
+  ) async {
+    final pdfBytes =
+        await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
+          ),
+          documentRepositoryProvider.overrideWith(
+            (ref) =>
+                DocumentStateNotifier()
+                  ..openPicked(pageCount: 3, bytes: pdfBytes),
+          ),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: false),
+          ),
+          exportServiceProvider.overrideWith((ref) => LightweightExporter()),
+          savePathPickerProvider.overrideWith(
+            (_) => () async => 'C:/tmp/output-after-export.pdf',
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: PdfSignatureHomePage(
+            onPickPdf: () async {},
+            onClosePdf: () {},
+            currentFile: fs.XFile('test.pdf'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Trigger export
+    await tester.tap(find.byKey(const Key('btn_save_pdf')));
+    await tester.pumpAndSettle();
+
+    // Tap on the page area; should not crash
+    final pageArea = find.byKey(const ValueKey('pdf_page_area'));
+    expect(pageArea, findsOneWidget);
+    await tester.tap(pageArea);
+    await tester.pumpAndSettle();
+
+    // Still present and responsive
+    expect(pageArea, findsOneWidget);
   });
 }
