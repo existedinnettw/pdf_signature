@@ -10,14 +10,27 @@ class PdfExportViewModel extends ChangeNotifier {
 
   // Dependencies (injectable via constructor for tests)
   final ExportService _exporter;
+  // Zero-arg picker retained for backward compatibility with tests.
   final Future<String?> Function() _savePathPicker;
+  // Preferred picker that accepts a suggested filename.
+  final Future<String?> Function(String suggestedName)
+  _savePathPickerWithSuggestedName;
 
   PdfExportViewModel(
     this.ref, {
     ExportService? exporter,
     Future<String?> Function()? savePathPicker,
+    Future<String?> Function(String suggestedName)?
+    savePathPickerWithSuggestedName,
   }) : _exporter = exporter ?? ExportService(),
-       _savePathPicker = savePathPicker ?? _defaultSavePathPicker;
+       _savePathPicker = savePathPicker ?? _defaultSavePathPicker,
+       // Prefer provided suggested-name picker; otherwise, if only zero-arg
+       // picker is given (tests), wrap it; else use default that honors name.
+       _savePathPickerWithSuggestedName =
+           savePathPickerWithSuggestedName ??
+           (savePathPicker != null
+               ? ((_) => savePathPicker())
+               : _defaultSavePathPickerWithSuggestedName);
 
   bool get exporting => _exporting;
 
@@ -35,11 +48,22 @@ class PdfExportViewModel extends ChangeNotifier {
     return _savePathPicker();
   }
 
+  /// Show save dialog with a suggested name and return the chosen path.
+  Future<String?> pickSavePathWithSuggestedName(String suggestedName) async {
+    return _savePathPickerWithSuggestedName(suggestedName);
+  }
+
   static Future<String?> _defaultSavePathPicker() async {
+    return _defaultSavePathPickerWithSuggestedName('signed.pdf');
+  }
+
+  static Future<String?> _defaultSavePathPickerWithSuggestedName(
+    String suggestedName,
+  ) async {
     final group = fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
     final location = await fs.getSaveLocation(
       acceptedTypeGroups: [group],
-      suggestedName: 'signed.pdf',
+      suggestedName: suggestedName,
       confirmButtonText: 'Save',
     );
     return location?.path; // null if user cancels

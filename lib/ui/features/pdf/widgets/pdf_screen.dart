@@ -20,12 +20,18 @@ class PdfSignatureHomePage extends ConsumerStatefulWidget {
   final Future<void> Function() onPickPdf;
   final VoidCallback onClosePdf;
   final fs.XFile currentFile;
+  // Optional display name for the currently opened file. On Linux
+  // xdg-desktop-portal, XFile.name/path can be a UUID-like value. When
+  // available, this name preserves the user-selected filename so we can
+  // suggest a proper "signed_*.pdf" on save.
+  final String? currentFileName;
 
   const PdfSignatureHomePage({
     super.key,
     required this.onPickPdf,
     required this.onClosePdf,
     required this.currentFile,
+    this.currentFileName,
   });
 
   @override
@@ -152,8 +158,23 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       bool ok = false;
       String? savedPath;
 
+      // Derive a suggested filename based on the opened file. Prefer the
+      // provided display name if available (see Linux portal note above).
+      final display = widget.currentFileName;
+      final originalName =
+          (display != null && display.trim().isNotEmpty)
+              ? display.trim()
+              : widget.currentFile.name.isNotEmpty
+              ? widget.currentFile.name
+              : widget.currentFile.path.isNotEmpty
+              ? widget.currentFile.path.split('/').last.split('\\').last
+              : 'document.pdf';
+      final suggested = _suggestSignedName(originalName);
+
       if (!kIsWeb) {
-        final path = await ref.read(pdfExportViewModelProvider).pickSavePath();
+        final path = await ref
+            .read(pdfExportViewModelProvider)
+            .pickSavePathWithSuggestedName(suggested);
         if (path == null || path.trim().isEmpty) return;
         final fullPath = _ensurePdfExtension(path.trim());
         savedPath = fullPath;
@@ -179,9 +200,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
           targetDpi: targetDpi,
         );
         if (out != null) {
-          // Use a sensible default filename (cannot prompt path on web)
-          ok = await downloadBytes(out, filename: 'signed.pdf');
-          savedPath = 'signed.pdf';
+          // Use suggested filename for browser download
+          ok = await downloadBytes(out, filename: suggested);
+          savedPath = suggested;
         }
       }
       if (!kIsWeb) {
@@ -222,6 +243,15 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   String _ensurePdfExtension(String name) {
     if (!name.toLowerCase().endsWith('.pdf')) return '$name.pdf';
     return name;
+  }
+
+  String _suggestSignedName(String original) {
+    // Normalize to a base filename
+    final base = original.split('/').last.split('\\').last;
+    if (base.toLowerCase().endsWith('.pdf')) {
+      return 'signed_' + base;
+    }
+    return 'signed_' + base + '.pdf';
   }
 
   void _onControllerChanged() {

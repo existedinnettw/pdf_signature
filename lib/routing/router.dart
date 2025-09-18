@@ -31,7 +31,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             onPickPdf: () => sessionVm.pickAndOpenPdf(),
             onOpenPdf:
                 ({String? path, Uint8List? bytes, String? fileName}) =>
-                    sessionVm.openPdf(path: path, bytes: bytes),
+                    sessionVm.openPdf(
+                      path: path,
+                      bytes: bytes,
+                      fileName: fileName,
+                    ),
           );
         },
       ),
@@ -43,6 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             onPickPdf: () => sessionVm.pickAndOpenPdf(),
             onClosePdf: () => sessionVm.closePdf(),
             currentFile: sessionVm.currentFile,
+            currentFileName: sessionVm.displayFileName,
           );
         },
       ),

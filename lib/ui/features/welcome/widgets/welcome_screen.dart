@@ -46,7 +46,7 @@ Future<void> handleDroppedFiles(
     bytes = null;
   }
   final String path = pdf.path ?? pdf.name;
-  await onOpenPdf(path: path, bytes: bytes);
+  await onOpenPdf(path: path, bytes: bytes, fileName: pdf.name);
 }
 
 class WelcomeScreen extends ConsumerStatefulWidget {
