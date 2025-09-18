@@ -7,7 +7,7 @@ import 'package:image/image.dart' as img;
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
@@ -26,7 +26,9 @@ Future<void> pumpWithOpenPdf(WidgetTester tester) async {
         pdfViewModelProvider.overrideWith(
           (ref) => PdfViewModel(ref, useMockViewer: true),
         ),
-        exportingProvider.overrideWith((ref) => false),
+        pdfExportViewModelProvider.overrideWith(
+          (ref) => PdfExportViewModel(ref),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -398,7 +400,9 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
         pdfViewModelProvider.overrideWith(
           (ref) => PdfViewModel(ref, useMockViewer: true),
         ),
-        exportingProvider.overrideWith((ref) => false),
+        pdfExportViewModelProvider.overrideWith(
+          (ref) => PdfExportViewModel(ref),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

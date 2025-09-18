@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pdf_signature/data/services/export_service.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
@@ -62,9 +62,12 @@ void main() {
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: true),
           ),
-          exportServiceProvider.overrideWith((_) => fake),
-          savePathPickerProvider.overrideWith(
-            (_) => () async => 'C:/tmp/output.pdf',
+          pdfExportViewModelProvider.overrideWith(
+            (ref) => PdfExportViewModel(
+              ref,
+              exporter: fake,
+              savePathPicker: () async => 'C:/tmp/output.pdf',
+            ),
           ),
         ],
         child: MaterialApp(

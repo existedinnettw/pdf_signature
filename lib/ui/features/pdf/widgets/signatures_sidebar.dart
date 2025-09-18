@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import '../../signature/widgets/signature_drawer.dart';
-import 'ui_services.dart';
+import '../view_model/pdf_export_view_model.dart';
 
 class SignaturesSidebar extends ConsumerWidget {
   const SignaturesSidebar({
@@ -21,7 +21,7 @@ class SignaturesSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final isExporting = ref.watch(exportingProvider);
+    final isExporting = ref.watch(pdfExportViewModelProvider).exporting;
     return AbsorbPointer(
       absorbing: isExporting,
       child: Card(

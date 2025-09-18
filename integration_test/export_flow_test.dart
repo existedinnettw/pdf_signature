@@ -14,7 +14,7 @@ import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pages_sidebar.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,12 +77,15 @@ void main() {
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
           ),
-          exportServiceProvider.overrideWith((_) => fake),
-          savePathPickerProvider.overrideWith(
-            (_) => () async {
-              final dir = Directory.systemTemp.createTempSync('pdfsig_');
-              return '${dir.path}/output.pdf';
-            },
+          pdfExportViewModelProvider.overrideWith(
+            (ref) => PdfExportViewModel(
+              ref,
+              exporter: fake,
+              savePathPicker: () async {
+                final dir = Directory.systemTemp.createTempSync('pdfsig_');
+                return '${dir.path}/output.pdf';
+              },
+            ),
           ),
         ],
         child: MaterialApp(
@@ -432,12 +435,17 @@ void main() {
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
           ),
-          exportServiceProvider.overrideWith((ref) => LightweightExporter()),
-          savePathPickerProvider.overrideWith(
-            (_) => () async {
-              final dir = Directory.systemTemp.createTempSync('pdfsig_after_');
-              return '${dir.path}/output-after-export.pdf';
-            },
+          pdfExportViewModelProvider.overrideWith(
+            (ref) => PdfExportViewModel(
+              ref,
+              exporter: LightweightExporter(),
+              savePathPicker: () async {
+                final dir = Directory.systemTemp.createTempSync(
+                  'pdfsig_after_',
+                );
+                return '${dir.path}/output-after-export.pdf';
+              },
+            ),
           ),
         ],
         child: MaterialApp(

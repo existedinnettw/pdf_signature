@@ -12,7 +12,7 @@ import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
 import 'pages_sidebar.dart';
 import 'signatures_sidebar.dart';
-import 'ui_services.dart';
+import '../view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/utils/download.dart';
 import '../view_model/pdf_view_model.dart';
 
@@ -133,7 +133,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   Future<void> _saveSignedPdf() async {
-    ref.read(exportingProvider.notifier).state = true;
+    ref.read(pdfExportViewModelProvider.notifier).setExporting(true);
     try {
       final pdf = _viewModel.document;
       final messenger = ScaffoldMessenger.of(context);
@@ -145,7 +145,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         );
         return;
       }
-      final exporter = ref.read(exportServiceProvider);
+      final exporter = ref.read(pdfExportViewModelProvider).exporter;
 
       // get DPI from preferences
       final targetDpi = ref.read(preferencesRepositoryProvider).exportDpi;
@@ -153,8 +153,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       String? savedPath;
 
       if (!kIsWeb) {
-        final pick = ref.read(savePathPickerProvider);
-        final path = await pick();
+        final path = await ref.read(pdfExportViewModelProvider).pickSavePath();
         if (path == null || path.trim().isEmpty) return;
         final fullPath = _ensurePdfExtension(path.trim());
         savedPath = fullPath;
@@ -216,7 +215,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         );
       }
     } finally {
-      ref.read(exportingProvider.notifier).state = false;
+      ref.read(pdfExportViewModelProvider.notifier).setExporting(false);
     }
   }
 
@@ -362,7 +361,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   Widget _buildScaffold(BuildContext context) {
-    final isExporting = ref.watch(exportingProvider);
+    final isExporting = ref.watch(pdfExportViewModelProvider).exporting;
     final l = AppLocalizations.of(context);
     return Scaffold(
       body: Padding(

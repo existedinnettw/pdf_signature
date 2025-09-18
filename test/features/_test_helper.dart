@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf_signature/app.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/ui_services.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/data/services/export_service.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 
@@ -51,8 +51,13 @@ Future<ProviderContainer> pumpApp(
       pdfViewModelProvider.overrideWith(
         (ref) => PdfViewModel(ref, useMockViewer: true),
       ),
-      exportServiceProvider.overrideWith((ref) => fakeExport),
-      savePathPickerProvider.overrideWith((ref) => () async => 'out.pdf'),
+      pdfExportViewModelProvider.overrideWith(
+        (ref) => PdfExportViewModel(
+          ref,
+          exporter: fakeExport,
+          savePathPicker: () async => 'out.pdf',
+        ),
+      ),
     ],
   );
   await tester.pumpWidget(
