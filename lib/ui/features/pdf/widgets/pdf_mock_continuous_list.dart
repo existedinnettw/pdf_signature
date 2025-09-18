@@ -123,7 +123,7 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                         return Container(
                           color:
                               candidateData.isNotEmpty
-                                  ? Colors.blue.withOpacity(0.3)
+                                  ? Colors.blue.withValues(alpha: 0.3)
                                   : Colors.grey.shade200,
                           child: Center(
                             child: Builder(

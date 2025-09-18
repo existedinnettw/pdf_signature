@@ -247,7 +247,7 @@ void main() {
     expect(container.read(pdfViewModelProvider).currentPage, 2);
   });
 
-  testWidgets('PDF View: scroll thumbnails to reveal and select last page', (
+  testWidgets('PDF View: scroll thumb to reveal and select last page', (
     tester,
   ) async {
     final pdfBytes =
@@ -308,6 +308,4 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(pdfViewModelProvider).currentPage, 3);
   });
-
-  //TODO: Scroll Thumbs
 }

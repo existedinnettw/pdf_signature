@@ -5,6 +5,7 @@ import 'signature_drag_data.dart';
 import 'rotated_signature_image.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import '../view_model/signature_view_model.dart';
+import '../view_model/dragging_signature_view_model.dart';
 
 class SignatureCard extends ConsumerWidget {
   const SignatureCard({
@@ -163,6 +164,12 @@ class SignatureCard extends ConsumerWidget {
                   graphicAdjust: graphicAdjust,
                 ),
               ),
+      onDragStarted: () {
+        ref.read(isDraggingSignatureViewModelProvider.notifier).state = true;
+      },
+      onDragEnd: (_) {
+        ref.read(isDraggingSignatureViewModelProvider.notifier).state = false;
+      },
       feedback: Opacity(
         opacity: 0.9,
         child: ConstrainedBox(

@@ -12,6 +12,7 @@ Refs:
 ## Welcome / First screen
 
 Purpose: let the user open a PDF quickly via drag & drop or file picker.
+
 Route: root
 
 Design notes:
@@ -29,8 +30,8 @@ Purpose: provide basic configuration before/after opening a PDF.
 Route: root --> settings
 
 Design notes:
-- Opened via "Configure" button in the top bar.
-- Modal with simple sections (e.g., General, Display).
+- Opened via "Configure" button in the right of top bar.
+- Model with simple sections (e.g., General, Display).
 - Primary action to save, secondary to cancel.
 
 Illustration:
@@ -61,6 +62,7 @@ Design notes:
   - There is an empty card with "new signature" prompt and 2 buttons: "from file" and "draw".
     - "from file" opens a file picker to select an image as a signature card.
     - "draw" opens a simple drawing interface (draw canvas) to create a signature card.
+  - There is a button at bottom to export PDF with placed signatures.
 - Interaction: drag a signature card from the right drawer onto the currently visible page to place it.
 
 Signature controls (after placing on page):

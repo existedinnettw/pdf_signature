@@ -117,15 +117,6 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
         },
         viewerOverlayBuilder: (context, size, handle) {
           return [
-            PdfPageOverlays(
-              pageSize: widget.pageSize,
-              pageNumber: pdfViewModel.currentPage,
-              onDragSignature: widget.onDragSignature,
-              onResizeSignature: widget.onResizeSignature,
-              onConfirmSignature: widget.onConfirmSignature,
-              onClearActiveOverlay: widget.onClearActiveOverlay,
-              onSelectPlaced: widget.onSelectPlaced,
-            ),
             // Vertical scroll thumb on the right
             PdfViewerScrollThumb(
               controller: widget.controller,
@@ -163,6 +154,20 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
                       ),
                     ),
                   ),
+            ),
+          ];
+        },
+        // Per-page overlays to enable page-specific drag targets and placed signatures
+        pageOverlaysBuilder: (context, pageRect, page) {
+          return [
+            PdfPageOverlays(
+              pageSize: Size(pageRect.width, pageRect.height),
+              pageNumber: page.pageNumber,
+              onDragSignature: widget.onDragSignature,
+              onResizeSignature: widget.onResizeSignature,
+              onConfirmSignature: widget.onConfirmSignature,
+              onClearActiveOverlay: widget.onClearActiveOverlay,
+              onSelectPlaced: widget.onSelectPlaced,
             ),
           ];
         },
