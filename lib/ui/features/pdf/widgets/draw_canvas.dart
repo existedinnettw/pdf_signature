@@ -54,8 +54,8 @@ class _DrawCanvasState extends State<DrawCanvas> {
                   onPressed: () async {
                     // Export signature to PNG bytes first
                     final byteData = await _control.toImage(
-                      width: 1024,
-                      height: 512,
+                      width: 512,
+                      height: 256,
                       fit: true,
                       color: Colors.black,
                       background: Colors.transparent,

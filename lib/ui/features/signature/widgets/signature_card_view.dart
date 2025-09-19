@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/domain/models/model.dart' as domain;
@@ -7,15 +8,14 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import '../view_model/signature_view_model.dart';
 import '../view_model/dragging_signature_view_model.dart';
 
-class SignatureCard extends ConsumerWidget {
-  const SignatureCard({
+class SignatureCardView extends ConsumerStatefulWidget {
+  const SignatureCardView({
     super.key,
     required this.asset,
     required this.disabled,
     required this.onDelete,
     this.onTap,
     this.onAdjust,
-    this.useCurrentBytesForDrag = false,
     this.rotationDeg = 0.0,
     this.graphicAdjust = const domain.GraphicAdjust(),
   });
@@ -24,9 +24,14 @@ class SignatureCard extends ConsumerWidget {
   final VoidCallback onDelete;
   final VoidCallback? onTap;
   final VoidCallback? onAdjust;
-  final bool useCurrentBytesForDrag;
   final double rotationDeg;
   final domain.GraphicAdjust graphicAdjust;
+  @override
+  ConsumerState<SignatureCardView> createState() => _SignatureCardViewState();
+}
+
+class _SignatureCardViewState extends ConsumerState<SignatureCardView> {
+  Uint8List? _lastBytesRef;
   Future<void> _showContextMenu(BuildContext context, Offset position) async {
     final selected = await showMenu<String>(
       context: context,
@@ -50,22 +55,40 @@ class SignatureCard extends ConsumerWidget {
       ],
     );
     if (selected == 'adjust') {
-      onAdjust?.call();
+      widget.onAdjust?.call();
     } else if (selected == 'delete') {
-      onDelete();
+      widget.onDelete();
     }
   }
 
+  void _maybePrecache(Uint8List bytes) {
+    if (identical(_lastBytesRef, bytes)) return;
+    _lastBytesRef = bytes;
+    // Schedule after frame to avoid doing work during build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Use single-dimension hints to preserve aspect ratio.
+      final img128 = ResizeImage(MemoryImage(bytes), height: 128);
+      final img256 = ResizeImage(MemoryImage(bytes), height: 256);
+      precacheImage(img128, context);
+      precacheImage(img256, context);
+    });
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final displayData = ref
         .watch(signatureViewModelProvider)
-        .getDisplaySignatureData(asset, graphicAdjust);
+        .getDisplaySignatureData(widget.asset, widget.graphicAdjust);
+    _maybePrecache(displayData.bytes);
     // Fit inside 96x64 with 6px padding using the shared rotated image widget
     const boxW = 96.0, boxH = 64.0, pad = 6.0;
+    // Hint decoder with small target size to reduce decode cost.
+    // The card shows inside 96x64 with 6px padding; request ~128px max.
     Widget coreImage = RotatedSignatureImage(
       bytes: displayData.bytes,
-      rotationDeg: rotationDeg,
+      rotationDeg: widget.rotationDeg,
+      // Only set one dimension to keep aspect ratio
+      cacheHeight: 128,
     );
     Widget img =
         (displayData.colorMatrix != null)
@@ -102,7 +125,7 @@ class SignatureCard extends ConsumerWidget {
               top: 0,
               child: IconButton(
                 icon: const Icon(Icons.close, size: 16),
-                onPressed: disabled ? null : onDelete,
+                onPressed: widget.disabled ? null : widget.onDelete,
                 tooltip: 'Remove',
                 padding: const EdgeInsets.all(2),
               ),
@@ -111,33 +134,31 @@ class SignatureCard extends ConsumerWidget {
         ),
       ),
     );
-    Widget child = onTap != null ? InkWell(onTap: onTap, child: base) : base;
+    Widget child =
+        widget.onTap != null ? InkWell(onTap: widget.onTap, child: base) : base;
     // Add context menu for adjust/delete on right-click or long-press
     child = GestureDetector(
       key: const Key('gd_signature_card_area'),
       behavior: HitTestBehavior.opaque,
       onSecondaryTapDown:
-          disabled
+          widget.disabled
               ? null
               : (details) => _showContextMenu(context, details.globalPosition),
       onLongPressStart:
-          disabled
+          widget.disabled
               ? null
               : (details) => _showContextMenu(context, details.globalPosition),
       child: child,
     );
-    if (disabled) return child;
+    if (widget.disabled) return child;
     return Draggable<SignatureDragData>(
-      data:
-          useCurrentBytesForDrag
-              ? const SignatureDragData()
-              : SignatureDragData(
-                card: domain.SignatureCard(
-                  asset: asset,
-                  rotationDeg: rotationDeg,
-                  graphicAdjust: graphicAdjust,
-                ),
-              ),
+      data: SignatureDragData(
+        card: domain.SignatureCard(
+          asset: widget.asset,
+          rotationDeg: widget.rotationDeg,
+          graphicAdjust: widget.graphicAdjust,
+        ),
+      ),
       onDragStarted: () {
         ref.read(isDraggingSignatureViewModelProvider.notifier).state = true;
       },
@@ -166,12 +187,14 @@ class SignatureCard extends ConsumerWidget {
                         ),
                         child: RotatedSignatureImage(
                           bytes: displayData.bytes,
-                          rotationDeg: rotationDeg,
+                          rotationDeg: widget.rotationDeg,
+                          cacheHeight: 256,
                         ),
                       )
                       : RotatedSignatureImage(
                         bytes: displayData.bytes,
-                        rotationDeg: rotationDeg,
+                        rotationDeg: widget.rotationDeg,
+                        cacheHeight: 256,
                       ),
             ),
           ),

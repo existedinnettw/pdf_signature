@@ -43,11 +43,6 @@ void main() {
                 height: 520,
                 child: PdfPageArea(
                   pageSize: const Size(676, 400),
-                  onDragSignature: _noopOffset,
-                  onResizeSignature: _noopOffset,
-                  onConfirmSignature: _noop,
-                  onClearActiveOverlay: _noop,
-                  onSelectPlaced: _noopInt,
                   controller: PdfViewerController(),
                 ),
               ),
@@ -91,11 +86,6 @@ void main() {
                 // Keep aspect ratio consistent with uiPageSize
                 child: PdfPageArea(
                   pageSize: uiPageSize,
-                  onDragSignature: _noopOffset,
-                  onResizeSignature: _noopOffset,
-                  onConfirmSignature: _noop,
-                  onClearActiveOverlay: _noop,
-                  onSelectPlaced: _noopInt,
                   controller: PdfViewerController(),
                 ),
               ),
@@ -170,6 +160,4 @@ void main() {
   });
 }
 
-void _noop() {}
-void _noopInt(int? _) {}
-void _noopOffset(Offset _) {}
+// No extra callbacks required in the new API

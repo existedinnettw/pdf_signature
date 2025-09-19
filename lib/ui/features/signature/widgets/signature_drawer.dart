@@ -6,9 +6,9 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
-import 'package:pdf_signature/domain/models/model.dart' hide SignatureCard;
+import 'package:pdf_signature/domain/models/signature_asset.dart';
 import 'image_editor_dialog.dart';
-import 'signature_card.dart';
+import 'signature_card_view.dart';
 import '../../pdf/view_model/pdf_view_model.dart';
 
 /// Data for drag-and-drop is in signature_drag_data.dart
@@ -49,7 +49,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
               margin: EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: SignatureCard(
+                child: SignatureCardView(
                   key: ValueKey('sig_card_${library.indexOf(card)}'),
                   asset: card.asset,
                   rotationDeg: card.rotationDeg,

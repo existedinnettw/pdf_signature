@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as img;
 import '../../../../utils/rotation_utils.dart' as rot;
 
 /// A lightweight widget to render signature bytes with rotation and an
 /// angle-aware scale-to-fit so the rotated image stays within its bounds.
+/// Aware that `decodeImage` large images can be crazily slow, especially on web.
 class RotatedSignatureImage extends StatefulWidget {
   const RotatedSignatureImage({
     super.key,
@@ -12,6 +12,8 @@ class RotatedSignatureImage extends StatefulWidget {
     this.rotationDeg = 0.0, // counterclockwise as positive
     this.filterQuality = FilterQuality.low,
     this.semanticLabel,
+    this.cacheWidth,
+    this.cacheHeight,
   });
 
   final Uint8List bytes;
@@ -22,6 +24,10 @@ class RotatedSignatureImage extends StatefulWidget {
   final Alignment alignment = Alignment.center;
   final bool wrapInRepaintBoundary = true;
   final String? semanticLabel;
+  // Hint the decoder to decode at a smaller size to reduce memory/latency.
+  // On some platforms these may be ignored, but they are safe no-ops.
+  final int? cacheWidth;
+  final int? cacheHeight;
 
   @override
   State<RotatedSignatureImage> createState() => _RotatedSignatureImageState();
@@ -67,16 +73,6 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
       _setAspectRatio(1.0); // safe fallback
       return;
     }
-    // One-time synchronous header decode to establish aspect ratio quickly.
-    // This only runs when bytes change (not on rotation), so it's acceptable.
-    try {
-      final decoded = img.decodeImage(widget.bytes);
-      if (decoded != null && decoded.width > 0 && decoded.height > 0) {
-        _setAspectRatio(decoded.width / decoded.height);
-      }
-    } catch (_) {
-      // ignore decode errors and rely on image stream listener
-    }
     final stream = _provider.resolve(createLocalImageConfiguration(context));
     _stream = stream;
     _listener = ImageStreamListener((ImageInfo info, bool sync) {
@@ -113,6 +109,9 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
       filterQuality: widget.filterQuality,
       alignment: widget.alignment,
       semanticLabel: widget.semanticLabel,
+      // Provide at most one dimension to preserve aspect ratio if only one is set
+      cacheWidth: widget.cacheWidth,
+      cacheHeight: widget.cacheHeight,
       isAntiAlias: false,
       errorBuilder: (context, error, stackTrace) {
         // Return a placeholder for invalid images

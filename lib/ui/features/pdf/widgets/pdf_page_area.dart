@@ -11,21 +11,10 @@ class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
     super.key,
     required this.pageSize,
-    required this.onDragSignature,
-    required this.onResizeSignature,
-    required this.onConfirmSignature,
-    required this.onClearActiveOverlay,
-    required this.onSelectPlaced,
     required this.controller,
   });
 
   final Size pageSize;
-  // viewerController removed in migration
-  final ValueChanged<Offset> onDragSignature;
-  final ValueChanged<Offset> onResizeSignature;
-  final VoidCallback onConfirmSignature;
-  final VoidCallback onClearActiveOverlay;
-  final ValueChanged<int?> onSelectPlaced;
   final PdfViewerController controller;
   @override
   ConsumerState<PdfPageArea> createState() => _PdfPageAreaState();
@@ -156,11 +145,6 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     if (isContinuous) {
       return PdfViewerWidget(
         pageSize: widget.pageSize,
-        onDragSignature: widget.onDragSignature,
-        onResizeSignature: widget.onResizeSignature,
-        onConfirmSignature: widget.onConfirmSignature,
-        onClearActiveOverlay: widget.onClearActiveOverlay,
-        onSelectPlaced: widget.onSelectPlaced,
         pageKeyBuilder: _pageKey,
         scrollToPage: _scrollToPage,
         controller: widget.controller,

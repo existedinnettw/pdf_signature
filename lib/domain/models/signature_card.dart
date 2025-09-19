@@ -18,7 +18,7 @@ class SignatureCard {
   });
 
   SignatureCard copyWith({
-    double? rotationDeg,
+    double? rotationDeg, //z axis is out of the screen, positive is CCW
     SignatureAsset? asset,
     GraphicAdjust? graphicAdjust,
   }) => SignatureCard(

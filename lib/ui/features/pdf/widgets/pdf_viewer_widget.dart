@@ -10,22 +10,12 @@ class PdfViewerWidget extends ConsumerStatefulWidget {
   const PdfViewerWidget({
     super.key,
     required this.pageSize,
-    required this.onDragSignature,
-    required this.onResizeSignature,
-    required this.onConfirmSignature,
-    required this.onClearActiveOverlay,
-    required this.onSelectPlaced,
     this.pageKeyBuilder,
     this.scrollToPage,
     required this.controller,
   });
 
   final Size pageSize;
-  final ValueChanged<Offset> onDragSignature;
-  final ValueChanged<Offset> onResizeSignature;
-  final VoidCallback onConfirmSignature;
-  final VoidCallback onClearActiveOverlay;
-  final ValueChanged<int?> onSelectPlaced;
   final GlobalKey Function(int page)? pageKeyBuilder;
   final void Function(int page)? scrollToPage;
   final PdfViewerController controller;
@@ -88,11 +78,6 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
             widget.pageKeyBuilder ??
             (page) => GlobalKey(debugLabel: 'page_$page'),
         scrollToPage: widget.scrollToPage ?? (page) {},
-        onDragSignature: widget.onDragSignature,
-        onResizeSignature: widget.onResizeSignature,
-        onConfirmSignature: widget.onConfirmSignature,
-        onClearActiveOverlay: widget.onClearActiveOverlay,
-        onSelectPlaced: widget.onSelectPlaced,
       );
     }
 
@@ -163,11 +148,6 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
             PdfPageOverlays(
               pageSize: Size(pageRect.width, pageRect.height),
               pageNumber: page.pageNumber,
-              onDragSignature: widget.onDragSignature,
-              onResizeSignature: widget.onResizeSignature,
-              onConfirmSignature: widget.onConfirmSignature,
-              onClearActiveOverlay: widget.onClearActiveOverlay,
-              onSelectPlaced: widget.onSelectPlaced,
             ),
           ];
         },

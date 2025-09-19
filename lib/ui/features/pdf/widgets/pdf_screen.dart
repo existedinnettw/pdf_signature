@@ -109,22 +109,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     return bytes;
   }
 
-  void _confirmSignature() {
-    // In simplified UI, confirmation is a no-op
-  }
-
-  void _onDragSignature(Offset delta) {
-    // In simplified UI, interactive overlay disabled
-  }
-
-  void _onResizeSignature(Offset delta) {
-    // In simplified UI, interactive overlay disabled
-  }
-
-  void _onSelectPlaced(int? index) {
-    // In simplified UI, selection is a no-op for tests
-  }
-
   Future<Uint8List?> _openDrawCanvas() async {
     final result = await showModalBottomSheet<Uint8List>(
       context: context,
@@ -323,11 +307,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                 controller: _viewModel.controller,
                 key: const ValueKey('pdf_page_area'),
                 pageSize: _pageSize,
-                onDragSignature: _onDragSignature,
-                onResizeSignature: _onResizeSignature,
-                onConfirmSignature: _confirmSignature,
-                onClearActiveOverlay: () {},
-                onSelectPlaced: _onSelectPlaced,
               ),
             ),
       ),
