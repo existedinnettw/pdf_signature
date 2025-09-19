@@ -41,7 +41,7 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
   late bool _bgRemoval;
   late double _contrast;
   late double _brightness;
-  late double _rotation;
+  late final ValueNotifier<double> _rotation;
 
   // Cached image data
   late Uint8List _originalBytes; // Original asset bytes (never mutated)
@@ -59,7 +59,7 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
     _bgRemoval = widget.initialGraphicAdjust.bgRemoval;
     _contrast = widget.initialGraphicAdjust.contrast;
     _brightness = widget.initialGraphicAdjust.brightness;
-    _rotation = widget.initialRotation;
+    _rotation = ValueNotifier<double>(widget.initialRotation);
     _originalBytes = widget.asset.bytes;
     // Decode lazily only if/when background removal is needed
     if (_bgRemoval) {
@@ -172,6 +172,7 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
 
   @override
   void dispose() {
+    _rotation.dispose();
     _bgRemovalDebounce?.cancel();
     super.dispose();
   }
@@ -206,19 +207,20 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child:
-                          _bgRemoval
-                              ? RotatedSignatureImage(
-                                bytes: _displayBytes,
-                                rotationDeg: _rotation,
-                              )
-                              : ColorFiltered(
-                                colorFilter: _currentColorFilter(),
-                                child: RotatedSignatureImage(
-                                  bytes: _displayBytes,
-                                  rotationDeg: _rotation,
-                                ),
-                              ),
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: _rotation,
+                        builder: (context, rot, child) {
+                          final image = RotatedSignatureImage(
+                            bytes: _displayBytes,
+                            rotationDeg: rot,
+                          );
+                          if (_bgRemoval) return image;
+                          return ColorFiltered(
+                            colorFilter: _currentColorFilter(),
+                            child: image,
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -248,16 +250,26 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                   children: [
                     Text(l10n.rotate),
                     Expanded(
-                      child: Slider(
-                        key: const Key('sld_rotation'),
-                        min: -180,
-                        max: 180,
-                        divisions: 72,
-                        value: _rotation,
-                        onChanged: (v) => setState(() => _rotation = v),
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: _rotation,
+                        builder: (context, rot, _) {
+                          return Slider(
+                            key: const Key('sld_rotation'),
+                            min: -180,
+                            max: 180,
+                            divisions: 72,
+                            value: rot,
+                            onChanged: (v) => _rotation.value = v,
+                          );
+                        },
                       ),
                     ),
-                    Text('${_rotation.toStringAsFixed(0)}°'),
+                    ValueListenableBuilder<double>(
+                      valueListenable: _rotation,
+                      builder:
+                          (context, rot, _) =>
+                              Text('${rot.toStringAsFixed(0)}°'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -269,7 +281,7 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                       onPressed:
                           () => Navigator.of(context).pop(
                             ImageEditorResult(
-                              rotation: _rotation,
+                              rotation: _rotation.value,
                               graphicAdjust: domain.GraphicAdjust(
                                 contrast: _contrast,
                                 brightness: _brightness,

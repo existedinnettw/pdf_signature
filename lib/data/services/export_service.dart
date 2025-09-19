@@ -7,6 +7,8 @@ import 'package:pdf/pdf.dart' as pdf;
 import 'package:printing/printing.dart' as printing;
 import 'package:image/image.dart' as img;
 import '../../domain/models/model.dart';
+// math moved to utils in rot
+import '../../utils/rotation_utils.dart' as rot;
 
 // NOTE:
 // - This exporter uses a raster snapshot of the UI (RepaintBoundary) and embeds it into a new PDF.
@@ -15,50 +17,6 @@ import '../../domain/models/model.dart';
 //   cannot import/modify existing PDF pages. If/when a suitable FOSS library exists, wire it here.
 
 class ExportService {
-  /// Compose a new PDF by rasterizing the original PDF pages (via pdfrx engine)
-  /// and optionally stamping a signature image on the specified page.
-  ///
-  /// Inputs:
-  /// - [inputPath]: Path to the original PDF to read
-  /// - [outputPath]: Path to write the composed PDF
-  /// - [uiPageSize]: The logical page size used by the UI layout (SignatureCardStateNotifier.pageSize)
-  /// - [signatureImageBytes]: PNG/JPEG bytes of the signature image to overlay
-  /// - [targetDpi]: Rasterization DPI for background pages
-  Future<bool> exportSignedPdfFromFile({
-    required String inputPath,
-    required String outputPath,
-    required Size uiPageSize,
-    required Uint8List? signatureImageBytes,
-    Map<int, List<SignaturePlacement>>? placementsByPage,
-    Map<String, Uint8List>? libraryBytes,
-    double targetDpi = 144.0,
-  }) async {
-    // Read source bytes and delegate to bytes-based exporter
-    Uint8List? srcBytes;
-    try {
-      srcBytes = await File(inputPath).readAsBytes();
-    } catch (_) {
-      srcBytes = null;
-    }
-    if (srcBytes == null) return false;
-    final bytes = await exportSignedPdfFromBytes(
-      srcBytes: srcBytes,
-      uiPageSize: uiPageSize,
-      signatureImageBytes: signatureImageBytes,
-      placementsByPage: placementsByPage,
-      libraryBytes: libraryBytes,
-      targetDpi: targetDpi,
-    );
-    if (bytes == null) return false;
-    try {
-      final file = File(outputPath);
-      await file.writeAsBytes(bytes, flush: true);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   /// Compose a new PDF from source PDF bytes; returns the resulting PDF bytes.
   Future<Uint8List?> exportSignedPdfFromBytes({
     required Uint8List srcBytes,
@@ -68,6 +26,131 @@ class ExportService {
     Map<String, Uint8List>? libraryBytes,
     double targetDpi = 144.0,
   }) async {
+    // Per-call caches to avoid redundant decode/encode and image embedding work
+    final Map<String, Uint8List> _processedBytesCache = <String, Uint8List>{};
+    final Map<String, pw.MemoryImage> _memoryImageCache =
+        <String, pw.MemoryImage>{};
+    final Map<String, double> _aspectRatioCache = <String, double>{};
+
+    // Returns a stable-ish cache key for bytes within this process (not content-hash, but good enough per-call)
+    String _baseKeyForBytes(Uint8List b) =>
+        '${identityHashCode(b)}:${b.length}';
+
+    // Fast PNG signature check (no string allocation)
+    bool _isPng(Uint8List bytes) {
+      if (bytes.length < 8) return false;
+      return bytes[0] == 0x89 &&
+          bytes[1] == 0x50 && // P
+          bytes[2] == 0x4E && // N
+          bytes[3] == 0x47 && // G
+          bytes[4] == 0x0D &&
+          bytes[5] == 0x0A &&
+          bytes[6] == 0x1A &&
+          bytes[7] == 0x0A;
+    }
+
+    // Resolve base (unprocessed) bytes for a placement, considering library override.
+    Uint8List _getBaseBytes(SignaturePlacement placement) {
+      Uint8List baseBytes = placement.asset.bytes;
+      final libKey = placement.asset.name;
+      if (libKey != null && libraryBytes != null) {
+        final libBytes = libraryBytes[libKey];
+        if (libBytes != null && libBytes.isNotEmpty) {
+          baseBytes = libBytes;
+        }
+      }
+      return baseBytes;
+    }
+
+    // Get processed bytes for a placement, with caching.
+    Uint8List _getProcessedBytes(SignaturePlacement placement) {
+      final Uint8List baseBytes = _getBaseBytes(placement);
+
+      final adj = placement.graphicAdjust;
+      final cacheKey =
+          '${_baseKeyForBytes(baseBytes)}|c=${adj.contrast}|b=${adj.brightness}|bg=${adj.bgRemoval}';
+      final cached = _processedBytesCache[cacheKey];
+      if (cached != null) return cached;
+
+      // If no graphic changes requested, return bytes as-is (conversion to PNG is deferred to MemoryImage step)
+      final bool needsAdjust =
+          (adj.contrast != 1.0 || adj.brightness != 1.0 || adj.bgRemoval);
+      if (!needsAdjust) {
+        _processedBytesCache[cacheKey] = baseBytes;
+        return baseBytes;
+      }
+
+      try {
+        final decoded = img.decodeImage(baseBytes);
+        if (decoded == null) {
+          _processedBytesCache[cacheKey] = baseBytes;
+          return baseBytes;
+        }
+        img.Image processed = decoded;
+
+        if (adj.contrast != 1.0 || adj.brightness != 1.0) {
+          processed = img.adjustColor(
+            processed,
+            contrast: adj.contrast,
+            brightness: adj.brightness,
+          );
+        }
+
+        if (adj.bgRemoval) {
+          processed = _removeBackground(processed);
+        }
+
+        final outBytes = Uint8List.fromList(img.encodePng(processed));
+        _processedBytesCache[cacheKey] = outBytes;
+        return outBytes;
+      } catch (_) {
+        // If processing fails, fall back to original
+        _processedBytesCache[cacheKey] = baseBytes;
+        return baseBytes;
+      }
+    }
+
+    // Wrap bytes in a pw.MemoryImage with caching, converting to PNG only when necessary.
+    pw.MemoryImage? _getMemoryImage(Uint8List bytes) {
+      final key = _baseKeyForBytes(bytes);
+      final cached = _memoryImageCache[key];
+      if (cached != null) return cached;
+      try {
+        if (_isPng(bytes)) {
+          final imgObj = pw.MemoryImage(bytes);
+          _memoryImageCache[key] = imgObj;
+          return imgObj;
+        }
+        // Convert to PNG to preserve transparency if not already PNG
+        final decoded = img.decodeImage(bytes);
+        if (decoded == null) return null;
+        final png = Uint8List.fromList(img.encodePng(decoded, level: 6));
+        final imgObj = pw.MemoryImage(png);
+        _memoryImageCache[key] = imgObj;
+        return imgObj;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // Compute and cache aspect ratio (width/height) for given bytes
+    double? _getAspectRatioFromBytes(Uint8List bytes) {
+      final key = _baseKeyForBytes(bytes);
+      final c = _aspectRatioCache[key];
+      if (c != null) return c;
+      try {
+        final decoded = img.decodeImage(bytes);
+        if (decoded == null || decoded.width <= 0 || decoded.height <= 0) {
+          return null;
+        }
+        final ar = decoded.width / decoded.height;
+        _aspectRatioCache[key] = ar;
+        return ar;
+      } catch (_) {
+        return null;
+      }
+    }
+
     final out = pw.Document(version: pdf.PdfVersion.pdf_1_4, compress: false);
     int pageIndex = 0;
     bool anyPage = false;
@@ -123,51 +206,22 @@ class ExportService {
                   final w = r.width * widthPts;
                   final h = r.height * heightPts;
 
-                  // Process the signature asset with its graphic adjustments
-                  Uint8List bytes = placement.asset.bytes;
-                  if (bytes.isNotEmpty) {
-                    try {
-                      // Decode the image
-                      final decoded = img.decodeImage(bytes);
-                      if (decoded != null) {
-                        img.Image processed = decoded;
-
-                        // Apply contrast and brightness first
-                        if (placement.graphicAdjust.contrast != 1.0 ||
-                            placement.graphicAdjust.brightness != 0.0) {
-                          processed = img.adjustColor(
-                            processed,
-                            contrast: placement.graphicAdjust.contrast,
-                            brightness: placement.graphicAdjust.brightness,
-                          );
-                        }
-
-                        // Apply background removal after color adjustments
-                        if (placement.graphicAdjust.bgRemoval) {
-                          processed = _removeBackground(processed);
-                        }
-
-                        // Encode back to PNG to preserve transparency
-                        bytes = Uint8List.fromList(img.encodePng(processed));
-                      }
-                    } catch (e) {
-                      // If processing fails, use original bytes
-                    }
-                  }
-
-                  // Use fallback if no bytes available
+                  // Get processed bytes (cached) and then embed as MemoryImage (cached)
+                  Uint8List bytes = _getProcessedBytes(placement);
                   if (bytes.isEmpty && signatureImageBytes != null) {
                     bytes = signatureImageBytes;
                   }
 
                   if (bytes.isNotEmpty) {
-                    pw.MemoryImage? imgObj;
-                    try {
-                      imgObj = pw.MemoryImage(bytes);
-                    } catch (_) {
-                      imgObj = null;
-                    }
+                    final imgObj = _getMemoryImage(bytes);
                     if (imgObj != null) {
+                      // Align with RotatedSignatureImage: counterclockwise positive
+                      final angle = rot.radians(placement.rotationDeg);
+                      // Prefer AR from base bytes to avoid extra decode of processed
+                      final baseBytes = _getBaseBytes(placement);
+                      final ar = _getAspectRatioFromBytes(baseBytes);
+                      final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
+
                       children.add(
                         pw.Positioned(
                           left: left,
@@ -177,12 +231,12 @@ class ExportService {
                             height: h,
                             child: pw.FittedBox(
                               fit: pw.BoxFit.contain,
-                              child: pw.Transform.rotate(
-                                angle:
-                                    placement.rotationDeg *
-                                    3.1415926535 /
-                                    180.0,
-                                child: pw.Image(imgObj),
+                              child: pw.Transform.scale(
+                                scale: scaleToFit,
+                                child: pw.Transform.rotate(
+                                  angle: angle,
+                                  child: pw.Image(imgObj),
+                                ),
                               ),
                             ),
                           ),
@@ -227,7 +281,7 @@ class ExportService {
                 color: pdf.PdfColors.white,
               ),
             ];
-            // Multi-placement stamping on fallback page
+
             if (hasMulti && pagePlacements.isNotEmpty) {
               for (var i = 0; i < pagePlacements.length; i++) {
                 final placement = pagePlacements[i];
@@ -238,65 +292,19 @@ class ExportService {
                 final w = r.width * widthPts;
                 final h = r.height * heightPts;
 
-                // Process the signature asset with its graphic adjustments
-                Uint8List bytes = placement.asset.bytes;
-                if (bytes.isNotEmpty) {
-                  try {
-                    // Decode the image
-                    final decoded = img.decodeImage(bytes);
-                    if (decoded != null) {
-                      img.Image processed = decoded;
-
-                      // Apply contrast and brightness first
-                      if (placement.graphicAdjust.contrast != 1.0 ||
-                          placement.graphicAdjust.brightness != 0.0) {
-                        processed = img.adjustColor(
-                          processed,
-                          contrast: placement.graphicAdjust.contrast,
-                          brightness: placement.graphicAdjust.brightness,
-                        );
-                      }
-
-                      // Apply background removal after color adjustments
-                      if (placement.graphicAdjust.bgRemoval) {
-                        processed = _removeBackground(processed);
-                      }
-
-                      // Encode back to PNG to preserve transparency
-                      bytes = Uint8List.fromList(img.encodePng(processed));
-                    }
-                  } catch (e) {
-                    // If processing fails, use original bytes
-                  }
-                }
-
-                // Use fallback if no bytes available
+                Uint8List bytes = _getProcessedBytes(placement);
                 if (bytes.isEmpty && signatureImageBytes != null) {
                   bytes = signatureImageBytes;
                 }
 
                 if (bytes.isNotEmpty) {
-                  pw.MemoryImage? imgObj;
-                  try {
-                    // Ensure PNG for transparency if not already
-                    final asStr = String.fromCharCodes(bytes.take(8));
-                    final isPng =
-                        bytes.length > 8 &&
-                        bytes[0] == 0x89 &&
-                        asStr.startsWith('\u0089PNG');
-                    if (isPng) {
-                      imgObj = pw.MemoryImage(bytes);
-                    } else {
-                      final decoded = img.decodeImage(bytes);
-                      if (decoded != null) {
-                        final png = img.encodePng(decoded, level: 6);
-                        imgObj = pw.MemoryImage(Uint8List.fromList(png));
-                      }
-                    }
-                  } catch (_) {
-                    imgObj = null;
-                  }
+                  final imgObj = _getMemoryImage(bytes);
                   if (imgObj != null) {
+                    final angle = rot.radians(placement.rotationDeg);
+                    final baseBytes = _getBaseBytes(placement);
+                    final ar = _getAspectRatioFromBytes(baseBytes);
+                    final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
+
                     children.add(
                       pw.Positioned(
                         left: left,
@@ -306,10 +314,12 @@ class ExportService {
                           height: h,
                           child: pw.FittedBox(
                             fit: pw.BoxFit.contain,
-                            child: pw.Transform.rotate(
-                              angle:
-                                  placement.rotationDeg * 3.1415926535 / 180.0,
-                              child: pw.Image(imgObj),
+                            child: pw.Transform.scale(
+                              scale: scaleToFit,
+                              child: pw.Transform.rotate(
+                                angle: angle,
+                                child: pw.Image(imgObj),
+                              ),
                             ),
                           ),
                         ),

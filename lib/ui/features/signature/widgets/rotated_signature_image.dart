@@ -1,7 +1,7 @@
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import '../../../../utils/rotation_utils.dart' as rot;
 
 /// A lightweight widget to render signature bytes with rotation and an
 /// angle-aware scale-to-fit so the rotated image stays within its bounds.
@@ -9,7 +9,7 @@ class RotatedSignatureImage extends StatefulWidget {
   const RotatedSignatureImage({
     super.key,
     required this.bytes,
-    this.rotationDeg = 0.0,
+    this.rotationDeg = 0.0, // counterclockwise as positive
     this.filterQuality = FilterQuality.low,
     this.semanticLabel,
   });
@@ -45,8 +45,9 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
   @override
   void didUpdateWidget(covariant RotatedSignatureImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.bytes, widget.bytes) ||
-        oldWidget.rotationDeg != widget.rotationDeg) {
+    // Only re-resolve when the bytes change. Rotation does not affect
+    // intrinsic aspect ratio, so avoid expensive decode/resolve on slider drags.
+    if (!identical(oldWidget.bytes, widget.bytes)) {
       _derivedAspectRatio = null;
       _resolveImage();
     }
@@ -60,24 +61,21 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
 
   void _resolveImage() {
     _unlisten();
-    // Decode synchronously to get aspect ratio
-    // Guard against empty / invalid bytes that some simplified tests may inject.
+    // Resolve via ImageProvider; when first frame arrives, capture intrinsic size.
+    // Avoid synchronous decode on UI thread to keep rotation smooth.
     if (widget.bytes.isEmpty) {
-      _setAspectRatio(1.0); // assume square to avoid layout exceptions
+      _setAspectRatio(1.0); // safe fallback
       return;
     }
+    // One-time synchronous header decode to establish aspect ratio quickly.
+    // This only runs when bytes change (not on rotation), so it's acceptable.
     try {
-      final decoded = img.decodePng(widget.bytes);
-      if (decoded != null) {
-        final w = decoded.width;
-        final h = decoded.height;
-        if (w > 0 && h > 0) {
-          _setAspectRatio(w / h);
-        }
+      final decoded = img.decodeImage(widget.bytes);
+      if (decoded != null && decoded.width > 0 && decoded.height > 0) {
+        _setAspectRatio(decoded.width / decoded.height);
       }
     } catch (_) {
-      // Swallow decode errors for test-provided dummy data; assume square.
-      _setAspectRatio(1.0);
+      // ignore decode errors and rely on image stream listener
     }
     final stream = _provider.resolve(createLocalImageConfiguration(context));
     _stream = stream;
@@ -107,7 +105,7 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
 
   @override
   Widget build(BuildContext context) {
-    final angle = widget.rotationDeg * math.pi / 180.0;
+    final angle = rot.ccwRadians(widget.rotationDeg);
     Widget img = Image.memory(
       widget.bytes,
       fit: widget.fit,
@@ -115,6 +113,7 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
       filterQuality: widget.filterQuality,
       alignment: widget.alignment,
       semanticLabel: widget.semanticLabel,
+      isAntiAlias: false,
       errorBuilder: (context, error, stackTrace) {
         // Return a placeholder for invalid images
         return Container(
@@ -125,16 +124,7 @@ class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
     );
 
     if (angle != 0.0) {
-      final double c = math.cos(angle).abs();
-      final double s = math.sin(angle).abs();
-      final ar = _derivedAspectRatio;
-      double scaleToFit;
-      if (ar != null && ar > 0) {
-        scaleToFit = math.min(ar / (ar * c + s), 1.0 / (ar * s + c));
-      } else {
-        // Fallback: square approximation
-        scaleToFit = 1.0 / (c + s).clamp(1.0, double.infinity);
-      }
+      final scaleToFit = rot.scaleToFitForAngle(angle, ar: _derivedAspectRatio);
       img = Transform.scale(
         scale: scaleToFit,
         child: Transform.rotate(angle: angle, child: img),
