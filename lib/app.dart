@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localized_locales/flutter_localized_locales.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
-import 'package:pdf_signature/ui/features/welcome/widgets/welcome_screen.dart';
-import 'data/services/preferences_providers.dart';
+import 'package:pdf_signature/routing/router.dart';
 import 'package:pdf_signature/ui/features/preferences/widgets/settings_screen.dart';
+import 'data/repositories/preferences_repository.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -16,92 +14,74 @@ class MyApp extends StatelessWidget {
     return ProviderScope(
       child: Consumer(
         builder: (context, ref, _) {
-          // Ensure SharedPreferences loaded before building MaterialApp
-          final sp = ref.watch(sharedPreferencesProvider);
-          return sp.when(
-            loading: () => const SizedBox.shrink(),
-            error:
-                (e, st) => MaterialApp(
-                  onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
-                  supportedLocales: AppLocalizations.supportedLocales,
-                  localizationsDelegates:
-                      AppLocalizations.localizationsDelegates,
-                  home: Builder(
-                    builder:
-                        (ctx) => Scaffold(
-                          body: Center(
-                            child: Text(
-                              AppLocalizations.of(
-                                ctx,
-                              ).errorWithMessage(e.toString()),
-                            ),
+          final prefs = ref.watch(preferencesRepositoryProvider);
+          final seed = themeSeedFromPrefs(prefs);
+          final appLocale =
+              supportedLanguageTags().contains(prefs.language)
+                  ? parseLanguageTag(prefs.language)
+                  : null;
+          final themeMode = () {
+            switch (prefs.theme) {
+              case 'light':
+                return ThemeMode.light;
+              case 'dark':
+                return ThemeMode.dark;
+              case 'system':
+              default:
+                return ThemeMode.system;
+            }
+          }();
+
+          return MaterialApp.router(
+            onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: seed,
+                brightness: Brightness.light,
+              ),
+            ),
+            darkTheme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: seed,
+                brightness: Brightness.dark,
+              ),
+            ),
+            themeMode: themeMode,
+            locale: appLocale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: [
+              ...AppLocalizations.localizationsDelegates,
+              LocaleNamesLocalizationsDelegate(),
+            ],
+            routerConfig: ref.watch(routerProvider),
+            builder: (context, child) {
+              final router = ref.watch(routerProvider);
+              return Scaffold(
+                appBar: AppBar(
+                  title: Text(AppLocalizations.of(context).appTitle),
+                  actions: [
+                    OutlinedButton.icon(
+                      key: const Key('btn_appbar_settings'),
+                      icon: const Icon(Icons.settings),
+                      label: Text(AppLocalizations.of(context).settings),
+                      onPressed:
+                          () => showDialog<bool>(
+                            context:
+                                router
+                                    .routerDelegate
+                                    .navigatorKey
+                                    .currentContext!,
+                            builder: (_) => const SettingsDialog(),
                           ),
-                        ),
-                  ),
+                    ),
+                  ],
                 ),
-            data: (_) {
-              final themeMode = ref.watch(themeModeProvider);
-              final appLocale = ref.watch(localeProvider);
-              return MaterialApp(
-                onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
-                theme: ThemeData(
-                  colorScheme: ColorScheme.fromSeed(
-                    seedColor: Colors.indigo,
-                    brightness: Brightness.light,
-                  ),
-                ),
-                darkTheme: ThemeData(
-                  colorScheme: ColorScheme.fromSeed(
-                    seedColor: Colors.indigo,
-                    brightness: Brightness.dark,
-                  ),
-                ),
-                themeMode: themeMode,
-                locale: appLocale,
-                supportedLocales: AppLocalizations.supportedLocales,
-                localizationsDelegates: [
-                  ...AppLocalizations.localizationsDelegates,
-                  LocaleNamesLocalizationsDelegate(),
-                ],
-                home: Builder(
-                  builder:
-                      (ctx) => Scaffold(
-                        appBar: AppBar(
-                          title: Text(AppLocalizations.of(ctx).appTitle),
-                          actions: [
-                            OutlinedButton.icon(
-                              key: const Key('btn_appbar_settings'),
-                              icon: const Icon(Icons.settings),
-                              label: Text(AppLocalizations.of(ctx).settings),
-                              onPressed:
-                                  () => showDialog<bool>(
-                                    context: ctx,
-                                    builder: (_) => const SettingsDialog(),
-                                  ),
-                            ),
-                          ],
-                        ),
-                        body: const _RootHomeSwitcher(),
-                      ),
-                ),
+                body: child,
               );
             },
           );
         },
       ),
     );
-  }
-}
-
-class _RootHomeSwitcher extends ConsumerWidget {
-  const _RootHomeSwitcher();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pdf = ref.watch(pdfProvider);
-    if (!pdf.loaded) {
-      return const WelcomeScreen();
-    }
-    return const PdfSignatureHomePage();
   }
 }

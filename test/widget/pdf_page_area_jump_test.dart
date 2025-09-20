@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
-import 'package:pdf_signature/data/services/export_providers.dart';
-import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:pdf_signature/data/model/model.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 
-class _TestPdfController extends PdfController {
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+
+import 'package:pdf_signature/l10n/app_localizations.dart';
+import 'package:pdf_signature/domain/models/model.dart';
+
+class _TestPdfController extends DocumentStateNotifier {
   _TestPdfController() : super() {
-    state = PdfState.initial().copyWith(
-      loaded: true,
-      pageCount: 6,
-      currentPage: 2,
-    );
+    state = Document.initial().copyWith(loaded: true, pageCount: 6);
   }
 }
 
@@ -27,26 +26,24 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            useMockViewerProvider.overrideWithValue(true),
+            pdfViewModelProvider.overrideWith(
+              (ref) => PdfViewModel(ref, useMockViewer: true),
+            ),
             // Continuous mode is always-on; no page view override needed
-            pdfProvider.overrideWith((ref) => ctrl),
+            documentRepositoryProvider.overrideWith((ref) => ctrl),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             locale: const Locale('en'),
-            home: const Scaffold(
+            home: Scaffold(
               body: Center(
                 child: SizedBox(
                   width: 800,
                   height: 520,
                   child: PdfPageArea(
                     pageSize: Size(676, 400),
-                    onDragSignature: _noopOffset,
-                    onResizeSignature: _noopOffset,
-                    onConfirmSignature: _noop,
-                    onClearActiveOverlay: _noop,
-                    onSelectPlaced: _noopInt,
+                    controller: PdfViewerController(),
                   ),
                 ),
               ),
@@ -65,9 +62,13 @@ void main() {
       double lastPixels =
           tester.state<ScrollableState>(scrollableFinder).position.pixels;
 
+      final ctx = tester.element(find.byType(PdfPageArea));
+      final container = ProviderScope.containerOf(ctx, listen: false);
+      final vm = container.read(pdfViewModelProvider.notifier);
+
       Future<void> jumpAndVerify(int targetPage) async {
         final before = lastPixels;
-        ctrl.jumpTo(targetPage);
+        vm.jumpToPage(targetPage);
         await tester.pump();
         await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
@@ -91,6 +92,7 @@ void main() {
       }
 
       // Jump to 4 different pages and verify each
+      await jumpAndVerify(2);
       await jumpAndVerify(5);
       await jumpAndVerify(1);
       await jumpAndVerify(6);
@@ -99,6 +101,4 @@ void main() {
   );
 }
 
-void _noop() {}
-void _noopInt(int? _) {}
-void _noopOffset(Offset _) {}
+// No extra callbacks required in the new API

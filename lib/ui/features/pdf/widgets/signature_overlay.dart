@@ -1,283 +1,163 @@
-import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_box_transform/flutter_box_transform.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../domain/models/model.dart';
+import '../../signature/widgets/rotated_signature_image.dart';
+import '../../signature/view_model/signature_view_model.dart';
+import '../view_model/pdf_view_model.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-import '../../../../data/model/model.dart';
-import '../../signature/view_model/signature_controller.dart';
-import '../view_model/pdf_controller.dart';
-import '../../signature/view_model/signature_library.dart';
-import 'image_editor_dialog.dart';
-import '../../signature/widgets/rotated_signature_image.dart';
-
-/// Renders a single signature overlay (either interactive or placed) on a page.
+/// Minimal overlay widget for rendering a placed signature.
 class SignatureOverlay extends ConsumerWidget {
   const SignatureOverlay({
     super.key,
     required this.pageSize,
     required this.rect,
-    required this.sig,
+    required this.placement,
+    required this.placedIndex,
     required this.pageNumber,
-    this.interactive = true,
-    this.placedIndex,
-    this.onDragSignature,
-    this.onResizeSignature,
-    this.onConfirmSignature,
-    this.onClearActiveOverlay,
-    this.onSelectPlaced,
   });
 
-  final Size pageSize;
-  final Rect rect;
-  final SignatureState sig;
+  final Size pageSize; // not used directly, kept for API symmetry
+  final Rect rect; // normalized 0..1 values (left, top, width, height)
+  final SignaturePlacement placement;
+  final int placedIndex;
   final int pageNumber;
-  final bool interactive;
-  final int? placedIndex;
-
-  // Callbacks used by interactive overlay
-  final ValueChanged<Offset>? onDragSignature;
-  final ValueChanged<Offset>? onResizeSignature;
-  final VoidCallback? onConfirmSignature;
-  final VoidCallback? onClearActiveOverlay;
-  // Callback for selecting a placed overlay
-  final ValueChanged<int?>? onSelectPlaced;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final processedImage = ref
+        .watch(signatureViewModelProvider)
+        .getProcessedImage(placement.asset, placement.graphicAdjust);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final scaleX = constraints.maxWidth / pageSize.width;
-        final scaleY = constraints.maxHeight / pageSize.height;
-        final left = rect.left * scaleX;
-        final top = rect.top * scaleY;
-        final width = rect.width * scaleX;
-        final height = rect.height * scaleY;
+        final pageW = constraints.maxWidth;
+        final pageH = constraints.maxHeight;
+        final rectPx = Rect.fromLTWH(
+          rect.left * pageW,
+          rect.top * pageH,
+          rect.width * pageW,
+          rect.height * pageH,
+        );
+
+        Future<void> _showContextMenu(Offset position) async {
+          final pdfViewModel = ref.read(pdfViewModelProvider.notifier);
+          final isLocked = ref
+              .watch(pdfViewModelProvider)
+              .isPlacementLocked(page: pageNumber, index: placedIndex);
+          final selected = await showMenu<String>(
+            context: context,
+            position: RelativeRect.fromLTRB(
+              position.dx,
+              position.dy,
+              position.dx,
+              position.dy,
+            ),
+            items: [
+              PopupMenuItem(
+                key: const Key('mi_placement_lock'),
+                value: isLocked ? 'unlock' : 'lock',
+                child: Text(
+                  isLocked
+                      ? AppLocalizations.of(context).unlock
+                      : AppLocalizations.of(context).lock,
+                ),
+              ),
+              PopupMenuItem(
+                key: const Key('mi_placement_delete'),
+                value: 'delete',
+                child: Text(AppLocalizations.of(context).delete),
+              ),
+            ],
+          );
+          if (selected == 'lock') {
+            pdfViewModel.lockPlacement(page: pageNumber, index: placedIndex);
+          } else if (selected == 'unlock') {
+            pdfViewModel.unlockPlacement(page: pageNumber, index: placedIndex);
+          } else if (selected == 'delete') {
+            pdfViewModel.removePlacement(page: pageNumber, index: placedIndex);
+          }
+        }
 
         return Stack(
           children: [
+            TransformableBox(
+              key: Key('placed_signature_$placedIndex'),
+              rect: rectPx,
+              flip: Flip.none,
+              // Keep the box within page bounds
+              clampingRect: Rect.fromLTWH(0, 0, pageW, pageH),
+              // Disable flips for signatures to avoid mirrored signatures
+              allowFlippingWhileResizing: false,
+              allowContentFlipping: false,
+              onChanged:
+                  ref
+                          .watch(pdfViewModelProvider)
+                          .isPlacementLocked(
+                            page: pageNumber,
+                            index: placedIndex,
+                          )
+                      ? null
+                      : (result, details) {
+                        final r = result.rect;
+                        // Persist as normalized rect (0..1)
+                        final newRect = Rect.fromLTWH(
+                          (r.left / pageW).clamp(0.0, 1.0),
+                          (r.top / pageH).clamp(0.0, 1.0),
+                          (r.width / pageW).clamp(0.0, 1.0),
+                          (r.height / pageH).clamp(0.0, 1.0),
+                        );
+                        ref
+                            .read(pdfViewModelProvider.notifier)
+                            .updatePlacementRect(
+                              page: pageNumber,
+                              index: placedIndex,
+                              rect: newRect,
+                            );
+                      },
+              // Keep default handles; you can customize later if needed
+              contentBuilder: (context, boxRect, flip) {
+                final isLocked = ref
+                    .watch(pdfViewModelProvider)
+                    .isPlacementLocked(page: pageNumber, index: placedIndex);
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isLocked ? Colors.green : Colors.red,
+                      width: 2,
+                    ),
+                  ),
+                  child: SizedBox(
+                    width: boxRect.width,
+                    height: boxRect.height,
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: RotatedSignatureImage(
+                        image: processedImage,
+                        rotationDeg: placement.rotationDeg,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            // Invisible overlay for right-click context menu
             Positioned(
-              left: left,
-              top: top,
-              width: width,
-              height: height,
-              child: _buildContent(context, ref, scaleX, scaleY),
+              left: rectPx.left,
+              top: rectPx.top,
+              width: rectPx.width,
+              height: rectPx.height,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onSecondaryTapDown:
+                    (details) => _showContextMenu(details.globalPosition),
+                onLongPressStart:
+                    (details) => _showContextMenu(details.globalPosition),
+              ),
             ),
           ],
         );
       },
     );
-  }
-
-  Widget _buildContent(
-    BuildContext context,
-    WidgetRef ref,
-    double scaleX,
-    double scaleY,
-  ) {
-    final selectedIdx = ref.read(pdfProvider).selectedPlacementIndex;
-    final bool isPlaced = placedIndex != null;
-    final bool isSelected = isPlaced && selectedIdx == placedIndex;
-    final Color borderColor = isPlaced ? Colors.red : Colors.indigo;
-    final double borderWidth = isPlaced ? (isSelected ? 3.0 : 2.0) : 2.0;
-
-    // Instead of DecoratedBox, use a Stack to control layering
-    Widget content = Stack(
-      alignment: Alignment.center,
-      children: [
-        // Background layer (semi-transparent color)
-        Positioned.fill(
-          child: Container(
-            color: Color.fromRGBO(
-              0,
-              0,
-              0,
-              0.05 + math.min(0.25, (sig.contrast - 1.0).abs()),
-            ),
-          ),
-        ),
-        // Signature image layer
-        _SignatureImage(
-          interactive: interactive,
-          placedIndex: placedIndex,
-          pageNumber: pageNumber,
-          sig: sig,
-        ),
-        // Border layer (on top, using Positioned.fill with a transparent background)
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: borderColor, width: borderWidth),
-            ),
-          ),
-        ),
-        // Resize handle (only for interactive mode, on top of everything)
-        if (interactive)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: GestureDetector(
-              key: const Key('signature_handle'),
-              behavior: HitTestBehavior.opaque,
-              onPanUpdate:
-                  (d) => onResizeSignature?.call(
-                    Offset(d.delta.dx / scaleX, d.delta.dy / scaleY),
-                  ),
-              child: const Icon(Icons.open_in_full, size: 20),
-            ),
-          ),
-      ],
-    );
-
-    if (interactive) {
-      content = GestureDetector(
-        key: const Key('signature_overlay'),
-        behavior: HitTestBehavior.opaque,
-        onPanStart: (_) {},
-        onPanUpdate:
-            (d) => onDragSignature?.call(
-              Offset(d.delta.dx / scaleX, d.delta.dy / scaleY),
-            ),
-        onSecondaryTapDown:
-            (d) => _showActiveMenu(context, d.globalPosition, ref, null),
-        onLongPressStart:
-            (d) => _showActiveMenu(context, d.globalPosition, ref, null),
-        child: content,
-      );
-    } else {
-      content = GestureDetector(
-        key: Key('placed_signature_${placedIndex ?? 'x'}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onSelectPlaced?.call(placedIndex),
-        onSecondaryTapDown: (d) {
-          if (placedIndex != null) {
-            _showActiveMenu(context, d.globalPosition, ref, placedIndex);
-          }
-        },
-        onLongPressStart: (d) {
-          if (placedIndex != null) {
-            _showActiveMenu(context, d.globalPosition, ref, placedIndex);
-          }
-        },
-        child: content,
-      );
-    }
-    return content;
-  }
-
-  void _showActiveMenu(
-    BuildContext context,
-    Offset globalPos,
-    WidgetRef ref,
-    int? placedIndex,
-  ) {
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        globalPos.dx,
-        globalPos.dy,
-        globalPos.dx,
-        globalPos.dy,
-      ),
-      items: [
-        // if not placed, show Adjust and Confirm option
-        if (placedIndex == null) ...[
-          PopupMenuItem<String>(
-            key: const Key('ctx_active_confirm'),
-            value: 'confirm',
-            child: Text(AppLocalizations.of(context).confirm),
-          ),
-          PopupMenuItem<String>(
-            key: const Key('ctx_active_adjust'),
-            value: 'adjust',
-            child: Text(AppLocalizations.of(context).adjustGraphic),
-          ),
-        ],
-        PopupMenuItem<String>(
-          key: const Key('ctx_active_delete'),
-          value: 'delete',
-          child: Text(AppLocalizations.of(context).delete),
-        ),
-      ],
-    ).then((choice) {
-      if (choice == 'confirm') {
-        if (placedIndex == null) {
-          onConfirmSignature?.call();
-        }
-        // For placed, confirm does nothing
-      } else if (choice == 'delete') {
-        if (placedIndex == null) {
-          onClearActiveOverlay?.call();
-        } else {
-          ref
-              .read(pdfProvider.notifier)
-              .removePlacement(page: pageNumber, index: placedIndex);
-        }
-      } else if (choice == 'adjust') {
-        showDialog(context: context, builder: (_) => const ImageEditorDialog());
-      }
-    });
-  }
-}
-
-class _SignatureImage extends ConsumerWidget {
-  const _SignatureImage({
-    required this.interactive,
-    required this.placedIndex,
-    required this.pageNumber,
-    required this.sig,
-  });
-
-  final bool interactive;
-  final int? placedIndex;
-  final int pageNumber;
-  final SignatureState sig;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Uint8List? bytes;
-    if (interactive) {
-      final processed = ref.watch(processedSignatureImageProvider);
-      bytes = processed ?? sig.imageBytes;
-    } else if (placedIndex != null) {
-      final placementList = ref.read(pdfProvider).placementsByPage[pageNumber];
-      final placement =
-          (placementList != null && placedIndex! < placementList.length)
-              ? placementList[placedIndex!]
-              : null;
-      final imgId = placement?.imageId;
-      if (imgId != null) {
-        final lib = ref.watch(signatureLibraryProvider);
-        for (final a in lib) {
-          if (a.id == imgId) {
-            bytes = a.bytes;
-            break;
-          }
-        }
-      }
-      bytes ??= ref.read(processedSignatureImageProvider) ?? sig.imageBytes;
-    }
-
-    if (bytes == null) {
-      String label;
-      try {
-        label = AppLocalizations.of(context).signature;
-      } catch (_) {
-        label = 'Signature';
-      }
-      return Center(child: Text(label));
-    }
-
-    // Use live rotation for interactive overlay; stored rotation for placed
-    double rotationDeg = 0.0;
-    if (interactive) {
-      rotationDeg = sig.rotation;
-    } else if (placedIndex != null) {
-      final placementList = ref.read(pdfProvider).placementsByPage[pageNumber];
-      if (placementList != null && placedIndex! < placementList.length) {
-        rotationDeg = placementList[placedIndex!].rotationDeg;
-      }
-    }
-    return RotatedSignatureImage(bytes: bytes, rotationDeg: rotationDeg);
   }
 }

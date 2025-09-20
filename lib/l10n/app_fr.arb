@@ -13,6 +13,7 @@
   "display": "Affichage",
   "downloadStarted": "Téléchargement commencé",
   "dpi": "DPI :",
+  "dragOntoDocument": "Faites glisser sur le document",
   "drawSignature": "Dessiner une signature",
   "errorWithMessage": "Erreur : {message}",
   "exportingPleaseWait": "Exportation… Veuillez patienter",
@@ -23,6 +24,7 @@
   "image": "Image",
   "invalidOrUnsupportedFile": "Fichier invalide ou non pris en charge",
   "language": "Langue",
+  "lock": "Verrouiller",
   "loadSignatureFromFile": "Charger une signature depuis un fichier",
   "lockAspectRatio": "Verrouiller le ratio largeur/hauteur",
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "Appuyez longuement ou cliquez droit sur la signature pour la confirmer ou la supprimer.",
@@ -46,5 +48,11 @@
   "themeDark": "Sombre",
   "themeLight": "Clair",
   "themeSystem": "Système",
-  "undo": "Annuler"
+  "themeColor": "Couleur du thème",
+  "themeColorBlue": "Bleu",
+  "themeColorGreen": "Vert",
+  "themeColorRed": "Rouge",
+  "themeColorPurple": "Violet",
+  "undo": "Annuler",
+  "unlock": "Déverrouiller"
 }

@@ -13,6 +13,7 @@
   "display": "Anzeige",
   "downloadStarted": "Download gestartet",
   "dpi": "DPI",
+  "dragOntoDocument": "Auf Dokument ziehen",
   "drawSignature": "Signatur zeichnen",
   "errorWithMessage": "Fehler: {message}",
   "exportingPleaseWait": "Exportiere… Bitte warten",
@@ -23,6 +24,7 @@
   "image": "Bild",
   "invalidOrUnsupportedFile": "Ungültige oder nicht unterstützte Datei",
   "language": "Sprache",
+  "lock": "Sperren",
   "loadSignatureFromFile": "Signatur aus Datei laden",
   "lockAspectRatio": "Seitenverhältnis sperren",
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "Drücken Sie lange oder klicken Sie mit der rechten Maustaste auf die Signatur, um sie zu bestätigen oder zu löschen.",
@@ -46,5 +48,11 @@
   "themeDark": "Dunkel",
   "themeLight": "Hell",
   "themeSystem": "System",
-  "undo": "Rückgängig"
+  "themeColor": "Themenfarbe",
+  "themeColorBlue": "Blau",
+  "themeColorGreen": "Grün",
+  "themeColorRed": "Rot",
+  "themeColorPurple": "Lila",
+  "undo": "Rückgängig",
+  "unlock": "Entsperren"
 }

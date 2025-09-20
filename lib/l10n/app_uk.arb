@@ -13,6 +13,7 @@
   "display": "Відображення",
   "downloadStarted": "Завантаження розпочато",
   "dpi": "DPI",
+  "dragOntoDocument": "Перетягніть на документ",
   "drawSignature": "Намалювати підпис",
   "errorWithMessage": "Помилка: {message}",
   "exportingPleaseWait": "Експортування... Зачекайте",
@@ -23,6 +24,7 @@
   "image": "Зображення",
   "invalidOrUnsupportedFile": "Недійсний або непідтримуваний файл",
   "language": "Мова",
+  "lock": "Замкнути",
   "loadSignatureFromFile": "Завантажити підпис з файлу",
   "lockAspectRatio": "Зафіксувати співвідношення сторін",
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "Довго натисніть або клацніть правою кнопкою миші на підпис, щоб підтвердити або видалити.",
@@ -46,5 +48,11 @@
   "themeDark": "Темна",
   "themeLight": "Світла",
   "themeSystem": "Системна",
-  "undo": "Відмінити"
+  "themeColor": "Колір теми",
+  "themeColorBlue": "Синій",
+  "themeColorGreen": "Зелений",
+  "themeColorRed": "Червоний",
+  "themeColorPurple": "Фіолетовий",
+  "undo": "Відмінити",
+  "unlock": "Відмкнути"
 }

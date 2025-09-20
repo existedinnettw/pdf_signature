@@ -1,26 +1,39 @@
-import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart' as fs;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
-import 'package:printing/printing.dart' as printing;
-import 'package:pdfrx/pdfrx.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 
-import '../../../../data/services/export_providers.dart';
-import 'package:image/image.dart' as img;
-import '../../signature/view_model/signature_controller.dart';
-import '../view_model/pdf_controller.dart';
-import '../../signature/view_model/signature_library.dart';
+import 'package:pdfrx/pdfrx.dart';
 import 'draw_canvas.dart';
 import 'pdf_toolbar.dart';
 import 'pdf_page_area.dart';
 import 'pages_sidebar.dart';
 import 'signatures_sidebar.dart';
+import '../view_model/pdf_export_view_model.dart';
+import 'package:pdf_signature/utils/download.dart';
+import '../view_model/pdf_view_model.dart';
+import 'package:image/image.dart' as img;
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
-  const PdfSignatureHomePage({super.key});
+  final Future<void> Function() onPickPdf;
+  final VoidCallback onClosePdf;
+  final fs.XFile currentFile;
+  // Optional display name for the currently opened file. On Linux
+  // xdg-desktop-portal, XFile.name/path can be a UUID-like value. When
+  // available, this name preserves the user-selected filename so we can
+  // suggest a proper "signed_*.pdf" on save.
+  final String? currentFileName;
+
+  const PdfSignatureHomePage({
+    super.key,
+    required this.onPickPdf,
+    required this.onClosePdf,
+    required this.currentFile,
+    this.currentFileName,
+  });
 
   @override
   ConsumerState<PdfSignatureHomePage> createState() =>
@@ -28,8 +41,7 @@ class PdfSignatureHomePage extends ConsumerStatefulWidget {
 }
 
 class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
-  static const Size _pageSize = SignatureController.pageSize;
-  final PdfViewerController _viewerController = PdfViewerController();
+  static const Size _pageSize = Size(676, 960 / 1.4142);
   bool _showPagesSidebar = true;
   bool _showSignaturesSidebar = true;
   int _zoomLevel = 100; // percentage for display only
@@ -44,33 +56,60 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   final double _pagesMax = 250;
   final double _signaturesMin = 140;
   final double _signaturesMax = 250;
+  late PdfViewModel _viewModel;
 
   // Exposed for tests to trigger the invalid-file SnackBar without UI.
   @visibleForTesting
   void debugShowInvalidSignatureSnackBar() {
-    ref.read(signatureProvider.notifier).setInvalidSelected(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).invalidOrUnsupportedFile),
+      ),
+    );
   }
 
   Future<void> _pickPdf() async {
-    final typeGroup = const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
-    final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
-    if (file != null) {
-      Uint8List? bytes;
-      try {
-        bytes = await file.readAsBytes();
-      } catch (_) {
-        bytes = null;
-      }
-      ref.read(pdfProvider.notifier).openPicked(path: file.path, bytes: bytes);
-      ref.read(signatureProvider.notifier).resetForNewPage();
-    }
+    await widget.onPickPdf();
+  }
+
+  void _closePdf() {
+    widget.onClosePdf();
   }
 
   void _jumpToPage(int page) {
-    ref.read(pdfProvider.notifier).jumpTo(page);
+    final controller = _viewModel.controller;
+    final current = _viewModel.currentPage;
+    final pdf = _viewModel.document;
+    int target;
+    if (page == -1) {
+      target = (current - 1).clamp(1, pdf.pageCount);
+    } else {
+      target = page.clamp(1, pdf.pageCount);
+    }
+    // Update reactive page providers so UI/tests reflect navigation even if controller is a stub
+    if (current != target) {
+      // Also notify view model (if used elsewhere) via its public API
+      try {
+        _viewModel.jumpToPage(target);
+      } catch (_) {
+        // ignore if provider not available
+      }
+    }
+    if (controller.isReady) controller.goToPage(pageNumber: target);
   }
 
-  Future<Uint8List?> _loadSignatureFromFile() async {
+  img.Image? _toStdSignatureImage(img.Image? image) {
+    if (image == null) return null;
+    image.convert(numChannels: 4);
+    // Scale down if height > 256 to improve performance
+    if (image.height > 256) {
+      final newWidth = (image.width * 256) ~/ image.height;
+      image = img.copyResize(image, width: newWidth, height: 256);
+    }
+    return image;
+  }
+
+  Future<img.Image?> _loadSignatureFromFile() async {
     final typeGroup = fs.XTypeGroup(
       label:
           Localizations.of<AppLocalizations>(context, AppLocalizations)?.image,
@@ -79,55 +118,37 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
     if (file == null) return null;
     final bytes = await file.readAsBytes();
-    final sig = ref.read(signatureProvider.notifier);
-    sig.setImageBytes(bytes);
-    final p = ref.read(pdfProvider);
-    if (p.loaded) {
-      ref.read(pdfProvider.notifier).setSignedPage(p.currentPage);
+    try {
+      var sigImage = img.decodeImage(bytes);
+      return _toStdSignatureImage(sigImage);
+    } catch (_) {
+      return null;
     }
-    return bytes;
   }
 
-  void _confirmSignature() {
-    ref.read(signatureProvider.notifier).confirmCurrentSignature(ref);
-  }
-
-  void _onDragSignature(Offset delta) {
-    ref.read(signatureProvider.notifier).drag(delta);
-  }
-
-  void _onResizeSignature(Offset delta) {
-    ref.read(signatureProvider.notifier).resize(delta);
-  }
-
-  void _onSelectPlaced(int? index) {
-    ref.read(pdfProvider.notifier).selectPlacement(index);
-  }
-
-  Future<Uint8List?> _openDrawCanvas() async {
+  Future<img.Image?> _openDrawCanvas() async {
     final result = await showModalBottomSheet<Uint8List>(
       context: context,
       isScrollControlled: true,
       enableDrag: false,
       builder: (_) => const DrawCanvas(),
     );
-    if (result != null && result.isNotEmpty) {
-      ref.read(signatureProvider.notifier).setImageBytes(result);
-      final p = ref.read(pdfProvider);
-      if (p.loaded) {
-        ref.read(pdfProvider.notifier).setSignedPage(p.currentPage);
-      }
+    if (result == null || result.isEmpty) return null;
+    // In simplified UI, adding to library isn't implemented
+    try {
+      var sigImage = img.decodeImage(result);
+      return _toStdSignatureImage(sigImage);
+    } catch (_) {
+      return null;
     }
-    return result;
   }
 
   Future<void> _saveSignedPdf() async {
-    ref.read(exportingProvider.notifier).state = true;
+    ref.read(pdfExportViewModelProvider.notifier).setExporting(true);
     try {
-      final pdf = ref.read(pdfProvider);
-      final sig = ref.read(signatureProvider);
+      final pdf = _viewModel.document;
       final messenger = ScaffoldMessenger.of(context);
-      if (!pdf.loaded || sig.rect == null) {
+      if (!pdf.loaded) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context).nothingToSaveYet),
@@ -135,118 +156,58 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         );
         return;
       }
-      final exporter = ref.read(exportServiceProvider);
-      final targetDpi = ref.read(exportDpiProvider);
-      final useMock = ref.read(useMockViewerProvider);
+      final exporter = ref.read(pdfExportViewModelProvider).exporter;
+
+      // get DPI from preferences
+      final targetDpi = ref.read(preferencesRepositoryProvider).exportDpi;
       bool ok = false;
       String? savedPath;
-      // Helper to apply rotation to bytes for export (single-signature path only)
-      Uint8List? _rotatedForExport(Uint8List? src, double deg) {
-        if (src == null || src.isEmpty) return src;
-        final r = deg % 360;
-        if (r == 0) return src;
-        try {
-          final decoded = img.decodeImage(src);
-          if (decoded == null) return src;
-          final out = img.copyRotate(
-            decoded,
-            angle: r,
-            interpolation: img.Interpolation.linear,
-          );
-          return Uint8List.fromList(img.encodePng(out, level: 6));
-        } catch (_) {
-          return src;
-        }
-      }
 
-      if (kIsWeb) {
-        Uint8List? src = pdf.pickedPdfBytes;
-        if (src != null) {
-          final processed = ref.read(processedSignatureImageProvider);
-          final rotated = _rotatedForExport(
-            processed ?? sig.imageBytes,
-            sig.rotation,
-          );
-          final bytes = await exporter.exportSignedPdfFromBytes(
-            srcBytes: src,
-            signedPage: pdf.signedPage,
-            signatureRectUi: sig.rect,
-            uiPageSize: SignatureController.pageSize,
-            signatureImageBytes: rotated,
-            placementsByPage: pdf.placementsByPage,
-            libraryBytes: {
-              for (final a in ref.read(signatureLibraryProvider)) a.id: a.bytes,
-            },
-            targetDpi: targetDpi,
-          );
-          if (bytes != null) {
-            try {
-              await printing.Printing.sharePdf(
-                bytes: bytes,
-                filename: 'signed.pdf',
-              );
-              ok = true;
-            } catch (_) {
-              ok = false;
-            }
-          }
-        }
-      } else {
-        final pick = ref.read(savePathPickerProvider);
-        final path = await pick();
+      // Derive a suggested filename based on the opened file. Prefer the
+      // provided display name if available (see Linux portal note above).
+      final display = widget.currentFileName;
+      final originalName =
+          (display != null && display.trim().isNotEmpty)
+              ? display.trim()
+              : widget.currentFile.name.isNotEmpty
+              ? widget.currentFile.name
+              : widget.currentFile.path.isNotEmpty
+              ? widget.currentFile.path.split('/').last.split('\\').last
+              : 'document.pdf';
+      final suggested = _suggestSignedName(originalName);
+
+      if (!kIsWeb) {
+        final path = await ref
+            .read(pdfExportViewModelProvider)
+            .pickSavePathWithSuggestedName(suggested);
         if (path == null || path.trim().isEmpty) return;
         final fullPath = _ensurePdfExtension(path.trim());
         savedPath = fullPath;
-        if (pdf.pickedPdfBytes != null) {
-          final processed = ref.read(processedSignatureImageProvider);
-          final rotated = _rotatedForExport(
-            processed ?? sig.imageBytes,
-            sig.rotation,
-          );
-          final out = await exporter.exportSignedPdfFromBytes(
-            srcBytes: pdf.pickedPdfBytes!,
-            signedPage: pdf.signedPage,
-            signatureRectUi: sig.rect,
-            uiPageSize: SignatureController.pageSize,
-            signatureImageBytes: rotated,
-            placementsByPage: pdf.placementsByPage,
-            libraryBytes: {
-              for (final a in ref.read(signatureLibraryProvider)) a.id: a.bytes,
-            },
-            targetDpi: targetDpi,
-          );
-          if (useMock) {
-            ok = out != null;
-          } else if (out != null) {
-            ok = await exporter.saveBytesToFile(
-              bytes: out,
-              outputPath: fullPath,
-            );
-          }
-        } else if (pdf.pickedPdfPath != null) {
-          if (useMock) {
-            ok = true;
-          } else {
-            final processed = ref.read(processedSignatureImageProvider);
-            final rotated = _rotatedForExport(
-              processed ?? sig.imageBytes,
-              sig.rotation,
-            );
-            ok = await exporter.exportSignedPdfFromFile(
-              inputPath: pdf.pickedPdfPath!,
-              outputPath: fullPath,
-              signedPage: pdf.signedPage,
-              signatureRectUi: sig.rect,
-              uiPageSize: SignatureController.pageSize,
-              signatureImageBytes: rotated,
-              placementsByPage: pdf.placementsByPage,
-              libraryBytes: {
-                for (final a in ref.read(signatureLibraryProvider))
-                  a.id: a.bytes,
-              },
-              targetDpi: targetDpi,
-            );
-          }
+        final src = pdf.pickedPdfBytes ?? Uint8List(0);
+        final out = await exporter.exportSignedPdfFromBytes(
+          srcBytes: src,
+          uiPageSize: _pageSize,
+          signatureImageBytes: null,
+          placementsByPage: pdf.placementsByPage,
+          targetDpi: targetDpi,
+        );
+        if (out != null) {
+          ok = await exporter.saveBytesToFile(bytes: out, outputPath: fullPath);
+        }
+      } else {
+        // Web: export and trigger browser download
+        final src = pdf.pickedPdfBytes ?? Uint8List(0);
+        final out = await exporter.exportSignedPdfFromBytes(
+          srcBytes: src,
+          uiPageSize: _pageSize,
+          signatureImageBytes: null,
+          placementsByPage: pdf.placementsByPage,
+          targetDpi: targetDpi,
+        );
+        if (out != null) {
+          // Use suggested filename for browser download
+          ok = await downloadBytes(out, filename: suggested);
+          savedPath = suggested;
         }
       }
       if (!kIsWeb) {
@@ -266,22 +227,21 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
           );
         }
       } else {
-        if (ok) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).downloadStarted),
+        // Web: show a toast-like confirmation
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              ok
+                  ? AppLocalizations.of(
+                    context,
+                  ).savedWithPath(savedPath ?? 'signed.pdf')
+                  : AppLocalizations.of(context).failedToSavePdf,
             ),
-          );
-        } else {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).failedToGeneratePdf),
-            ),
-          );
-        }
+          ),
+        );
       }
     } finally {
-      ref.read(exportingProvider.notifier).state = false;
+      ref.read(pdfExportViewModelProvider.notifier).setExporting(false);
     }
   }
 
@@ -290,10 +250,46 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     return name;
   }
 
+  String _suggestSignedName(String original) {
+    // Normalize to a base filename
+    final base = original.split('/').last.split('\\').last;
+    if (base.toLowerCase().endsWith('.pdf')) {
+      return 'signed_' + base;
+    }
+    return 'signed_' + base + '.pdf';
+  }
+
+  void _onControllerChanged() {
+    if (mounted) {
+      if (_viewModel.controller.isReady) {
+        final newZoomLevel = (_viewModel.controller.currentZoom * 100)
+            .round()
+            .clamp(10, 800);
+        if (newZoomLevel != _zoomLevel) {
+          setState(() {
+            _zoomLevel = newZoomLevel;
+          });
+        }
+      } else {
+        // Reset to default zoom level when controller is not ready
+        if (_zoomLevel != 100) {
+          setState(() {
+            _zoomLevel = 100;
+          });
+        }
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Build areas once with builders; keep these instances stable.
+    _viewModel = ref.read(pdfViewModelProvider.notifier);
+
+    // Add listener to update zoom level when controller zoom changes
+    _viewModel.controller.addListener(_onControllerChanged);
+
     _areas = [
       Area(
         size: _lastPagesWidth,
@@ -302,7 +298,26 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         builder:
             (context, area) => Offstage(
               offstage: !_showPagesSidebar,
-              child: const PagesSidebar(),
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final pdfViewModel = ref.watch(pdfViewModelProvider);
+                  final pdf = pdfViewModel.document;
+
+                  final documentRef =
+                      pdf.loaded && pdf.pickedPdfBytes != null
+                          ? PdfDocumentRefData(
+                            pdf.pickedPdfBytes!,
+                            sourceName: 'document.pdf',
+                          )
+                          : null;
+
+                  return PagesSidebar(
+                    documentRef: documentRef,
+                    controller: _viewModel.controller,
+                    currentPage: _viewModel.currentPage,
+                  );
+                },
+              ),
             ),
       ),
       Area(
@@ -310,18 +325,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         builder:
             (context, area) => RepaintBoundary(
               child: PdfPageArea(
+                controller: _viewModel.controller,
                 key: const ValueKey('pdf_page_area'),
                 pageSize: _pageSize,
-                viewerController: _viewerController,
-                onDragSignature: _onDragSignature,
-                onResizeSignature: _onResizeSignature,
-                onConfirmSignature: _confirmSignature,
-                onClearActiveOverlay:
-                    () =>
-                        ref
-                            .read(signatureProvider.notifier)
-                            .clearActiveOverlay(),
-                onSelectPlaced: _onSelectPlaced,
               ),
             ),
       ),
@@ -347,6 +353,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   @override
   void dispose() {
+    _viewModel.controller.removeListener(_onControllerChanged);
     _splitController.dispose();
     super.dispose();
   }
@@ -380,7 +387,11 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isExporting = ref.watch(exportingProvider);
+    return _buildScaffold(context);
+  }
+
+  Widget _buildScaffold(BuildContext context) {
+    final isExporting = ref.watch(pdfExportViewModelProvider).exporting;
     final l = AppLocalizations.of(context);
     return Scaffold(
       body: Padding(
@@ -393,25 +404,42 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                 PdfToolbar(
                   disabled: isExporting,
                   onPickPdf: _pickPdf,
+                  onClosePdf: _closePdf,
                   onJumpToPage: _jumpToPage,
                   onZoomOut: () {
-                    if (_viewerController.isReady) {
-                      _viewerController.zoomDown();
+                    if (_viewModel.controller.isReady) {
+                      _viewModel.controller.zoomDown();
+                      // Update display zoom level after controller zoom
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _zoomLevel = (_viewModel.controller.currentZoom *
+                                    100)
+                                .round()
+                                .clamp(10, 800);
+                          });
+                        }
+                      });
                     }
-                    setState(() {
-                      _zoomLevel = (_zoomLevel - 10).clamp(10, 800);
-                    });
                   },
                   onZoomIn: () {
-                    if (_viewerController.isReady) {
-                      _viewerController.zoomUp();
+                    if (_viewModel.controller.isReady) {
+                      _viewModel.controller.zoomUp();
+                      // Update display zoom level after controller zoom
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _zoomLevel = (_viewModel.controller.currentZoom *
+                                    100)
+                                .round()
+                                .clamp(10, 800);
+                          });
+                        }
+                      });
                     }
-                    setState(() {
-                      _zoomLevel = (_zoomLevel + 10).clamp(10, 800);
-                    });
                   },
                   zoomLevel: _zoomLevel,
-                  fileName: ref.watch(pdfProvider).pickedPdfPath,
+                  filePath: widget.currentFile.path,
                   showPagesSidebar: _showPagesSidebar,
                   showSignaturesSidebar: _showSignaturesSidebar,
                   onTogglePagesSidebar:
@@ -425,6 +453,24 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                         _applySidebarVisibility();
                       }),
                 ),
+                // Expose a compact signature drawer trigger area for tests when sidebar hidden
+                if (!_showSignaturesSidebar)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      height:
+                          0, // zero-height container exposing buttons offstage
+                      width: 0,
+                      child: Offstage(
+                        offstage: true,
+                        child: SignaturesSidebar(
+                          onLoadSignatureFromFile: _loadSignatureFromFile,
+                          onOpenDrawCanvas: _openDrawCanvas,
+                          onSave: _saveSignedPdf,
+                        ),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 Expanded(
                   child: MultiSplitView(

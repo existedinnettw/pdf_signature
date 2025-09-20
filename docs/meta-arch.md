@@ -1,15 +1,83 @@
 # meta archietecture
 
 * [MVVM](https://docs.flutter.dev/app-architecture/guide)
+  * [Data layer](https://docs.flutter.dev/app-architecture/case-study/data-layer)
+    * View ⇆ ViewModel ⇆ Repository ⇆ Service
+      * Model is used across.
 
 ## Package structure
 
-The repo structure follows official [Package structure](https://docs.flutter.dev/app-architecture/case-study#package-structure) with slight modifications.
+The repo structure follows official [Package structure](https://docs.flutter.dev/app-architecture/case-study#package-structure). 
+
+```
+lib
+├─┬─ ui
+│ ├─┬─ core
+│ │ ├─┬─ ui
+│ │ │ └─── <shared widgets>
+│ │ └─── themes
+│ └─┬─ <FEATURE NAME>
+│   ├─┬─ view_model
+│   │ └─── <view_model class>.dart
+│   └─┬─ widgets
+│     ├── <feature name>_screen.dart
+│     └── <other widgets>
+├─┬─ domain
+│ └─┬─ models
+│   └─── <model name>.dart
+├─┬─ data
+│ ├─┬─ repositories
+│ │ └─── <repository class>.dart
+│ ├─┬─ services
+│ │ └─── <service class>.dart
+│ └─┬─ model
+│   └─── <api model class>.dart
+├─── config
+├─── utils
+├─── routing
+├─── main_staging.dart
+├─── main_development.dart
+└─── main.dart
+
+// The test folder contains unit and widget tests
+test
+├─── data
+├─── domain
+├─── ui
+└─── utils
+
+// The testing folder contains mocks other classes need to execute tests
+testing
+├─── fakes
+└─── models
+```
+
+But with slight modifications.
 
 * put each `<FEATURE NAME>/`s in `features/` sub-directory under `ui/`.
 * `test/features/` contains BDD unit tests for each feature. It focuses on pure logic, therefore will not access `View` but `ViewModel` and `Model`.
 * `test/widget/` contains UI widget(component) tests which focus on `View` from MVVM of each component.
 * `integration_test/` for integration tests. They should be volatile to follow UI layout changes.
+
+Some rule of thumb:
+* global provider 
+  * `<object>RepositoryProvider` only placed in `/lib/data/repositories/`, provide data to `/lib/ui`.
+    * `lib/data/services/*` should be stateless, and should only accessible by `Repository`.
+
+## Abstraction
+
+### terminology
+
+* `signature asset`
+  * image file of a signature, stored in the device or cloud storage
+    * can drawing from canvas
+* `signature card`
+  * template of signature placement
+  * It will include modifications such as brightness, contrast, background removal, rotation of the signature asset.
+* `signature placement`
+  * placed modified signature asset from signature card on a specific position on a specific page of a specific PDF document
+* `document`
+  * PDF document to be signed
 
 ## key dependencies
 
@@ -22,3 +90,7 @@ The repo structure follows official [Package structure](https://docs.flutter.dev
     * [Viewer Customization using Widget Overlay](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams/viewerOverlayBuilder.html)
     * [Per-page Customization using Widget Overlay](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams/pageOverlaysBuilder.html)
       * `pageOverlaysBuilder`
+* [image](https://pub.dev/packages/image)
+  * whole app use its image object as image representation.
+  * aware that minimize, encode/decode usage, because its has poor performance on web
+  * `ColorFilterGenerator` can not replace `adjustColor` due to custom background removal algorithm need at last stage. It is GPU based, and offscreen-render then readback is not ideal.

@@ -13,6 +13,7 @@
   "display": "표시",
   "downloadStarted": "다운로드 시작됨",
   "dpi": "DPI",
+  "dragOntoDocument": "문서로 끌어다 놓습니다",
   "drawSignature": "서명 그리기",
   "errorWithMessage": "오류: {message}",
   "exportingPleaseWait": "내보내는 중... 잠시 기다려주세요",
@@ -23,6 +24,7 @@
   "image": "이미지",
   "invalidOrUnsupportedFile": "잘못된 파일이거나 지원되지 않는 파일입니다.",
   "language": "언어",
+  "lock": "잠금",
   "loadSignatureFromFile": "파일에서 서명 불러오기",
   "lockAspectRatio": "종횡비 고정",
   "longPressOrRightClickTheSignatureToConfirmOrDelete": "서명을 길게 누르거나 마우스 오른쪽 버튼을 클릭하여 확인하거나 삭제합니다.",
@@ -46,5 +48,11 @@
   "themeDark": "다크",
   "themeLight": "라이트",
   "themeSystem": "시스템",
-  "undo": "실행 취소"
+  "themeColor": "테마 색상",
+  "themeColorBlue": "파란색",
+  "themeColorGreen": "녹색",
+  "themeColorRed": "빨간색",
+  "themeColorPurple": "보라색",
+  "undo": "실행 취소",
+  "unlock": "잠금 해제"
 }

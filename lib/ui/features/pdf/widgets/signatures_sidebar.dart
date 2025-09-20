@@ -1,10 +1,11 @@
-import 'dart:typed_data';
+// no bytes here; use decoded images
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
+import 'package:image/image.dart' as img;
 
-import '../../../../data/services/export_providers.dart';
-import 'signature_drawer.dart';
+import '../../signature/widgets/signature_drawer.dart';
+import '../view_model/pdf_export_view_model.dart';
 
 class SignaturesSidebar extends ConsumerWidget {
   const SignaturesSidebar({
@@ -14,14 +15,14 @@ class SignaturesSidebar extends ConsumerWidget {
     required this.onSave,
   });
 
-  final Future<Uint8List?> Function() onLoadSignatureFromFile;
-  final Future<Uint8List?> Function() onOpenDrawCanvas;
+  final Future<img.Image?> Function() onLoadSignatureFromFile;
+  final Future<img.Image?> Function() onOpenDrawCanvas;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final isExporting = ref.watch(exportingProvider);
+    final isExporting = ref.watch(pdfExportViewModelProvider).exporting;
     return AbsorbPointer(
       absorbing: isExporting,
       child: Card(

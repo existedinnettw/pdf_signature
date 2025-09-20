@@ -1,21 +1,19 @@
+import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
-import 'package:pdf_signature/data/model/model.dart';
-import 'package:pdf_signature/data/services/export_providers.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/domain/models/model.dart';
+
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
-class _TestPdfController extends PdfController {
+class _TestPdfController extends DocumentStateNotifier {
   _TestPdfController() : super() {
     // Start with a loaded multi-page doc, page 1 of 5
-    state = PdfState.initial().copyWith(
-      loaded: true,
-      pageCount: 5,
-      currentPage: 1,
-    );
+    state = Document.initial().copyWith(loaded: true, pageCount: 5);
   }
 }
 
@@ -26,14 +24,22 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          useMockViewerProvider.overrideWithValue(true),
-          pdfProvider.overrideWith((ref) => _TestPdfController()),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: true),
+          ),
+          documentRepositoryProvider.overrideWith(
+            (ref) => _TestPdfController(),
+          ),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('en'),
-          home: const PdfSignatureHomePage(),
+          home: PdfSignatureHomePage(
+            onPickPdf: () async {},
+            onClosePdf: () {},
+            currentFile: fs.XFile(''),
+          ),
         ),
       ),
     );

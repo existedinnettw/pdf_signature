@@ -11,11 +11,11 @@ void main() {
     expect((tester.widget<Text>(pageInfo)).data, 'Page 1/5');
 
     await tester.tap(find.byKey(const Key('btn_next')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect((tester.widget<Text>(pageInfo)).data, 'Page 2/5');
 
     await tester.tap(find.byKey(const Key('btn_prev')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect((tester.widget<Text>(pageInfo)).data, 'Page 1/5');
   });
 
@@ -25,7 +25,7 @@ void main() {
     final goto = find.byKey(const Key('txt_goto'));
     await tester.enterText(goto, '4');
     await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pump();
+    await tester.pumpAndSettle();
     final pageInfo = find.byKey(const Key('lbl_page_info'));
     expect((tester.widget<Text>(pageInfo)).data, 'Page 4/5');
   });

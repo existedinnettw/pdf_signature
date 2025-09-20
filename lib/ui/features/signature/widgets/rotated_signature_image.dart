@@ -1,127 +1,164 @@
-import 'dart:math' as math;
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import '../../../../utils/rotation_utils.dart' as rot;
 
 /// A lightweight widget to render signature bytes with rotation and an
 /// angle-aware scale-to-fit so the rotated image stays within its bounds.
+/// Don't use `decodeImage`, large images can be crazily slow, especially on web.
 class RotatedSignatureImage extends StatefulWidget {
   const RotatedSignatureImage({
     super.key,
-    required this.bytes,
-    this.rotationDeg = 0.0,
+    required this.image,
+    this.rotationDeg = 0.0, // counterclockwise as positive
     this.filterQuality = FilterQuality.low,
     this.semanticLabel,
+    this.cacheWidth,
+    this.cacheHeight,
   });
 
-  final Uint8List bytes;
+  /// Decoded CPU image (from `package:image`).
+  final img.Image image;
+
+  /// Rotation in degrees. Positive values rotate counterclockwise in math sense.
+  /// Screen-space is handled via [rot.ccwRadians].
   final double rotationDeg;
+
   final FilterQuality filterQuality;
-  final BoxFit fit = BoxFit.contain;
-  final bool gaplessPlayback = true;
-  final Alignment alignment = Alignment.center;
-  final bool wrapInRepaintBoundary = true;
+
   final String? semanticLabel;
+
+  /// Optional target size hints to reduce decode cost.
+  /// If only one is provided, the other is computed to preserve aspect.
+  final int? cacheWidth;
+  final int? cacheHeight;
 
   @override
   State<RotatedSignatureImage> createState() => _RotatedSignatureImageState();
 }
 
 class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
-  ImageStream? _stream;
-  ImageStreamListener? _listener;
-  double? _derivedAspectRatio; // width / height
-
-  MemoryImage get _provider => MemoryImage(widget.bytes);
+  Uint8List? _encodedBytes; // PNG-encoded bytes for Image.memory
+  img.Image? _lastSrc; // To detect changes cheaply
+  int? _lastW;
+  int? _lastH;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _resolveImage();
+  void initState() {
+    super.initState();
+    _prepare();
   }
 
   @override
   void didUpdateWidget(covariant RotatedSignatureImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.bytes, widget.bytes)) {
-      _derivedAspectRatio = null;
-      _resolveImage();
+    final srcChanged =
+        !identical(widget.image, _lastSrc) ||
+        widget.image.width != (oldWidget.image.width) ||
+        widget.image.height != (oldWidget.image.height);
+    final sizeHintChanged =
+        widget.cacheWidth != oldWidget.cacheWidth ||
+        widget.cacheHeight != oldWidget.cacheHeight;
+    if (srcChanged || sizeHintChanged) {
+      _prepare();
     }
-  }
-
-  void _setAspectRatio(double ar) {
-    if (mounted && _derivedAspectRatio != ar) {
-      setState(() => _derivedAspectRatio = ar);
-    }
-  }
-
-  void _resolveImage() {
-    _unlisten();
-    // Decode synchronously to get aspect ratio
-    final decoded = img.decodePng(widget.bytes);
-    if (decoded != null) {
-      final w = decoded.width;
-      final h = decoded.height;
-      if (w > 0 && h > 0) {
-        _setAspectRatio(w / h);
-      }
-    }
-    final stream = _provider.resolve(createLocalImageConfiguration(context));
-    _stream = stream;
-    _listener = ImageStreamListener((ImageInfo info, bool sync) {
-      final w = info.image.width;
-      final h = info.image.height;
-      if (w > 0 && h > 0) {
-        _setAspectRatio(w / h);
-      }
-    });
-    stream.addListener(_listener!);
-  }
-
-  void _unlisten() {
-    if (_stream != null && _listener != null) {
-      _stream!.removeListener(_listener!);
-    }
-    _stream = null;
-    _listener = null;
   }
 
   @override
   void dispose() {
-    _unlisten();
     super.dispose();
+  }
+
+  Future<void> _prepare() async {
+    final src = widget.image;
+    _lastSrc = src;
+
+    // Compute target decode size preserving aspect if hints provided.
+    int targetW = src.width;
+    int targetH = src.height;
+    if (widget.cacheWidth != null || widget.cacheHeight != null) {
+      if (widget.cacheWidth != null && widget.cacheHeight != null) {
+        targetW = widget.cacheWidth!.clamp(1, src.width);
+        targetH = widget.cacheHeight!.clamp(1, src.height);
+      } else if (widget.cacheWidth != null) {
+        targetW = widget.cacheWidth!.clamp(1, src.width);
+        targetH = (targetW * src.height / src.width).round().clamp(
+          1,
+          src.height,
+        );
+      } else if (widget.cacheHeight != null) {
+        targetH = widget.cacheHeight!.clamp(1, src.height);
+        targetW = (targetH * src.width / src.height).round().clamp(
+          1,
+          src.width,
+        );
+      }
+    }
+
+    img.Image working = src;
+    if (working.width != targetW || working.height != targetH) {
+      // High-quality resize; image package chooses a reasonable default.
+      working = img.copyResize(working, width: targetW, height: targetH);
+    }
+
+    // Ensure RGBA (4 channels) so alpha is preserved when encoding.
+    working = working.convert(numChannels: 4);
+
+    _lastW = working.width;
+    _lastH = working.height;
+
+    // Encode to PNG with low compression level for faster encode.
+    // This avoids manual decode in the widget; Flutter will decode the PNG.
+    final pngEncoder = img.PngEncoder(level: 1);
+    final bytes = Uint8List.fromList(pngEncoder.encode(working));
+    if (!mounted) return;
+    setState(() => _encodedBytes = bytes);
   }
 
   @override
   Widget build(BuildContext context) {
-    final angle = widget.rotationDeg * math.pi / 180.0;
-    Widget img = Image.memory(
-      widget.bytes,
-      fit: widget.fit,
-      gaplessPlayback: widget.gaplessPlayback,
-      filterQuality: widget.filterQuality,
-      alignment: widget.alignment,
-      semanticLabel: widget.semanticLabel,
-    );
+    // Compute angle-aware scale so rotated image stays within bounds.
+    final double angleRad = rot.ccwRadians(widget.rotationDeg);
+    final double ar =
+        widget.image.width == 0
+            ? 1.0
+            : widget.image.width / widget.image.height;
+    final double k = rot.scaleToFitForAngle(angleRad, ar: ar);
 
-    if (angle != 0.0) {
-      final double c = math.cos(angle).abs();
-      final double s = math.sin(angle).abs();
-      final ar = _derivedAspectRatio;
-      double scaleToFit;
-      if (ar != null && ar > 0) {
-        scaleToFit = math.min(ar / (ar * c + s), 1.0 / (ar * s + c));
-      } else {
-        // Fallback: square approximation
-        scaleToFit = 1.0 / (c + s).clamp(1.0, double.infinity);
-      }
-      img = Transform.scale(
-        scale: scaleToFit,
-        child: Transform.rotate(angle: angle, child: img),
-      );
+    Widget core =
+        _encodedBytes == null
+            ? const SizedBox.shrink()
+            : Image.memory(
+              _encodedBytes!,
+              fit: BoxFit.contain,
+              filterQuality: widget.filterQuality,
+              gaplessPlayback: true,
+            );
+    if (widget.semanticLabel != null) {
+      core = Semantics(label: widget.semanticLabel, child: core);
     }
 
-    if (!widget.wrapInRepaintBoundary) return img;
-    return RepaintBoundary(child: img);
+    // Order: scale first, then rotate. Scale ensures rotated bounds fit.
+    Widget transformed = Transform.scale(
+      scale: k,
+      alignment: Alignment.center,
+      child: Transform.rotate(
+        angle: angleRad,
+        alignment: Alignment.center,
+        child: core,
+      ),
+    );
+
+    // Allow parent to size; we simply contain within available space.
+    return FittedBox(
+      fit: BoxFit.contain,
+      alignment: Alignment.center,
+      child: SizedBox(
+        width: _lastW?.toDouble() ?? widget.image.width.toDouble(),
+        height: _lastH?.toDouble() ?? widget.image.height.toDouble(),
+        child: transformed,
+      ),
+    );
   }
 }

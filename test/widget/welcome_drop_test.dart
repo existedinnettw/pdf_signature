@@ -6,8 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/ui/features/welcome/widgets/welcome_screen.dart';
-import 'package:pdf_signature/ui/features/signature/view_model/signature_controller.dart';
-import 'package:pdf_signature/ui/features/pdf/view_model/pdf_controller.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 
 class _FakeDropReadable implements DropReadable {
   final String _name;
@@ -23,15 +22,19 @@ class _FakeDropReadable implements DropReadable {
 }
 
 void main() {
-  testWidgets('dropping a PDF opens it and resets signature state', (
+  testWidgets('dropping a PDF opens it and updates document state', (
     tester,
   ) async {
     await tester.pumpWidget(
-      const ProviderScope(
+      ProviderScope(
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: WelcomeScreen(),
+          home: WelcomeScreen(
+            onPickPdf: () async {},
+            onOpenPdf:
+                ({String? path, Uint8List? bytes, String? fileName}) async {},
+          ),
         ),
       ),
     );
@@ -40,18 +43,21 @@ void main() {
     final bytes = Uint8List.fromList([1, 2, 3, 4]);
     final fake = _FakeDropReadable('sample.pdf', '/tmp/sample.pdf', bytes);
 
-    // Use the top-level helper with the WidgetRef.read function
-    await handleDroppedFiles(stateful.ref.read, [fake]);
+    // Call handleDroppedFiles with the onOpenPdf callback from the widget
+    await handleDroppedFiles(({
+      String? path,
+      Uint8List? bytes,
+      String? fileName,
+    }) async {
+      final container = ProviderScope.containerOf(stateful.context);
+      final repo = container.read(documentRepositoryProvider.notifier);
+      repo.openPicked(pageCount: 1, bytes: bytes);
+    }, [fake]);
     await tester.pump();
 
     final container = ProviderScope.containerOf(stateful.context);
-    final pdf = container.read(pdfProvider);
+    final pdf = container.read(documentRepositoryProvider);
     expect(pdf.loaded, isTrue);
-    expect(pdf.pickedPdfPath, '/tmp/sample.pdf');
     expect(pdf.pickedPdfBytes, bytes);
-
-    final sig = container.read(signatureProvider);
-    expect(sig.rect, isNull);
-    expect(sig.editingEnabled, isFalse);
   });
 }

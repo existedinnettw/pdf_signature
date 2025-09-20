@@ -28,6 +28,10 @@
   "@downloadStarted": {},
   "dpi": "DPI",
   "@dpi": {},
+  "dragOntoDocument": "Drag onto document",
+  "@dragOntoDocument": {
+    "description": "Tooltip message for dragging signature card onto PDF document"
+  },
   "drawSignature": "Draw Signature",
   "@drawSignature": {},
   "errorWithMessage": "Error: {message}",
@@ -55,6 +59,8 @@
   "@invalidOrUnsupportedFile": {},
   "language": "Language",
   "@language": {},
+  "lock": "Lock",
+  "@lock": {},
   "loadSignatureFromFile": "Load Signature from file",
   "@loadSignatureFromFile": {},
   "lockAspectRatio": "Lock aspect ratio",
@@ -118,6 +124,18 @@
   "@themeLight": {},
   "themeSystem": "System",
   "@themeSystem": {},
+  "themeColor": "Theme color",
+  "@themeColor": {},
+  "themeColorBlue": "Blue",
+  "@themeColorBlue": {},
+  "themeColorGreen": "Green",
+  "@themeColorGreen": {},
+  "themeColorRed": "Red",
+  "@themeColorRed": {},
+  "themeColorPurple": "Purple",
+  "@themeColorPurple": {},
   "undo": "Undo",
-  "@undo": {}
+  "@undo": {},
+  "unlock": "Unlock",
+  "@unlock": {}
 }

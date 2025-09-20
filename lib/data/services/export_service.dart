@@ -6,7 +6,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart' as pdf;
 import 'package:printing/printing.dart' as printing;
 import 'package:image/image.dart' as img;
-import '../model/model.dart';
+import '../../domain/models/model.dart';
+// math moved to utils in rot
+import '../../utils/rotation_utils.dart' as rot;
+import '../../utils/background_removal.dart' as br;
 
 // NOTE:
 // - This exporter uses a raster snapshot of the UI (RepaintBoundary) and embeds it into a new PDF.
@@ -15,70 +18,106 @@ import '../model/model.dart';
 //   cannot import/modify existing PDF pages. If/when a suitable FOSS library exists, wire it here.
 
 class ExportService {
-  /// Compose a new PDF by rasterizing the original PDF pages (via pdfrx engine)
-  /// and optionally stamping a signature image on the specified page.
-  ///
-  /// Inputs:
-  /// - [inputPath]: Path to the original PDF to read
-  /// - [outputPath]: Path to write the composed PDF
-  /// - [signedPage]: 1-based page index to place the signature on (null = no overlay)
-  /// - [signatureRectUi]: Rect in the UI's logical page space (e.g. 400x560)
-  /// - [uiPageSize]: The logical page size used by the UI layout (SignatureController.pageSize)
-  /// - [signatureImageBytes]: PNG/JPEG bytes of the signature image to overlay
-  /// - [targetDpi]: Rasterization DPI for background pages
-  Future<bool> exportSignedPdfFromFile({
-    required String inputPath,
-    required String outputPath,
-    required int? signedPage,
-    required Rect? signatureRectUi,
-    required Size uiPageSize,
-    required Uint8List? signatureImageBytes,
-    Map<int, List<SignaturePlacement>>? placementsByPage,
-    Map<String, Uint8List>? libraryBytes,
-    double targetDpi = 144.0,
-  }) async {
-    // print(
-    //   'exportSignedPdfFromFile: enter signedPage=$signedPage outputPath=$outputPath',
-    // );
-    // Read source bytes and delegate to bytes-based exporter
-    Uint8List? srcBytes;
-    try {
-      srcBytes = await File(inputPath).readAsBytes();
-    } catch (_) {
-      srcBytes = null;
-    }
-    if (srcBytes == null) return false;
-    final bytes = await exportSignedPdfFromBytes(
-      srcBytes: srcBytes,
-      signedPage: signedPage,
-      signatureRectUi: signatureRectUi,
-      uiPageSize: uiPageSize,
-      signatureImageBytes: signatureImageBytes,
-      placementsByPage: placementsByPage,
-      libraryBytes: libraryBytes,
-      targetDpi: targetDpi,
-    );
-    if (bytes == null) return false;
-    try {
-      final file = File(outputPath);
-      await file.writeAsBytes(bytes, flush: true);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   /// Compose a new PDF from source PDF bytes; returns the resulting PDF bytes.
   Future<Uint8List?> exportSignedPdfFromBytes({
     required Uint8List srcBytes,
-    required int? signedPage,
-    required Rect? signatureRectUi,
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
     Map<int, List<SignaturePlacement>>? placementsByPage,
-    Map<String, Uint8List>? libraryBytes,
+    Map<String, img.Image>? libraryImages,
     double targetDpi = 144.0,
   }) async {
+    // Per-call caches to avoid redundant decode/encode and image embedding work
+    final Map<String, img.Image> _baseImageCache = <String, img.Image>{};
+    final Map<String, img.Image> _processedImageCache = <String, img.Image>{};
+    final Map<String, Uint8List> _encodedPngCache = <String, Uint8List>{};
+    final Map<String, pw.MemoryImage> _memoryImageCache =
+        <String, pw.MemoryImage>{};
+    final Map<String, double> _aspectRatioCache = <String, double>{};
+
+    // Returns a stable-ish cache key for bytes within this process (not content-hash, but good enough per-call)
+    String _baseKeyForImage(img.Image im) =>
+        'im:${identityHashCode(im)}:${im.width}x${im.height}';
+    String _adjustKey(GraphicAdjust adj) =>
+        'c=${adj.contrast}|b=${adj.brightness}|bg=${adj.bgRemoval}';
+
+    // Removed: PNG signature helper is no longer needed; we always encode to PNG explicitly.
+
+    // Resolve base (unprocessed) image for a placement, considering library override.
+    img.Image _getBaseImage(SignaturePlacement placement) {
+      final libKey = placement.asset.name;
+      if (libKey != null && libraryImages != null) {
+        final cached = _baseImageCache[libKey];
+        if (cached != null) return cached;
+        final provided = libraryImages[libKey];
+        if (provided != null) {
+          _baseImageCache[libKey] = provided;
+          return provided;
+        }
+      }
+      return placement.asset.sigImage;
+    }
+
+    // Get processed image for a placement, with caching.
+    img.Image _getProcessedImage(SignaturePlacement placement) {
+      final base = _getBaseImage(placement);
+      final key =
+          '${_baseKeyForImage(base)}|${_adjustKey(placement.graphicAdjust)}';
+      final cached = _processedImageCache[key];
+      if (cached != null) return cached;
+      final adj = placement.graphicAdjust;
+      img.Image processed = base;
+      if (adj.contrast != 1.0 || adj.brightness != 1.0) {
+        processed = img.adjustColor(
+          processed,
+          contrast: adj.contrast,
+          brightness: adj.brightness,
+        );
+      }
+      if (adj.bgRemoval) {
+        processed = br.removeNearWhiteBackground(processed, threshold: 240);
+      }
+      _processedImageCache[key] = processed;
+      return processed;
+    }
+
+    // Get PNG bytes for the processed image, caching the encoding.
+    Uint8List _getProcessedPng(SignaturePlacement placement) {
+      final base = _getBaseImage(placement);
+      final key =
+          '${_baseKeyForImage(base)}|${_adjustKey(placement.graphicAdjust)}';
+      final cached = _encodedPngCache[key];
+      if (cached != null) return cached;
+      final processed = _getProcessedImage(placement);
+      final png = Uint8List.fromList(img.encodePng(processed, level: 6));
+      _encodedPngCache[key] = png;
+      return png;
+    }
+
+    // Wrap bytes in a pw.MemoryImage with caching.
+    pw.MemoryImage? _getMemoryImage(Uint8List bytes, String key) {
+      final cached = _memoryImageCache[key];
+      if (cached != null) return cached;
+      try {
+        final imgObj = pw.MemoryImage(bytes);
+        _memoryImageCache[key] = imgObj;
+        return imgObj;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // Compute and cache aspect ratio (width/height) for given image
+    double? _getAspectRatioFromImage(img.Image image) {
+      final key = _baseKeyForImage(image);
+      final c = _aspectRatioCache[key];
+      if (c != null) return c;
+      if (image.width <= 0 || image.height <= 0) return null;
+      final ar = image.width / image.height;
+      _aspectRatioCache[key] = ar;
+      return ar;
+    }
+
     final out = pw.Document(version: pdf.PdfVersion.pdf_1_4, compress: false);
     int pageIndex = 0;
     bool anyPage = false;
@@ -97,27 +136,12 @@ class ExportService {
         final bgPng = await raster.toPng();
         final bgImg = pw.MemoryImage(bgPng);
 
-        pw.MemoryImage? sigImgObj;
         final hasMulti =
             (placementsByPage != null && placementsByPage.isNotEmpty);
         final pagePlacements =
             hasMulti
                 ? (placementsByPage[pageIndex] ?? const <SignaturePlacement>[])
                 : const <SignaturePlacement>[];
-        final shouldStampSingle =
-            !hasMulti &&
-            signedPage != null &&
-            pageIndex == signedPage &&
-            signatureRectUi != null &&
-            signatureImageBytes != null &&
-            signatureImageBytes.isNotEmpty;
-        if (shouldStampSingle) {
-          try {
-            sigImgObj = pw.MemoryImage(signatureImageBytes);
-          } catch (_) {
-            sigImgObj = null;
-          }
-        }
 
         out.addPage(
           pw.Page(
@@ -143,24 +167,26 @@ class ExportService {
                 for (var i = 0; i < pagePlacements.length; i++) {
                   final placement = pagePlacements[i];
                   final r = placement.rect;
-                  final left = r.left / uiPageSize.width * widthPts;
-                  final top = r.top / uiPageSize.height * heightPts;
-                  final w = r.width / uiPageSize.width * widthPts;
-                  final h = r.height / uiPageSize.height * heightPts;
-                  Uint8List? bytes;
-                  final id = placement.imageId;
-                  if (id != null) {
-                    bytes = libraryBytes?[id];
-                  }
-                  bytes ??= signatureImageBytes; // fallback
-                  if (bytes != null && bytes.isNotEmpty) {
-                    pw.MemoryImage? imgObj;
-                    try {
-                      imgObj = pw.MemoryImage(bytes);
-                    } catch (_) {
-                      imgObj = null;
-                    }
+                  // rect is stored in normalized units (0..1) relative to page
+                  final left = r.left * widthPts;
+                  final top = r.top * heightPts;
+                  final w = r.width * widthPts;
+                  final h = r.height * heightPts;
+
+                  // Get processed image and embed as MemoryImage (cached)
+                  final processedPng = _getProcessedPng(placement);
+                  final baseImage = _getBaseImage(placement);
+                  final memKey =
+                      '${_baseKeyForImage(baseImage)}|${_adjustKey(placement.graphicAdjust)}';
+                  if (processedPng.isNotEmpty) {
+                    final imgObj = _getMemoryImage(processedPng, memKey);
                     if (imgObj != null) {
+                      // Align with RotatedSignatureImage: counterclockwise positive
+                      final angle = rot.radians(placement.rotationDeg);
+                      // Use AR from base image
+                      final ar = _getAspectRatioFromImage(baseImage);
+                      final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
+
                       children.add(
                         pw.Positioned(
                           left: left,
@@ -170,12 +196,12 @@ class ExportService {
                             height: h,
                             child: pw.FittedBox(
                               fit: pw.BoxFit.contain,
-                              child: pw.Transform.rotate(
-                                angle:
-                                    placement.rotationDeg *
-                                    3.1415926535 /
-                                    180.0,
-                                child: pw.Image(imgObj),
+                              child: pw.Transform.scale(
+                                scale: scaleToFit,
+                                child: pw.Transform.rotate(
+                                  angle: angle,
+                                  child: pw.Image(imgObj),
+                                ),
                               ),
                             ),
                           ),
@@ -184,26 +210,6 @@ class ExportService {
                     }
                   }
                 }
-              } else if (shouldStampSingle && sigImgObj != null) {
-                final r = signatureRectUi;
-                final left = r.left / uiPageSize.width * widthPts;
-                final top = r.top / uiPageSize.height * heightPts;
-                final w = r.width / uiPageSize.width * widthPts;
-                final h = r.height / uiPageSize.height * heightPts;
-                children.add(
-                  pw.Positioned(
-                    left: left,
-                    top: top,
-                    child: pw.SizedBox(
-                      width: w,
-                      height: h,
-                      child: pw.FittedBox(
-                        fit: pw.BoxFit.contain,
-                        child: pw.Image(sigImgObj),
-                      ),
-                    ),
-                  ),
-                );
               }
               return pw.Stack(children: children);
             },
@@ -218,39 +224,14 @@ class ExportService {
       // Fallback as A4 blank page with optional signature
       final widthPts = pdf.PdfPageFormat.a4.width;
       final heightPts = pdf.PdfPageFormat.a4.height;
-      pw.MemoryImage? sigImgObj;
+
       final hasMulti =
           (placementsByPage != null && placementsByPage.isNotEmpty);
       final pagePlacements =
           hasMulti
               ? (placementsByPage[1] ?? const <SignaturePlacement>[])
               : const <SignaturePlacement>[];
-      final shouldStampSingle =
-          !hasMulti &&
-          signedPage != null &&
-          signedPage == 1 &&
-          signatureRectUi != null &&
-          signatureImageBytes != null &&
-          signatureImageBytes.isNotEmpty;
-      if (shouldStampSingle) {
-        try {
-          // If it's already PNG, keep as-is to preserve alpha; otherwise decode/encode PNG
-          final asStr = String.fromCharCodes(signatureImageBytes.take(8));
-          final isPng =
-              signatureImageBytes.length > 8 &&
-              signatureImageBytes[0] == 0x89 &&
-              asStr.startsWith('\u0089PNG');
-          if (isPng) {
-            sigImgObj = pw.MemoryImage(signatureImageBytes);
-          } else {
-            final decoded = img.decodeImage(signatureImageBytes);
-            if (decoded != null) {
-              final png = img.encodePng(decoded, level: 6);
-              sigImgObj = pw.MemoryImage(Uint8List.fromList(png));
-            }
-          }
-        } catch (_) {}
-      }
+
       out.addPage(
         pw.Page(
           pageTheme: pw.PageTheme(
@@ -265,43 +246,28 @@ class ExportService {
                 color: pdf.PdfColors.white,
               ),
             ];
-            // Multi-placement stamping on fallback page
+
             if (hasMulti && pagePlacements.isNotEmpty) {
               for (var i = 0; i < pagePlacements.length; i++) {
                 final placement = pagePlacements[i];
                 final r = placement.rect;
-                final left = r.left / uiPageSize.width * widthPts;
-                final top = r.top / uiPageSize.height * heightPts;
-                final w = r.width / uiPageSize.width * widthPts;
-                final h = r.height / uiPageSize.height * heightPts;
-                Uint8List? bytes;
-                final id = placement.imageId;
-                if (id != null) {
-                  bytes = libraryBytes?[id];
-                }
-                bytes ??= signatureImageBytes; // fallback
-                if (bytes != null && bytes.isNotEmpty) {
-                  pw.MemoryImage? imgObj;
-                  try {
-                    // Ensure PNG for transparency if not already
-                    final asStr = String.fromCharCodes(bytes.take(8));
-                    final isPng =
-                        bytes.length > 8 &&
-                        bytes[0] == 0x89 &&
-                        asStr.startsWith('\u0089PNG');
-                    if (isPng) {
-                      imgObj = pw.MemoryImage(bytes);
-                    } else {
-                      final decoded = img.decodeImage(bytes);
-                      if (decoded != null) {
-                        final png = img.encodePng(decoded, level: 6);
-                        imgObj = pw.MemoryImage(Uint8List.fromList(png));
-                      }
-                    }
-                  } catch (_) {
-                    imgObj = null;
-                  }
+                // rect is stored in normalized units (0..1) relative to page
+                final left = r.left * widthPts;
+                final top = r.top * heightPts;
+                final w = r.width * widthPts;
+                final h = r.height * heightPts;
+
+                final processedPng = _getProcessedPng(placement);
+                final baseImage = _getBaseImage(placement);
+                final memKey =
+                    '${_baseKeyForImage(baseImage)}|${_adjustKey(placement.graphicAdjust)}';
+                if (processedPng.isNotEmpty) {
+                  final imgObj = _getMemoryImage(processedPng, memKey);
                   if (imgObj != null) {
+                    final angle = rot.radians(placement.rotationDeg);
+                    final ar = _getAspectRatioFromImage(baseImage);
+                    final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
+
                     children.add(
                       pw.Positioned(
                         left: left,
@@ -311,10 +277,12 @@ class ExportService {
                           height: h,
                           child: pw.FittedBox(
                             fit: pw.BoxFit.contain,
-                            child: pw.Transform.rotate(
-                              angle:
-                                  placement.rotationDeg * 3.1415926535 / 180.0,
-                              child: pw.Image(imgObj),
+                            child: pw.Transform.scale(
+                              scale: scaleToFit,
+                              child: pw.Transform.rotate(
+                                angle: angle,
+                                child: pw.Image(imgObj),
+                              ),
                             ),
                           ),
                         ),
@@ -323,26 +291,6 @@ class ExportService {
                   }
                 }
               }
-            } else if (shouldStampSingle && sigImgObj != null) {
-              final r = signatureRectUi;
-              final left = r.left / uiPageSize.width * widthPts;
-              final top = r.top / uiPageSize.height * heightPts;
-              final w = r.width / uiPageSize.width * widthPts;
-              final h = r.height / uiPageSize.height * heightPts;
-              children.add(
-                pw.Positioned(
-                  left: left,
-                  top: top,
-                  child: pw.SizedBox(
-                    width: w,
-                    height: h,
-                    child: pw.FittedBox(
-                      fit: pw.BoxFit.contain,
-                      child: pw.Image(sigImgObj),
-                    ),
-                  ),
-                ),
-              );
             }
             return pw.Stack(children: children);
           },
@@ -370,4 +318,6 @@ class ExportService {
       return false;
     }
   }
+
+  // Background removal implemented in utils/background_removal.dart
 }

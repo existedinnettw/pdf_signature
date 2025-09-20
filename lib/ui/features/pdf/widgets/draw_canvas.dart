@@ -48,22 +48,25 @@ class _DrawCanvasState extends State<DrawCanvas> {
                 ElevatedButton(
                   key: const Key('btn_canvas_confirm'),
                   onPressed: () async {
-                    // Export signature to PNG bytes
-                    final data = await _control.toImage(
+                    // Export signature to PNG bytes first
+                    final byteData = await _control.toImage(
+                      width: 512,
+                      height: 256,
+                      fit: true,
                       color: Colors.black,
                       background: Colors.transparent,
-                      fit: true,
-                      width: 1024,
-                      height: 512,
                     );
-                    final bytes = data?.buffer.asUint8List();
+                    final bytes = byteData?.buffer.asUint8List();
                     widget.debugBytesSink?.value = bytes;
+
+                    // Handle callbacks and navigation
                     if (widget.onConfirm != null) {
                       widget.onConfirm!(bytes);
-                    } else {
-                      if (context.mounted) {
-                        Navigator.of(context).pop(bytes);
-                      }
+                    }
+
+                    // Close the canvas
+                    if (mounted && Navigator.canPop(context)) {
+                      Navigator.of(context).pop(bytes);
                     }
                   },
                   child: Text(l.confirm),
@@ -85,7 +88,10 @@ class _DrawCanvasState extends State<DrawCanvas> {
             const SizedBox(height: 8),
             SizedBox(
               key: const Key('draw_canvas'),
-              height: math.max(MediaQuery.of(context).size.height * 0.6, 350),
+              height: math.min(
+                math.max(MediaQuery.of(context).size.height * 0.6, 350),
+                MediaQuery.of(context).size.height * 0.8,
+              ),
               child: AspectRatio(
                 aspectRatio: 10 / 3,
                 child: Container(

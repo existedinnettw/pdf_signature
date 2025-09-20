@@ -1,0 +1,15 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import '_world.dart';
+
+/// Usage: the other signature placements remain unchanged
+Future<void> theOtherSignaturePlacementsRemainUnchanged(
+  WidgetTester tester,
+) async {
+  final container = TestWorld.container!;
+  final pdf = container.read(documentRepositoryProvider);
+  final page = container.read(pdfViewModelProvider);
+  final placements = pdf.placementsByPage[page] ?? const [];
+  expect(placements.length, 2); // Should have 2 remaining after deleting 1
+}
