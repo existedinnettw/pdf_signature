@@ -12,7 +12,6 @@ class SettingsDialog extends ConsumerStatefulWidget {
 
 class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   String? _theme;
-  String? _themeColor;
   String? _language;
   // Page view removed; continuous-only
   double? _exportDpi;
@@ -22,7 +21,6 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     super.initState();
     final prefs = ref.read(preferencesRepositoryProvider);
     _theme = prefs.theme;
-    _themeColor = prefs.theme_color;
     _language = prefs.language;
     _exportDpi = prefs.exportDpi;
     // pageView no longer configurable (continuous-only)
@@ -74,8 +72,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                                   child: CircularProgressIndicator(),
                                 ),
                               ),
-                          error: (_, _) {
-                            final items =
+                          error: (_, __) {
+                            final tags =
                                 AppLocalizations.supportedLocales
                                     .map((loc) => toLanguageTag(loc))
                                     .toList()
@@ -85,19 +83,27 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                               isExpanded: true,
                               value: _language,
                               items:
-                                  items
+                                  tags
                                       .map(
-                                        (tag) => DropdownMenuItem(
+                                        (tag) => DropdownMenuItem<String>(
                                           value: tag,
                                           child: Text(tag),
                                         ),
                                       )
                                       .toList(),
-                              onChanged: (v) => setState(() => _language = v),
+                              onChanged: (v) async {
+                                if (v == null) return;
+                                setState(() => _language = v);
+                                await ref
+                                    .read(
+                                      preferencesRepositoryProvider.notifier,
+                                    )
+                                    .setLanguage(v);
+                              },
                             );
                           },
                           data: (names) {
-                            final items =
+                            final tags =
                                 AppLocalizations.supportedLocales
                                     .map((loc) => toLanguageTag(loc))
                                     .toList()
@@ -107,7 +113,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                               isExpanded: true,
                               value: _language,
                               items:
-                                  items
+                                  tags
                                       .map(
                                         (tag) => DropdownMenuItem<String>(
                                           value: tag,
@@ -115,7 +121,15 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                                         ),
                                       )
                                       .toList(),
-                              onChanged: (v) => setState(() => _language = v),
+                              onChanged: (v) async {
+                                if (v == null) return;
+                                setState(() => _language = v);
+                                await ref
+                                    .read(
+                                      preferencesRepositoryProvider.notifier,
+                                    )
+                                    .setLanguage(v);
+                              },
                             );
                           },
                         ),
@@ -140,7 +154,13 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                                 ),
                               )
                               .toList(),
-                      onChanged: (v) => setState(() => _exportDpi = v),
+                      onChanged: (v) async {
+                        if (v == null) return;
+                        setState(() => _exportDpi = v);
+                        await ref
+                            .read(preferencesRepositoryProvider.notifier)
+                            .setExportDpi(v);
+                      },
                     ),
                   ),
                 ],
@@ -171,7 +191,13 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                           child: Text(l.themeSystem),
                         ),
                       ],
-                      onChanged: (v) => setState(() => _theme = v),
+                      onChanged: (v) async {
+                        if (v == null) return;
+                        setState(() => _theme = v);
+                        await ref
+                            .read(preferencesRepositoryProvider.notifier)
+                            .setTheme(v);
+                      },
                     ),
                   ),
                 ],
@@ -187,37 +213,18 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                       await ref
                           .read(preferencesRepositoryProvider.notifier)
                           .setThemeColor(value);
-                      setState(() => _themeColor = value);
                     },
                   ),
                 ],
               ),
 
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: Text(l.cancel),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () async {
-                      final n = ref.read(
-                        preferencesRepositoryProvider.notifier,
-                      );
-                      if (_theme != null) await n.setTheme(_theme!);
-                      if (_themeColor != null)
-                        await n.setThemeColor(_themeColor!);
-                      if (_language != null) await n.setLanguage(_language!);
-                      if (_exportDpi != null) await n.setExportDpi(_exportDpi!);
-                      // pageView not configurable anymore
-                      if (mounted) Navigator.of(context).pop(true);
-                    },
-                    child: Text(l.save),
-                  ),
-                ],
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.tonal(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(l.close),
+                ),
               ),
             ],
           ),
@@ -282,26 +289,49 @@ class _ThemeColorPickerDialog extends StatelessWidget {
         child: Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: Colors.primaries.map((mat) {
-            final c = Color(mat.value);
-            final selected = c.value == currentColor.value;
-            // Store as ARGB hex string, e.g., #FF2196F3
-            String hex(Color color) =>
-                '#${color.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
-            return InkWell(
-              key: Key('pick_${mat.value}'),
-              onTap: () => Navigator.of(context).pop(hex(c)),
-              customBorder: const CircleBorder(),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  _ColorDot(color: c, size: 32),
-                  if (selected)
-                    const Icon(Icons.check, color: Colors.white, size: 20),
-                ],
-              ),
-            );
-          }).toList(),
+          children:
+              Colors.primaries.map((mat) {
+                final Color c = mat; // MaterialColor is a Color
+                final selected = c == currentColor;
+                // Store as ARGB hex string, e.g., #FF2196F3
+                String hex(Color color) {
+                  final a =
+                      ((color.a * 255.0).round() & 0xff)
+                          .toRadixString(16)
+                          .padLeft(2, '0')
+                          .toUpperCase();
+                  final r =
+                      ((color.r * 255.0).round() & 0xff)
+                          .toRadixString(16)
+                          .padLeft(2, '0')
+                          .toUpperCase();
+                  final g =
+                      ((color.g * 255.0).round() & 0xff)
+                          .toRadixString(16)
+                          .padLeft(2, '0')
+                          .toUpperCase();
+                  final b =
+                      ((color.b * 255.0).round() & 0xff)
+                          .toRadixString(16)
+                          .padLeft(2, '0')
+                          .toUpperCase();
+                  return '#$a$r$g$b';
+                }
+
+                return InkWell(
+                  key: Key('pick_${hex(c)}'),
+                  onTap: () => Navigator.of(context).pop(hex(c)),
+                  customBorder: const CircleBorder(),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      _ColorDot(color: c, size: 32),
+                      if (selected)
+                        const Icon(Icons.check, color: Colors.white, size: 20),
+                    ],
+                  ),
+                );
+              }).toList(),
         ),
       ),
       actions: [

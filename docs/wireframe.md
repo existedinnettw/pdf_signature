@@ -32,7 +32,8 @@ Route: root --> settings
 Design notes:
 - Opened via "Configure" button in the right of top bar.
 - Model with simple sections (e.g., General, Display).
-- Primary action to save, secondary to cancel.
+- When select option, option will take effect immediately.
+- A button to close the dialog and return to the previous screen.
 
 Illustration:
 

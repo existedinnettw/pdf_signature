@@ -108,15 +108,37 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
     //    (useful if some code persisted mat.toString()).
     for (final mc in Colors.primaries) {
       if (mc.toString() == v) {
-        return Color(mc.value);
+        return mc; // MaterialColor extends Color
       }
     }
 
     return null;
   }
 
-  static String _toHex(Color c) =>
-      '#${c.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+  static String _toHex(Color c) {
+    final a =
+        ((c.a * 255.0).round() & 0xff)
+            .toRadixString(16)
+            .padLeft(2, '0')
+            .toUpperCase();
+    final r =
+        ((c.r * 255.0).round() & 0xff)
+            .toRadixString(16)
+            .padLeft(2, '0')
+            .toUpperCase();
+    final g =
+        ((c.g * 255.0).round() & 0xff)
+            .toRadixString(16)
+            .padLeft(2, '0')
+            .toUpperCase();
+    final b =
+        ((c.b * 255.0).round() & 0xff)
+            .toRadixString(16)
+            .padLeft(2, '0')
+            .toUpperCase();
+    return '#$a$r$g$b';
+  }
+
   PreferencesStateNotifier(this.prefs)
     : super(
         PreferencesState(
