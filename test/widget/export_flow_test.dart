@@ -52,7 +52,6 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          sharedPreferencesProvider.overrideWith((_) async => prefs),
           preferencesRepositoryProvider.overrideWith(
             (ref) => PreferencesStateNotifier(prefs),
           ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,27 @@ Locale _parseLanguageTag(String tag) {
 
 Set<String> _supportedTags() {
   return AppLocalizations.supportedLocales.map((l) => toLanguageTag(l)).toSet();
+}
+
+// Public helpers for other layers to consume without extra providers
+Set<String> supportedLanguageTags() => _supportedTags();
+Locale parseLanguageTag(String tag) => _parseLanguageTag(tag);
+Color themeSeedFromPrefs(PreferencesState prefs) {
+  final c = PreferencesStateNotifier._tryParseColor(prefs.theme_color);
+  return c ?? Colors.blue;
+}
+
+Future<Map<String, String>> languageAutonyms() async {
+  final tags = _supportedTags().toList()..sort();
+  final delegate = LocaleNamesLocalizationsDelegate();
+  final Map<String, String> result = {};
+  for (final tag in tags) {
+    final locale = _parseLanguageTag(tag);
+    final names = await delegate.load(locale);
+    final name = names.nameOf(tag) ?? tag;
+    result[tag] = name;
+  }
+  return result;
 }
 
 // Keys
@@ -68,7 +90,8 @@ String _normalizeLanguageTag(String tag) {
 }
 
 class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
-  final SharedPreferences prefs;
+  late final SharedPreferences _prefs;
+  final Completer<void> _ready = Completer<void>();
   static Color? _tryParseColor(String? s) {
     if (s == null || s.isEmpty) return null;
     final v = s.trim();
@@ -139,21 +162,41 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
     return '#$a$r$g$b';
   }
 
-  PreferencesStateNotifier(this.prefs)
+  PreferencesStateNotifier([SharedPreferences? prefs])
     : super(
         PreferencesState(
-          theme: prefs.getString(_kTheme) ?? 'system',
+          theme: 'system',
           language: _normalizeLanguageTag(
-            prefs.getString(_kLanguage) ??
-                WidgetsBinding.instance.platformDispatcher.locale
-                    .toLanguageTag(),
+            WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag(),
           ),
-          exportDpi: _readDpi(prefs),
-          theme_color: prefs.getString(_kThemeColor) ?? '#FF2196F3', // blue
+          exportDpi: 144.0,
+          theme_color: '#FF2196F3', // blue
         ),
       ) {
-    // normalize language to supported/fallback
+    _init(prefs);
+  }
+
+  Future<void> _init(SharedPreferences? injected) async {
+    _prefs = injected ?? await SharedPreferences.getInstance();
+    // Load persisted values (with sane defaults)
+    final loaded = PreferencesState(
+      theme: _prefs.getString(_kTheme) ?? 'system',
+      language: _normalizeLanguageTag(
+        _prefs.getString(_kLanguage) ??
+            WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag(),
+      ),
+      exportDpi: _readDpi(_prefs),
+      theme_color: _prefs.getString(_kThemeColor) ?? '#FF2196F3',
+    );
+    state = loaded;
     _ensureValid();
+    if (!_ready.isCompleted) _ready.complete();
+  }
+
+  Future<void> _ensureReady() async {
+    if (!_ready.isCompleted) {
+      await _ready.future;
+    }
   }
 
   static double _readDpi(SharedPreferences prefs) {
@@ -167,18 +210,18 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
     final themeValid = {'light', 'dark', 'system'};
     if (!themeValid.contains(state.theme)) {
       state = state.copyWith(theme: 'system');
-      prefs.setString(_kTheme, 'system');
+      _prefs.setString(_kTheme, 'system');
     }
     final normalized = _normalizeLanguageTag(state.language);
     if (normalized != state.language) {
       state = state.copyWith(language: normalized);
-      prefs.setString(_kLanguage, normalized);
+      _prefs.setString(_kLanguage, normalized);
     }
     // Ensure DPI is one of allowed values
     const allowed = [96.0, 144.0, 200.0, 300.0];
     if (!allowed.contains(state.exportDpi)) {
       state = state.copyWith(exportDpi: 144.0);
-      prefs.setDouble(_kExportDpi, 144.0);
+      _prefs.setDouble(_kExportDpi, 144.0);
     }
     // Ensure theme color is a valid hex or known name; normalize to hex
     final parsed = _tryParseColor(state.theme_color);
@@ -186,12 +229,12 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
       final fallback = Colors.blue;
       final hex = _toHex(fallback);
       state = state.copyWith(theme_color: hex);
-      prefs.setString(_kThemeColor, hex);
+      _prefs.setString(_kThemeColor, hex);
     } else {
       final hex = _toHex(parsed);
       if (state.theme_color != hex) {
         state = state.copyWith(theme_color: hex);
-        prefs.setString(_kThemeColor, hex);
+        _prefs.setString(_kThemeColor, hex);
       }
     }
   }
@@ -200,13 +243,15 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
     final valid = {'light', 'dark', 'system'};
     if (!valid.contains(theme)) return;
     state = state.copyWith(theme: theme);
-    await prefs.setString(_kTheme, theme);
+    await _ensureReady();
+    await _prefs.setString(_kTheme, theme);
   }
 
   Future<void> setLanguage(String language) async {
     final normalized = _normalizeLanguageTag(language);
     state = state.copyWith(language: normalized);
-    await prefs.setString(_kLanguage, normalized);
+    await _ensureReady();
+    await _prefs.setString(_kLanguage, normalized);
   }
 
   Future<void> setThemeColor(String themeColor) async {
@@ -214,7 +259,8 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
     final c = _tryParseColor(themeColor) ?? Colors.blue;
     final hex = _toHex(c);
     state = state.copyWith(theme_color: hex);
-    await prefs.setString(_kThemeColor, hex);
+    await _ensureReady();
+    await _prefs.setString(_kThemeColor, hex);
   }
 
   Future<void> resetToDefaults() async {
@@ -227,85 +273,27 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
       exportDpi: 144.0,
       theme_color: '#FF2196F3',
     );
-    await prefs.setString(_kTheme, 'system');
-    await prefs.setString(_kLanguage, normalized);
-    await prefs.setString(_kPageView, 'continuous');
-    await prefs.setDouble(_kExportDpi, 144.0);
-    await prefs.setString(_kThemeColor, '#FF2196F3');
+    await _ensureReady();
+    await _prefs.setString(_kTheme, 'system');
+    await _prefs.setString(_kLanguage, normalized);
+    await _prefs.setString(_kPageView, 'continuous');
+    await _prefs.setDouble(_kExportDpi, 144.0);
+    await _prefs.setString(_kThemeColor, '#FF2196F3');
   }
 
   Future<void> setExportDpi(double dpi) async {
     const allowed = [96.0, 144.0, 200.0, 300.0];
     if (!allowed.contains(dpi)) return;
     state = state.copyWith(exportDpi: dpi);
-    await prefs.setDouble(_kExportDpi, dpi);
+    await _ensureReady();
+    await _prefs.setDouble(_kExportDpi, dpi);
   }
 }
 
-final sharedPreferencesProvider = FutureProvider<SharedPreferences>((
-  ref,
-) async {
-  final p = await SharedPreferences.getInstance();
-  return p;
-});
-
 final preferencesRepositoryProvider =
     StateNotifierProvider<PreferencesStateNotifier, PreferencesState>((ref) {
-      // In tests, you can override sharedPreferencesProvider
-      final prefs = ref
-          .watch(sharedPreferencesProvider)
-          .maybeWhen(
-            data: (p) => p,
-            orElse: () => throw StateError('SharedPreferences not ready'),
-          );
-      return PreferencesStateNotifier(prefs);
+      // Construct with lazy SharedPreferences initialization.
+      return PreferencesStateNotifier();
     });
 
 // pageViewModeProvider removed; the app always runs in continuous mode.
-
-/// Derive the active ThemeMode based on preference and platform brightness
-final themeModeProvider = Provider<ThemeMode>((ref) {
-  final prefs = ref.watch(preferencesRepositoryProvider);
-  switch (prefs.theme) {
-    case 'light':
-      return ThemeMode.light;
-    case 'dark':
-      return ThemeMode.dark;
-    case 'system':
-    default:
-      return ThemeMode.system;
-  }
-});
-
-/// Maps the selected theme color name to an actual Color for theming.
-final themeSeedColorProvider = Provider<Color>((ref) {
-  final prefs = ref.watch(preferencesRepositoryProvider);
-  final c = PreferencesStateNotifier._tryParseColor(prefs.theme_color);
-  return c ?? Colors.blue;
-});
-
-final localeProvider = Provider<Locale?>((ref) {
-  final prefs = ref.watch(preferencesRepositoryProvider);
-  final supported = _supportedTags();
-  // Return explicit Locale for supported ones; if not supported, null to follow device
-  if (supported.contains(prefs.language)) {
-    return _parseLanguageTag(prefs.language);
-  }
-  return null;
-});
-
-/// Provides a map of BCP-47 tag -> autonym (self name), independent of UI locale.
-final languageAutonymsProvider = FutureProvider<Map<String, String>>((
-  ref,
-) async {
-  final tags = _supportedTags().toList()..sort();
-  final delegate = LocaleNamesLocalizationsDelegate();
-  final Map<String, String> result = {};
-  for (final tag in tags) {
-    final locale = _parseLanguageTag(tag);
-    final names = await delegate.load(locale);
-    final name = names.nameOf(tag) ?? tag;
-    result[tag] = name;
-  }
-  return result;
-});

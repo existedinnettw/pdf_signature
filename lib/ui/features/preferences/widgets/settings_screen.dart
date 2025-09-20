@@ -62,77 +62,45 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                   SizedBox(width: 140, child: Text('${l.language}:')),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: ref
-                        .watch(languageAutonymsProvider)
-                        .when(
-                          loading:
-                              () => const SizedBox(
-                                height: 48,
-                                child: Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
-                          error: (_, __) {
-                            final tags =
-                                AppLocalizations.supportedLocales
-                                    .map((loc) => toLanguageTag(loc))
-                                    .toList()
-                                  ..sort();
-                            return DropdownButton<String>(
-                              key: const Key('ddl_language'),
-                              isExpanded: true,
-                              value: _language,
-                              items:
-                                  tags
-                                      .map(
-                                        (tag) => DropdownMenuItem<String>(
-                                          value: tag,
-                                          child: Text(tag),
-                                        ),
-                                      )
-                                      .toList(),
-                              onChanged: (v) async {
-                                if (v == null) return;
-                                setState(() => _language = v);
-                                await ref
-                                    .read(
-                                      preferencesRepositoryProvider.notifier,
-                                    )
-                                    .setLanguage(v);
-                              },
-                            );
+                    child: FutureBuilder<Map<String, String>>(
+                      future: languageAutonyms(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SizedBox(
+                            height: 48,
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        final names = snapshot.data;
+                        final tags =
+                            AppLocalizations.supportedLocales
+                                .map((loc) => toLanguageTag(loc))
+                                .toList()
+                              ..sort();
+                        return DropdownButton<String>(
+                          key: const Key('ddl_language'),
+                          isExpanded: true,
+                          value: _language,
+                          items:
+                              tags
+                                  .map(
+                                    (tag) => DropdownMenuItem<String>(
+                                      value: tag,
+                                      child: Text(names?[tag] ?? tag),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (v) async {
+                            if (v == null) return;
+                            setState(() => _language = v);
+                            await ref
+                                .read(preferencesRepositoryProvider.notifier)
+                                .setLanguage(v);
                           },
-                          data: (names) {
-                            final tags =
-                                AppLocalizations.supportedLocales
-                                    .map((loc) => toLanguageTag(loc))
-                                    .toList()
-                                  ..sort();
-                            return DropdownButton<String>(
-                              key: const Key('ddl_language'),
-                              isExpanded: true,
-                              value: _language,
-                              items:
-                                  tags
-                                      .map(
-                                        (tag) => DropdownMenuItem<String>(
-                                          value: tag,
-                                          child: Text(names[tag] ?? tag),
-                                        ),
-                                      )
-                                      .toList(),
-                              onChanged: (v) async {
-                                if (v == null) return;
-                                setState(() => _language = v);
-                                await ref
-                                    .read(
-                                      preferencesRepositoryProvider.notifier,
-                                    )
-                                    .setLanguage(v);
-                              },
-                            );
-                          },
-                        ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -256,7 +224,7 @@ class _ThemeColorCircle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final seed = ref.watch(themeSeedColorProvider);
+    final seed = themeSeedFromPrefs(ref.watch(preferencesRepositoryProvider));
     return InkWell(
       key: const Key('btn_theme_color_picker'),
       onTap: () async {
