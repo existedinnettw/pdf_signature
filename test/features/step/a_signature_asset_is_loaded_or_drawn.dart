@@ -15,7 +15,7 @@ Future<void> aSignatureAssetIsLoadedOrDrawn(WidgetTester tester) async {
   container.read(documentRepositoryProvider.notifier).state =
       Document.initial();
   container.read(signatureCardRepositoryProvider.notifier).state = [
-    CachedSignatureCard.initial(),
+    SignatureCard.initial(),
   ];
   final image = img.Image(width: 1, height: 1);
   container

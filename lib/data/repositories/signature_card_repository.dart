@@ -9,21 +9,26 @@ class DisplaySignatureData {
   const DisplaySignatureData({required this.image, this.colorMatrix});
 }
 
-/// CachedSignatureCard extends SignatureCard with an internal processed cache
-class CachedSignatureCard extends SignatureCard {
+/// CachedSignatureCard wraps SignatureCard data and stores a processed cache.
+class CachedSignatureCard {
+  final SignatureAsset asset;
+  final double rotationDeg;
+  final GraphicAdjust graphicAdjust;
+
   img.Image? _cachedProcessedImage;
 
   CachedSignatureCard({
-    required super.asset,
-    required super.rotationDeg,
-    super.graphicAdjust,
+    required this.asset,
+    required this.rotationDeg,
+    this.graphicAdjust = const GraphicAdjust(),
     img.Image? initialProcessedImage,
   }) {
-    // Seed cache if provided
     if (initialProcessedImage != null) {
       _cachedProcessedImage = initialProcessedImage;
     }
   }
+
+  // Intentionally no copyWith to avoid conflicting with Freezed interface
 
   /// Invalidate the cached processed image, forcing recompute next time.
   void invalidateCache() {
@@ -40,35 +45,33 @@ class CachedSignatureCard extends SignatureCard {
     rotationDeg: SignatureCard.initial().rotationDeg,
     graphicAdjust: SignatureCard.initial().graphicAdjust,
   );
+
+  factory CachedSignatureCard.fromPublic(SignatureCard card) =>
+      CachedSignatureCard(
+        asset: card.asset,
+        rotationDeg: card.rotationDeg,
+        graphicAdjust: card.graphicAdjust,
+      );
 }
 
-class SignatureCardStateNotifier
-    extends StateNotifier<List<CachedSignatureCard>> {
-  SignatureCardStateNotifier() : super(const []) {
-    state = const <CachedSignatureCard>[];
-  }
+class SignatureCardStateNotifier extends StateNotifier<List<SignatureCard>> {
+  SignatureCardStateNotifier() : super(const []);
+
+  // Internal storage with cache
+  final List<CachedSignatureCard> _cards = <CachedSignatureCard>[];
 
   // Stateless image processing service used by this repository
   final SignatureImageProcessingService _processingService =
       SignatureImageProcessingService();
 
   void add(SignatureCard card) {
-    final wrapped =
-        card is CachedSignatureCard
-            ? card
-            : CachedSignatureCard(
-              asset: card.asset,
-              rotationDeg: card.rotationDeg,
-              graphicAdjust: card.graphicAdjust,
-            );
-    final next = List<CachedSignatureCard>.of(state)..add(wrapped);
-    state = List<CachedSignatureCard>.unmodifiable(next);
+    _cards.add(CachedSignatureCard.fromPublic(card));
+    _publish();
   }
 
   void addWithAsset(SignatureAsset asset, double rotationDeg) {
-    final next = List<CachedSignatureCard>.of(state)
-      ..add(CachedSignatureCard(asset: asset, rotationDeg: rotationDeg));
-    state = List<CachedSignatureCard>.unmodifiable(next);
+    _cards.add(CachedSignatureCard(asset: asset, rotationDeg: rotationDeg));
+    _publish();
   }
 
   void update(
@@ -76,46 +79,52 @@ class SignatureCardStateNotifier
     double? rotationDeg,
     GraphicAdjust? graphicAdjust,
   ) {
-    final list = List<CachedSignatureCard>.of(state);
-    for (var i = 0; i < list.length; i++) {
-      final c = list[i];
-      if (c == card) {
-        final updated = c.copyWith(
-          rotationDeg: rotationDeg ?? c.rotationDeg,
-          graphicAdjust: graphicAdjust ?? c.graphicAdjust,
-        );
-        // Compute and set the single processed bytes for the updated adjust
+    for (var i = 0; i < _cards.length; i++) {
+      final c = _cards[i];
+      final isSameCard =
+          c.asset == card.asset &&
+          c.rotationDeg == card.rotationDeg &&
+          c.graphicAdjust == card.graphicAdjust;
+      if (isSameCard) {
+        final newRotation = rotationDeg ?? c.rotationDeg;
+        final newAdjust = graphicAdjust ?? c.graphicAdjust;
+        // Compute processed image for updated adjust
         final processedImage = _processingService.processImageToImage(
-          updated.asset.sigImage,
-          updated.graphicAdjust,
+          c.asset.sigImage,
+          newAdjust,
         );
         final next = CachedSignatureCard(
-          asset: updated.asset,
-          rotationDeg: updated.rotationDeg,
-          graphicAdjust: updated.graphicAdjust,
+          asset: c.asset,
+          rotationDeg: newRotation,
+          graphicAdjust: newAdjust,
         );
         next.setProcessedImage(processedImage);
-        list[i] = next;
-        state = List<CachedSignatureCard>.unmodifiable(list);
+        _cards[i] = next;
+        _publish();
         return;
       }
     }
   }
 
   void remove(SignatureCard card) {
-    state = List<CachedSignatureCard>.unmodifiable(
-      state.where((c) => c != card).toList(growable: false),
+    _cards.removeWhere(
+      (c) =>
+          c.asset == card.asset &&
+          c.rotationDeg == card.rotationDeg &&
+          c.graphicAdjust == card.graphicAdjust,
     );
+    _publish();
   }
 
   void clearAll() {
-    state = const <CachedSignatureCard>[];
+    _cards.clear();
+    state = const <SignatureCard>[];
   }
 
   /// New: Returns processed decoded image for the given asset + adjustments.
   img.Image getProcessedImage(SignatureAsset asset, GraphicAdjust adjust) {
     // Try to find a matching card by asset
-    for (final c in state) {
+    for (final c in _cards) {
       if (c.asset == asset) {
         if (c.graphicAdjust == adjust) {
           // If cached bytes exist, decode once; otherwise compute from image
@@ -168,22 +177,36 @@ class SignatureCardStateNotifier
 
   /// Clears all cached processed images.
   void clearProcessedCache() {
-    for (final c in state) {
+    for (final c in _cards) {
       c.invalidateCache();
     }
   }
 
   /// Clears cached processed images for a specific asset only.
   void clearCacheForAsset(SignatureAsset asset) {
-    for (final c in state) {
+    for (final c in _cards) {
       if (c.asset == asset) {
         c.invalidateCache();
       }
     }
   }
+
+  void _publish() {
+    state = List<SignatureCard>.unmodifiable(
+      _cards
+          .map(
+            (c) => SignatureCard(
+              asset: c.asset,
+              rotationDeg: c.rotationDeg,
+              graphicAdjust: c.graphicAdjust,
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
 }
 
-final signatureCardRepositoryProvider = StateNotifierProvider<
-  SignatureCardStateNotifier,
-  List<CachedSignatureCard>
->((ref) => SignatureCardStateNotifier());
+final signatureCardRepositoryProvider =
+    StateNotifierProvider<SignatureCardStateNotifier, List<SignatureCard>>(
+      (ref) => SignatureCardStateNotifier(),
+    );

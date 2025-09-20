@@ -137,3 +137,5 @@ appimage-build/
 .vscode/settings.json
 
 *.patch
+*.freezed.dart
+*.g.dart

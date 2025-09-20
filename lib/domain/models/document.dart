@@ -1,37 +1,20 @@
 import 'dart:typed_data';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import 'signature_placement.dart';
 
+part 'document.freezed.dart';
+
 /// PDF document to be signed
-class Document {
-  bool loaded;
-  int pageCount;
-  Uint8List? pickedPdfBytes;
-  // Multiple signature placements per page, each combines geometry and asset.
-  Map<int, List<SignaturePlacement>> placementsByPage;
-
-  Document({
-    required this.loaded,
-    required this.pageCount,
-    this.pickedPdfBytes,
-    Map<int, List<SignaturePlacement>>? placementsByPage,
-  }) : placementsByPage = placementsByPage ?? <int, List<SignaturePlacement>>{};
-
-  factory Document.initial() => Document(
-    loaded: false,
-    pageCount: 0,
-    pickedPdfBytes: null,
-    placementsByPage: <int, List<SignaturePlacement>>{},
-  );
-
-  Document copyWith({
-    bool? loaded,
-    int? pageCount,
+@freezed
+abstract class Document with _$Document {
+  const factory Document({
+    @Default(false) bool loaded,
+    @Default(0) int pageCount,
     Uint8List? pickedPdfBytes,
-    Map<int, List<SignaturePlacement>>? placementsByPage,
-  }) => Document(
-    loaded: loaded ?? this.loaded,
-    pageCount: pageCount ?? this.pageCount,
-    pickedPdfBytes: pickedPdfBytes ?? this.pickedPdfBytes,
-    placementsByPage: placementsByPage ?? this.placementsByPage,
-  );
+    @Default(<int, List<SignaturePlacement>>{})
+    Map<int, List<SignaturePlacement>> placementsByPage,
+  }) = _Document;
+
+  factory Document.initial() => const Document();
 }
