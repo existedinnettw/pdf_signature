@@ -10,7 +10,6 @@ class DrawCanvas extends StatefulWidget {
     this.control,
     this.onConfirm,
     this.debugBytesSink,
-    this.closeOnConfirmImmediately = false,
   });
 
   final hand.HandSignatureControl? control;
@@ -18,9 +17,6 @@ class DrawCanvas extends StatefulWidget {
   // For tests: allows observing exported bytes without relying on Navigator
   @visibleForTesting
   final ValueNotifier<Uint8List?>? debugBytesSink;
-  // When true (used by bottom sheet), the sheet will be closed immediately
-  // on confirm without waiting for export to finish.
-  final bool closeOnConfirmImmediately;
 
   @override
   State<DrawCanvas> createState() => _DrawCanvasState();

@@ -13,6 +13,7 @@
   "display": "Anzeige",
   "downloadStarted": "Download gestartet",
   "dpi": "DPI",
+  "dragOntoDocument": "Auf Dokument ziehen",
   "drawSignature": "Signatur zeichnen",
   "errorWithMessage": "Fehler: {message}",
   "exportingPleaseWait": "Exportiere… Bitte warten",
@@ -47,6 +48,11 @@
   "themeDark": "Dunkel",
   "themeLight": "Hell",
   "themeSystem": "System",
+  "themeColor": "Themenfarbe",
+  "themeColorBlue": "Blau",
+  "themeColorGreen": "Grün",
+  "themeColorRed": "Rot",
+  "themeColorPurple": "Lila",
   "undo": "Rückgängig",
   "unlock": "Entsperren"
 }

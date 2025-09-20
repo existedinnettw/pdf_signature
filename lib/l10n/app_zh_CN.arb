@@ -13,6 +13,7 @@
   "display": "显示",
   "downloadStarted": "下载已开始",
   "dpi": "DPI",
+  "dragOntoDocument": "拖到文档上",
   "drawSignature": "绘制签名",
   "errorWithMessage": "错误：{message}",
   "exportingPleaseWait": "正在导出... 请稍候",
@@ -47,6 +48,11 @@
   "themeDark": "深色",
   "themeLight": "浅色",
   "themeSystem": "系统",
+  "themeColor": "主题颜色",
+  "themeColorBlue": "蓝色",
+  "themeColorGreen": "绿色",
+  "themeColorRed": "红色",
+  "themeColorPurple": "紫色",
   "undo": "撤销",
   "unlock": "解锁"
 }

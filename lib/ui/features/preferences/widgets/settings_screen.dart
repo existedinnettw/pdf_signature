@@ -12,6 +12,7 @@ class SettingsDialog extends ConsumerStatefulWidget {
 
 class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   String? _theme;
+  String? _themeColor;
   String? _language;
   // Page view removed; continuous-only
   double? _exportDpi;
@@ -21,6 +22,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     super.initState();
     final prefs = ref.read(preferencesRepositoryProvider);
     _theme = prefs.theme;
+    _themeColor = prefs.theme_color;
     _language = prefs.language;
     _exportDpi = prefs.exportDpi;
     // pageView no longer configurable (continuous-only)
@@ -174,6 +176,22 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  SizedBox(width: 140, child: Text('${l.themeColor}:')),
+                  const SizedBox(width: 8),
+                  _ThemeColorCircle(
+                    onPick: (value) async {
+                      if (value == null) return;
+                      await ref
+                          .read(preferencesRepositoryProvider.notifier)
+                          .setThemeColor(value);
+                      setState(() => _themeColor = value);
+                    },
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 24),
               Row(
@@ -190,6 +208,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                         preferencesRepositoryProvider.notifier,
                       );
                       if (_theme != null) await n.setTheme(_theme!);
+                      if (_themeColor != null)
+                        await n.setThemeColor(_themeColor!);
                       if (_language != null) await n.setLanguage(_language!);
                       if (_exportDpi != null) await n.setExportDpi(_exportDpi!);
                       // pageView not configurable anymore
@@ -203,6 +223,93 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ColorDot extends StatelessWidget {
+  final Color color;
+  final double size;
+  const _ColorDot({required this.color, this.size = 14});
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: color,
+      shape: BoxShape.circle,
+      border: Border.all(color: Theme.of(context).dividerColor),
+    ),
+  );
+}
+
+class _ThemeColorCircle extends ConsumerWidget {
+  final ValueChanged<String?> onPick;
+  const _ThemeColorCircle({required this.onPick});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final seed = ref.watch(themeSeedColorProvider);
+    return InkWell(
+      key: const Key('btn_theme_color_picker'),
+      onTap: () async {
+        final picked = await showDialog<String>(
+          context: context,
+          builder: (ctx) => _ThemeColorPickerDialog(currentColor: seed),
+        );
+        onPick(picked);
+      },
+      customBorder: const CircleBorder(),
+      child: Padding(
+        padding: const EdgeInsets.all(6.0),
+        child: _ColorDot(color: seed, size: 22),
+      ),
+    );
+  }
+}
+
+class _ThemeColorPickerDialog extends StatelessWidget {
+  final Color currentColor;
+  const _ThemeColorPickerDialog({required this.currentColor});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l.themeColor),
+      content: SizedBox(
+        width: 320,
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: Colors.primaries.map((mat) {
+            final c = Color(mat.value);
+            final selected = c.value == currentColor.value;
+            // Store as ARGB hex string, e.g., #FF2196F3
+            String hex(Color color) =>
+                '#${color.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+            return InkWell(
+              key: Key('pick_${mat.value}'),
+              onTap: () => Navigator.of(context).pop(hex(c)),
+              customBorder: const CircleBorder(),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  _ColorDot(color: c, size: 32),
+                  if (selected)
+                    const Icon(Icons.check, color: Colors.white, size: 20),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: Text(l.cancel),
+        ),
+      ],
     );
   }
 }

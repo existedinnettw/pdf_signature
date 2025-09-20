@@ -28,7 +28,9 @@ Set<String> _supportedTags() {
 
 // Keys
 const _kTheme = 'theme'; // 'light'|'dark'|'system'
-const _kThemeColor = 'theme_color'; // 'blue'|'green'|'red'|'purple'
+// Theme color persisted as hex ARGB string (e.g., '#FF2196F3').
+// Backward compatible with historical names like 'blue', 'indigo', etc.
+const _kThemeColor = 'theme_color';
 const _kLanguage = 'language'; // BCP-47 tag like 'en', 'zh-TW', 'es'
 const _kPageView = 'page_view'; // now only 'continuous'
 const _kExportDpi = 'export_dpi'; // double, allowed: 96,144,200,300
@@ -67,6 +69,54 @@ String _normalizeLanguageTag(String tag) {
 
 class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
   final SharedPreferences prefs;
+  static Color? _tryParseColor(String? s) {
+    if (s == null || s.isEmpty) return null;
+    final v = s.trim();
+    // 1) Direct hex formats: #AARRGGBB, #RRGGBB, AARRGGBB, RRGGBB
+    String hex = v.startsWith('#') ? v.substring(1) : v;
+    // Accept 0xAARRGGBB / 0xRRGGBB as well
+    if (hex.toLowerCase().startsWith('0x')) hex = hex.substring(2);
+    if (hex.length == 6) {
+      final intVal = int.tryParse('FF$hex', radix: 16);
+      if (intVal != null) return Color(intVal);
+    } else if (hex.length == 8) {
+      final intVal = int.tryParse(hex, radix: 16);
+      if (intVal != null) return Color(intVal);
+    }
+
+    // 2) Parse from Color(...) or MaterialColor(...) toString outputs
+    //    e.g., 'Color(0xff2196f3)' or 'MaterialColor(primary value: Color(0xff2196f3))'
+    final lower = v.toLowerCase();
+    final idx = lower.indexOf('0x');
+    if (idx != -1) {
+      var sub = lower.substring(idx);
+      // Trim trailing non-hex chars
+      final hexChars = RegExp(r'^[0-9a-fx]+');
+      final m = hexChars.firstMatch(sub);
+      if (m != null) {
+        sub = m.group(0) ?? sub;
+        if (sub.startsWith('0x')) sub = sub.substring(2);
+        if (sub.length == 6) sub = 'FF$sub';
+        if (sub.length >= 8) {
+          final intVal = int.tryParse(sub.substring(0, 8), radix: 16);
+          if (intVal != null) return Color(intVal);
+        }
+      }
+    }
+
+    // 3) As a last resort, try to match any MaterialColor primary by toString equality
+    //    (useful if some code persisted mat.toString()).
+    for (final mc in Colors.primaries) {
+      if (mc.toString() == v) {
+        return Color(mc.value);
+      }
+    }
+
+    return null;
+  }
+
+  static String _toHex(Color c) =>
+      '#${c.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
   PreferencesStateNotifier(this.prefs)
     : super(
         PreferencesState(
@@ -77,7 +127,7 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
                     .toLanguageTag(),
           ),
           exportDpi: _readDpi(prefs),
-          theme_color: prefs.getString(_kThemeColor) ?? 'blue',
+          theme_color: prefs.getString(_kThemeColor) ?? '#FF2196F3', // blue
         ),
       ) {
     // normalize language to supported/fallback
@@ -108,6 +158,20 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
       state = state.copyWith(exportDpi: 144.0);
       prefs.setDouble(_kExportDpi, 144.0);
     }
+    // Ensure theme color is a valid hex or known name; normalize to hex
+    final parsed = _tryParseColor(state.theme_color);
+    if (parsed == null) {
+      final fallback = Colors.blue;
+      final hex = _toHex(fallback);
+      state = state.copyWith(theme_color: hex);
+      prefs.setString(_kThemeColor, hex);
+    } else {
+      final hex = _toHex(parsed);
+      if (state.theme_color != hex) {
+        state = state.copyWith(theme_color: hex);
+        prefs.setString(_kThemeColor, hex);
+      }
+    }
   }
 
   Future<void> setTheme(String theme) async {
@@ -123,6 +187,14 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
     await prefs.setString(_kLanguage, normalized);
   }
 
+  Future<void> setThemeColor(String themeColor) async {
+    // Accept hex like '#FF2196F3', '#2196F3', or known names like 'blue'. Normalize to hex.
+    final c = _tryParseColor(themeColor) ?? Colors.blue;
+    final hex = _toHex(c);
+    state = state.copyWith(theme_color: hex);
+    await prefs.setString(_kThemeColor, hex);
+  }
+
   Future<void> resetToDefaults() async {
     final device =
         WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag();
@@ -131,12 +203,13 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
       theme: 'system',
       language: normalized,
       exportDpi: 144.0,
-      theme_color: '',
+      theme_color: '#FF2196F3',
     );
     await prefs.setString(_kTheme, 'system');
     await prefs.setString(_kLanguage, normalized);
     await prefs.setString(_kPageView, 'continuous');
     await prefs.setDouble(_kExportDpi, 144.0);
+    await prefs.setString(_kThemeColor, '#FF2196F3');
   }
 
   Future<void> setExportDpi(double dpi) async {
@@ -180,6 +253,13 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
     default:
       return ThemeMode.system;
   }
+});
+
+/// Maps the selected theme color name to an actual Color for theming.
+final themeSeedColorProvider = Provider<Color>((ref) {
+  final prefs = ref.watch(preferencesRepositoryProvider);
+  final c = PreferencesStateNotifier._tryParseColor(prefs.theme_color);
+  return c ?? Colors.blue;
 });
 
 final localeProvider = Provider<Locale?>((ref) {

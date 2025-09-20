@@ -10,7 +10,7 @@ import 'package:pdf_signature/domain/models/signature_asset.dart';
 import 'package:image/image.dart' as img;
 import 'image_editor_dialog.dart';
 import 'signature_card_view.dart';
-import '../../pdf/view_model/pdf_view_model.dart';
+// Removed PdfViewModel import; no direct interaction from drawer on tap
 
 /// Data for drag-and-drop is in signature_drag_data.dart
 
@@ -77,13 +77,6 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                           .read(signatureCardRepositoryProvider.notifier)
                           .update(card, result.rotation, result.graphicAdjust);
                     }
-                  },
-                  onTap: () {
-                    // Activate a default overlay rectangle on the current page
-                    // so integration tests can find and size the active overlay.
-                    ref
-                        .read(pdfViewModelProvider.notifier)
-                        .activeRect = const Rect.fromLTWH(0.2, 0.2, 0.3, 0.15);
                   },
                 ),
               ),

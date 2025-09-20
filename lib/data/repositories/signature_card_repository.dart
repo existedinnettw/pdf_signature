@@ -25,23 +25,6 @@ class CachedSignatureCard extends SignatureCard {
     }
   }
 
-  /// Returns cached processed image for the current [graphicAdjust], computing
-  /// via [service] if not cached yet.
-  img.Image getOrComputeProcessedImage(
-    SignatureImageProcessingService service,
-  ) {
-    final existing = _cachedProcessedImage;
-    if (existing != null) {
-      return existing;
-    }
-    final computedImage = service.processImageToImage(
-      asset.sigImage,
-      graphicAdjust,
-    );
-    _cachedProcessedImage = computedImage;
-    return computedImage;
-  }
-
   /// Invalidate the cached processed image, forcing recompute next time.
   void invalidateCache() {
     _cachedProcessedImage = null;

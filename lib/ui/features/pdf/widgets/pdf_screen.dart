@@ -98,6 +98,17 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     if (controller.isReady) controller.goToPage(pageNumber: target);
   }
 
+  img.Image? _toStdSignatureImage(img.Image? image) {
+    if (image == null) return null;
+    image.convert(numChannels: 4);
+    // Scale down if height > 256 to improve performance
+    if (image.height > 256) {
+      final newWidth = (image.width * 256) ~/ image.height;
+      image = img.copyResize(image, width: newWidth, height: 256);
+    }
+    return image;
+  }
+
   Future<img.Image?> _loadSignatureFromFile() async {
     final typeGroup = fs.XTypeGroup(
       label:
@@ -109,8 +120,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final bytes = await file.readAsBytes();
     try {
       var sigImage = img.decodeImage(bytes);
-      sigImage?.convert(numChannels: 4);
-      return sigImage;
+      return _toStdSignatureImage(sigImage);
     } catch (_) {
       return null;
     }
@@ -121,14 +131,13 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
       context: context,
       isScrollControlled: true,
       enableDrag: false,
-      builder: (_) => const DrawCanvas(closeOnConfirmImmediately: false),
+      builder: (_) => const DrawCanvas(),
     );
     if (result == null || result.isEmpty) return null;
     // In simplified UI, adding to library isn't implemented
     try {
       var sigImage = img.decodeImage(result);
-      sigImage?.convert(numChannels: 4);
-      return sigImage;
+      return _toStdSignatureImage(sigImage);
     } catch (_) {
       return null;
     }

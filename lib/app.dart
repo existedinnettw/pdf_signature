@@ -39,18 +39,19 @@ class MyApp extends StatelessWidget {
                 ),
             data: (_) {
               final themeMode = ref.watch(themeModeProvider);
+              final seed = ref.watch(themeSeedColorProvider);
               final appLocale = ref.watch(localeProvider);
               return MaterialApp.router(
                 onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
                 theme: ThemeData(
                   colorScheme: ColorScheme.fromSeed(
-                    seedColor: Colors.indigo,
+                    seedColor: seed,
                     brightness: Brightness.light,
                   ),
                 ),
                 darkTheme: ThemeData(
                   colorScheme: ColorScheme.fromSeed(
-                    seedColor: Colors.indigo,
+                    seedColor: seed,
                     brightness: Brightness.dark,
                   ),
                 ),

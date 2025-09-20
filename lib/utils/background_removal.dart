@@ -5,6 +5,9 @@ import 'package:image/image.dart' as img;
 /// - Ensures the image has an alpha channel (RGBA) before modification.
 /// - Returns a new img.Image instance; does not mutate the input reference.
 /// - threshold: 0..255; pixels with r,g,b >= threshold become fully transparent.
+///
+/// TODO: optimize through SIMD or web-ffi openCV, sadly they are not stable yet.
+///
 img.Image removeNearWhiteBackground(img.Image image, {int threshold = 240}) {
   // Ensure truecolor RGBA; paletted images won't apply per-pixel alpha properly.
   final hadAlpha = image.hasAlpha;

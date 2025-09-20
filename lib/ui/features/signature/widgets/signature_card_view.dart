@@ -106,6 +106,16 @@ class _SignatureCardViewState extends ConsumerState<SignatureCardView> {
                 ),
               ),
             ),
+            // Subtle drag affordance icon
+            Positioned(
+              left: 4,
+              bottom: 4,
+              child: Icon(
+                Icons.open_with,
+                size: 14,
+                color: Theme.of(context).hintColor.withValues(alpha: 0.9),
+              ),
+            ),
             Positioned(
               right: 0,
               top: 0,
@@ -137,7 +147,9 @@ class _SignatureCardViewState extends ConsumerState<SignatureCardView> {
       child: child,
     );
     if (widget.disabled) return child;
-    return Draggable<SignatureDragData>(
+    final isDragging = ref.watch(isDraggingSignatureViewModelProvider);
+    // Mouse cursor + tooltip + semantics to hint drag behavior
+    final draggable = Draggable<SignatureDragData>(
       data: SignatureDragData(
         card: domain.SignatureCard(
           asset: widget.asset,
@@ -186,6 +198,18 @@ class _SignatureCardViewState extends ConsumerState<SignatureCardView> {
       ),
       childWhenDragging: Opacity(opacity: 0.5, child: child),
       child: child,
+    );
+    return MouseRegion(
+      cursor:
+          isDragging ? SystemMouseCursors.grabbing : SystemMouseCursors.grab,
+      child: Tooltip(
+        message: AppLocalizations.of(context).dragOntoDocument,
+        child: Semantics(
+          label: 'Signature card',
+          hint: 'Drag onto document to place',
+          child: draggable,
+        ),
+      ),
     );
   }
 }

@@ -13,6 +13,7 @@
   "display": "Відображення",
   "downloadStarted": "Завантаження розпочато",
   "dpi": "DPI",
+  "dragOntoDocument": "Перетягніть на документ",
   "drawSignature": "Намалювати підпис",
   "errorWithMessage": "Помилка: {message}",
   "exportingPleaseWait": "Експортування... Зачекайте",
@@ -47,6 +48,11 @@
   "themeDark": "Темна",
   "themeLight": "Світла",
   "themeSystem": "Системна",
+  "themeColor": "Колір теми",
+  "themeColorBlue": "Синій",
+  "themeColorGreen": "Зелений",
+  "themeColorRed": "Червоний",
+  "themeColorPurple": "Фіолетовий",
   "undo": "Відмінити",
   "unlock": "Відмкнути"
 }

@@ -13,6 +13,7 @@
   "display": "表示",
   "downloadStarted": "ダウンロード開始",
   "dpi": "DPI",
+  "dragOntoDocument": "ドキュメントにドラッグします",
   "drawSignature": "署名をかく",
   "errorWithMessage": "エラー：{message}",
   "exportingPleaseWait": "エクスポート中…お待ちください",
@@ -47,6 +48,11 @@
   "themeDark": "ダーク",
   "themeLight": "ライト",
   "themeSystem": "システム",
+  "themeColor": "テーマカラー",
+  "themeColorBlue": "青",
+  "themeColorGreen": "緑",
+  "themeColorRed": "赤",
+  "themeColorPurple": "紫",
   "undo": "元に戻す",
   "unlock": "ロック解除"
 }
