@@ -20,6 +20,7 @@ RUN --mount=type=cache,target=/root/.pub-cache \
     rm -rf .dart_tool build && \
 	flutter pub get && \
 	flutter gen-l10n && \
+	flutter pub run build_runner build --delete-conflicting-outputs && \
 	flutter build web --release -O4 --wasm
 
 # Stage 2: Caddy (Alpine) to serve static files with SPA fallback
