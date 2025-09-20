@@ -1,14 +1,16 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import '../../../../utils/rotation_utils.dart' as rot;
 
 /// A lightweight widget to render signature bytes with rotation and an
 /// angle-aware scale-to-fit so the rotated image stays within its bounds.
-/// Aware that `decodeImage` large images can be crazily slow, especially on web.
+/// Don't use `decodeImage`, large images can be crazily slow, especially on web.
 class RotatedSignatureImage extends StatefulWidget {
   const RotatedSignatureImage({
     super.key,
-    required this.bytes,
+    required this.image,
     this.rotationDeg = 0.0, // counterclockwise as positive
     this.filterQuality = FilterQuality.low,
     this.semanticLabel,
@@ -16,16 +18,19 @@ class RotatedSignatureImage extends StatefulWidget {
     this.cacheHeight,
   });
 
-  final Uint8List bytes;
+  /// Decoded CPU image (from `package:image`).
+  final img.Image image;
+
+  /// Rotation in degrees. Positive values rotate counterclockwise in math sense.
+  /// Screen-space is handled via [rot.ccwRadians].
   final double rotationDeg;
+
   final FilterQuality filterQuality;
-  final BoxFit fit = BoxFit.contain;
-  final bool gaplessPlayback = true;
-  final Alignment alignment = Alignment.center;
-  final bool wrapInRepaintBoundary = true;
+
   final String? semanticLabel;
-  // Hint the decoder to decode at a smaller size to reduce memory/latency.
-  // On some platforms these may be ignored, but they are safe no-ops.
+
+  /// Optional target size hints to reduce decode cost.
+  /// If only one is provided, the other is computed to preserve aspect.
   final int? cacheWidth;
   final int? cacheHeight;
 
@@ -34,103 +39,126 @@ class RotatedSignatureImage extends StatefulWidget {
 }
 
 class _RotatedSignatureImageState extends State<RotatedSignatureImage> {
-  ImageStream? _stream;
-  ImageStreamListener? _listener;
-  double? _derivedAspectRatio; // width / height
-
-  MemoryImage get _provider {
-    return MemoryImage(widget.bytes);
-  }
+  Uint8List? _encodedBytes; // PNG-encoded bytes for Image.memory
+  img.Image? _lastSrc; // To detect changes cheaply
+  int? _lastW;
+  int? _lastH;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _resolveImage();
+  void initState() {
+    super.initState();
+    _prepare();
   }
 
   @override
   void didUpdateWidget(covariant RotatedSignatureImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Only re-resolve when the bytes change. Rotation does not affect
-    // intrinsic aspect ratio, so avoid expensive decode/resolve on slider drags.
-    if (!identical(oldWidget.bytes, widget.bytes)) {
-      _derivedAspectRatio = null;
-      _resolveImage();
+    final srcChanged =
+        !identical(widget.image, _lastSrc) ||
+        widget.image.width != (oldWidget.image.width) ||
+        widget.image.height != (oldWidget.image.height);
+    final sizeHintChanged =
+        widget.cacheWidth != oldWidget.cacheWidth ||
+        widget.cacheHeight != oldWidget.cacheHeight;
+    if (srcChanged || sizeHintChanged) {
+      _prepare();
     }
-  }
-
-  void _setAspectRatio(double ar) {
-    if (mounted && _derivedAspectRatio != ar) {
-      setState(() => _derivedAspectRatio = ar);
-    }
-  }
-
-  void _resolveImage() {
-    _unlisten();
-    // Resolve via ImageProvider; when first frame arrives, capture intrinsic size.
-    // Avoid synchronous decode on UI thread to keep rotation smooth.
-    if (widget.bytes.isEmpty) {
-      _setAspectRatio(1.0); // safe fallback
-      return;
-    }
-    final stream = _provider.resolve(createLocalImageConfiguration(context));
-    _stream = stream;
-    _listener = ImageStreamListener((ImageInfo info, bool sync) {
-      final w = info.image.width;
-      final h = info.image.height;
-      if (w > 0 && h > 0) {
-        _setAspectRatio(w / h);
-      }
-    });
-    stream.addListener(_listener!);
-  }
-
-  void _unlisten() {
-    if (_stream != null && _listener != null) {
-      _stream!.removeListener(_listener!);
-    }
-    _stream = null;
-    _listener = null;
   }
 
   @override
   void dispose() {
-    _unlisten();
     super.dispose();
+  }
+
+  Future<void> _prepare() async {
+    final src = widget.image;
+    _lastSrc = src;
+
+    // Compute target decode size preserving aspect if hints provided.
+    int targetW = src.width;
+    int targetH = src.height;
+    if (widget.cacheWidth != null || widget.cacheHeight != null) {
+      if (widget.cacheWidth != null && widget.cacheHeight != null) {
+        targetW = widget.cacheWidth!.clamp(1, src.width);
+        targetH = widget.cacheHeight!.clamp(1, src.height);
+      } else if (widget.cacheWidth != null) {
+        targetW = widget.cacheWidth!.clamp(1, src.width);
+        targetH = (targetW * src.height / src.width).round().clamp(
+          1,
+          src.height,
+        );
+      } else if (widget.cacheHeight != null) {
+        targetH = widget.cacheHeight!.clamp(1, src.height);
+        targetW = (targetH * src.width / src.height).round().clamp(
+          1,
+          src.width,
+        );
+      }
+    }
+
+    img.Image working = src;
+    if (working.width != targetW || working.height != targetH) {
+      // High-quality resize; image package chooses a reasonable default.
+      working = img.copyResize(working, width: targetW, height: targetH);
+    }
+
+    // Ensure RGBA (4 channels) so alpha is preserved when encoding.
+    working = working.convert(numChannels: 4);
+
+    _lastW = working.width;
+    _lastH = working.height;
+
+    // Encode to PNG with low compression level for faster encode.
+    // This avoids manual decode in the widget; Flutter will decode the PNG.
+    final pngEncoder = img.PngEncoder(level: 1);
+    final bytes = Uint8List.fromList(pngEncoder.encode(working));
+    if (!mounted) return;
+    setState(() => _encodedBytes = bytes);
   }
 
   @override
   Widget build(BuildContext context) {
-    final angle = rot.ccwRadians(widget.rotationDeg);
-    Widget img = Image.memory(
-      widget.bytes,
-      fit: widget.fit,
-      gaplessPlayback: widget.gaplessPlayback,
-      filterQuality: widget.filterQuality,
-      alignment: widget.alignment,
-      semanticLabel: widget.semanticLabel,
-      // Provide at most one dimension to preserve aspect ratio if only one is set
-      cacheWidth: widget.cacheWidth,
-      cacheHeight: widget.cacheHeight,
-      isAntiAlias: false,
-      errorBuilder: (context, error, stackTrace) {
-        // Return a placeholder for invalid images
-        return Container(
-          color: Colors.grey[300],
-          child: const Icon(Icons.broken_image, color: Colors.grey),
-        );
-      },
-    );
+    // Compute angle-aware scale so rotated image stays within bounds.
+    final double angleRad = rot.ccwRadians(widget.rotationDeg);
+    final double ar =
+        widget.image.width == 0
+            ? 1.0
+            : widget.image.width / widget.image.height;
+    final double k = rot.scaleToFitForAngle(angleRad, ar: ar);
 
-    if (angle != 0.0) {
-      final scaleToFit = rot.scaleToFitForAngle(angle, ar: _derivedAspectRatio);
-      img = Transform.scale(
-        scale: scaleToFit,
-        child: Transform.rotate(angle: angle, child: img),
-      );
+    Widget core =
+        _encodedBytes == null
+            ? const SizedBox.shrink()
+            : Image.memory(
+              _encodedBytes!,
+              fit: BoxFit.contain,
+              filterQuality: widget.filterQuality,
+              gaplessPlayback: true,
+            );
+    if (widget.semanticLabel != null) {
+      core = Semantics(label: widget.semanticLabel, child: core);
     }
 
-    if (!widget.wrapInRepaintBoundary) return img;
-    return RepaintBoundary(child: img);
+    // Order: scale first, then rotate. Scale ensures rotated bounds fit.
+    Widget transformed = Transform.scale(
+      scale: k,
+      alignment: Alignment.center,
+      child: Transform.rotate(
+        angle: angleRad,
+        alignment: Alignment.center,
+        child: core,
+      ),
+    );
+
+    // Allow parent to size; we simply contain within available space.
+    return FittedBox(
+      fit: BoxFit.contain,
+      alignment: Alignment.center,
+      child: SizedBox(
+        width: _lastW?.toDouble() ?? widget.image.width.toDouble(),
+        height: _lastH?.toDouble() ?? widget.image.height.toDouble(),
+        child: transformed,
+      ),
+    );
   }
 }

@@ -10,12 +10,13 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/data/services/export_service.dart';
 import 'package:pdf_signature/domain/models/model.dart';
+import 'package:image/image.dart' as img;
 
 class FakeExportService extends ExportService {
   bool exported = false;
   @override
   Future<Uint8List?> exportSignedPdfFromBytes({
-    Map<String, Uint8List>? libraryBytes,
+    Map<String, img.Image>? libraryImages,
     required Uint8List srcBytes,
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,

@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,7 +20,7 @@ Future<void> theUserPlacesASignaturePlacementFromAssetOnPage(
     // add dummy asset
     container
         .read(signatureAssetRepositoryProvider.notifier)
-        .add(Uint8List(100), name: assetName);
+        .addImage(img.Image(width: 1, height: 1), name: assetName);
     final updatedLibrary = container.read(signatureAssetRepositoryProvider);
     asset = updatedLibrary.firstWhere((a) => a.name == assetName);
   }

@@ -113,9 +113,9 @@ class _PdfMockContinuousListState extends ConsumerState<PdfMockContinuousList> {
                               .addPlacement(
                                 page: pageNum,
                                 rect: rect,
-                                asset: dragData.card?.asset,
-                                rotationDeg: dragData.card?.rotationDeg ?? 0.0,
-                                graphicAdjust: dragData.card?.graphicAdjust,
+                                asset: dragData.card.asset,
+                                rotationDeg: dragData.card.rotationDeg,
+                                graphicAdjust: dragData.card.graphicAdjust,
                               );
                         }
                       },

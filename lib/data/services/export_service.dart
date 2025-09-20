@@ -9,6 +9,7 @@ import 'package:image/image.dart' as img;
 import '../../domain/models/model.dart';
 // math moved to utils in rot
 import '../../utils/rotation_utils.dart' as rot;
+import '../../utils/background_removal.dart' as br;
 
 // NOTE:
 // - This exporter uses a raster snapshot of the UI (RepaintBoundary) and embeds it into a new PDF.
@@ -23,109 +24,82 @@ class ExportService {
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
     Map<int, List<SignaturePlacement>>? placementsByPage,
-    Map<String, Uint8List>? libraryBytes,
+    Map<String, img.Image>? libraryImages,
     double targetDpi = 144.0,
   }) async {
     // Per-call caches to avoid redundant decode/encode and image embedding work
-    final Map<String, Uint8List> _processedBytesCache = <String, Uint8List>{};
+    final Map<String, img.Image> _baseImageCache = <String, img.Image>{};
+    final Map<String, img.Image> _processedImageCache = <String, img.Image>{};
+    final Map<String, Uint8List> _encodedPngCache = <String, Uint8List>{};
     final Map<String, pw.MemoryImage> _memoryImageCache =
         <String, pw.MemoryImage>{};
     final Map<String, double> _aspectRatioCache = <String, double>{};
 
     // Returns a stable-ish cache key for bytes within this process (not content-hash, but good enough per-call)
-    String _baseKeyForBytes(Uint8List b) =>
-        '${identityHashCode(b)}:${b.length}';
+    String _baseKeyForImage(img.Image im) =>
+        'im:${identityHashCode(im)}:${im.width}x${im.height}';
+    String _adjustKey(GraphicAdjust adj) =>
+        'c=${adj.contrast}|b=${adj.brightness}|bg=${adj.bgRemoval}';
 
-    // Fast PNG signature check (no string allocation)
-    bool _isPng(Uint8List bytes) {
-      if (bytes.length < 8) return false;
-      return bytes[0] == 0x89 &&
-          bytes[1] == 0x50 && // P
-          bytes[2] == 0x4E && // N
-          bytes[3] == 0x47 && // G
-          bytes[4] == 0x0D &&
-          bytes[5] == 0x0A &&
-          bytes[6] == 0x1A &&
-          bytes[7] == 0x0A;
-    }
+    // Removed: PNG signature helper is no longer needed; we always encode to PNG explicitly.
 
-    // Resolve base (unprocessed) bytes for a placement, considering library override.
-    Uint8List _getBaseBytes(SignaturePlacement placement) {
-      Uint8List baseBytes = placement.asset.bytes;
+    // Resolve base (unprocessed) image for a placement, considering library override.
+    img.Image _getBaseImage(SignaturePlacement placement) {
       final libKey = placement.asset.name;
-      if (libKey != null && libraryBytes != null) {
-        final libBytes = libraryBytes[libKey];
-        if (libBytes != null && libBytes.isNotEmpty) {
-          baseBytes = libBytes;
+      if (libKey != null && libraryImages != null) {
+        final cached = _baseImageCache[libKey];
+        if (cached != null) return cached;
+        final provided = libraryImages[libKey];
+        if (provided != null) {
+          _baseImageCache[libKey] = provided;
+          return provided;
         }
       }
-      return baseBytes;
+      return placement.asset.sigImage;
     }
 
-    // Get processed bytes for a placement, with caching.
-    Uint8List _getProcessedBytes(SignaturePlacement placement) {
-      final Uint8List baseBytes = _getBaseBytes(placement);
-
-      final adj = placement.graphicAdjust;
-      final cacheKey =
-          '${_baseKeyForBytes(baseBytes)}|c=${adj.contrast}|b=${adj.brightness}|bg=${adj.bgRemoval}';
-      final cached = _processedBytesCache[cacheKey];
+    // Get processed image for a placement, with caching.
+    img.Image _getProcessedImage(SignaturePlacement placement) {
+      final base = _getBaseImage(placement);
+      final key =
+          '${_baseKeyForImage(base)}|${_adjustKey(placement.graphicAdjust)}';
+      final cached = _processedImageCache[key];
       if (cached != null) return cached;
-
-      // If no graphic changes requested, return bytes as-is (conversion to PNG is deferred to MemoryImage step)
-      final bool needsAdjust =
-          (adj.contrast != 1.0 || adj.brightness != 1.0 || adj.bgRemoval);
-      if (!needsAdjust) {
-        _processedBytesCache[cacheKey] = baseBytes;
-        return baseBytes;
+      final adj = placement.graphicAdjust;
+      img.Image processed = base;
+      if (adj.contrast != 1.0 || adj.brightness != 1.0) {
+        processed = img.adjustColor(
+          processed,
+          contrast: adj.contrast,
+          brightness: adj.brightness,
+        );
       }
-
-      try {
-        final decoded = img.decodeImage(baseBytes);
-        if (decoded == null) {
-          _processedBytesCache[cacheKey] = baseBytes;
-          return baseBytes;
-        }
-        img.Image processed = decoded;
-
-        if (adj.contrast != 1.0 || adj.brightness != 1.0) {
-          processed = img.adjustColor(
-            processed,
-            contrast: adj.contrast,
-            brightness: adj.brightness,
-          );
-        }
-
-        if (adj.bgRemoval) {
-          processed = _removeBackground(processed);
-        }
-
-        final outBytes = Uint8List.fromList(img.encodePng(processed));
-        _processedBytesCache[cacheKey] = outBytes;
-        return outBytes;
-      } catch (_) {
-        // If processing fails, fall back to original
-        _processedBytesCache[cacheKey] = baseBytes;
-        return baseBytes;
+      if (adj.bgRemoval) {
+        processed = br.removeNearWhiteBackground(processed, threshold: 240);
       }
+      _processedImageCache[key] = processed;
+      return processed;
     }
 
-    // Wrap bytes in a pw.MemoryImage with caching, converting to PNG only when necessary.
-    pw.MemoryImage? _getMemoryImage(Uint8List bytes) {
-      final key = _baseKeyForBytes(bytes);
+    // Get PNG bytes for the processed image, caching the encoding.
+    Uint8List _getProcessedPng(SignaturePlacement placement) {
+      final base = _getBaseImage(placement);
+      final key =
+          '${_baseKeyForImage(base)}|${_adjustKey(placement.graphicAdjust)}';
+      final cached = _encodedPngCache[key];
+      if (cached != null) return cached;
+      final processed = _getProcessedImage(placement);
+      final png = Uint8List.fromList(img.encodePng(processed, level: 6));
+      _encodedPngCache[key] = png;
+      return png;
+    }
+
+    // Wrap bytes in a pw.MemoryImage with caching.
+    pw.MemoryImage? _getMemoryImage(Uint8List bytes, String key) {
       final cached = _memoryImageCache[key];
       if (cached != null) return cached;
       try {
-        if (_isPng(bytes)) {
-          final imgObj = pw.MemoryImage(bytes);
-          _memoryImageCache[key] = imgObj;
-          return imgObj;
-        }
-        // Convert to PNG to preserve transparency if not already PNG
-        final decoded = img.decodeImage(bytes);
-        if (decoded == null) return null;
-        final png = Uint8List.fromList(img.encodePng(decoded, level: 6));
-        final imgObj = pw.MemoryImage(png);
+        final imgObj = pw.MemoryImage(bytes);
         _memoryImageCache[key] = imgObj;
         return imgObj;
       } catch (_) {
@@ -133,22 +107,15 @@ class ExportService {
       }
     }
 
-    // Compute and cache aspect ratio (width/height) for given bytes
-    double? _getAspectRatioFromBytes(Uint8List bytes) {
-      final key = _baseKeyForBytes(bytes);
+    // Compute and cache aspect ratio (width/height) for given image
+    double? _getAspectRatioFromImage(img.Image image) {
+      final key = _baseKeyForImage(image);
       final c = _aspectRatioCache[key];
       if (c != null) return c;
-      try {
-        final decoded = img.decodeImage(bytes);
-        if (decoded == null || decoded.width <= 0 || decoded.height <= 0) {
-          return null;
-        }
-        final ar = decoded.width / decoded.height;
-        _aspectRatioCache[key] = ar;
-        return ar;
-      } catch (_) {
-        return null;
-      }
+      if (image.width <= 0 || image.height <= 0) return null;
+      final ar = image.width / image.height;
+      _aspectRatioCache[key] = ar;
+      return ar;
     }
 
     final out = pw.Document(version: pdf.PdfVersion.pdf_1_4, compress: false);
@@ -206,20 +173,18 @@ class ExportService {
                   final w = r.width * widthPts;
                   final h = r.height * heightPts;
 
-                  // Get processed bytes (cached) and then embed as MemoryImage (cached)
-                  Uint8List bytes = _getProcessedBytes(placement);
-                  if (bytes.isEmpty && signatureImageBytes != null) {
-                    bytes = signatureImageBytes;
-                  }
-
-                  if (bytes.isNotEmpty) {
-                    final imgObj = _getMemoryImage(bytes);
+                  // Get processed image and embed as MemoryImage (cached)
+                  final processedPng = _getProcessedPng(placement);
+                  final baseImage = _getBaseImage(placement);
+                  final memKey =
+                      '${_baseKeyForImage(baseImage)}|${_adjustKey(placement.graphicAdjust)}';
+                  if (processedPng.isNotEmpty) {
+                    final imgObj = _getMemoryImage(processedPng, memKey);
                     if (imgObj != null) {
                       // Align with RotatedSignatureImage: counterclockwise positive
                       final angle = rot.radians(placement.rotationDeg);
-                      // Prefer AR from base bytes to avoid extra decode of processed
-                      final baseBytes = _getBaseBytes(placement);
-                      final ar = _getAspectRatioFromBytes(baseBytes);
+                      // Use AR from base image
+                      final ar = _getAspectRatioFromImage(baseImage);
                       final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
 
                       children.add(
@@ -292,17 +257,15 @@ class ExportService {
                 final w = r.width * widthPts;
                 final h = r.height * heightPts;
 
-                Uint8List bytes = _getProcessedBytes(placement);
-                if (bytes.isEmpty && signatureImageBytes != null) {
-                  bytes = signatureImageBytes;
-                }
-
-                if (bytes.isNotEmpty) {
-                  final imgObj = _getMemoryImage(bytes);
+                final processedPng = _getProcessedPng(placement);
+                final baseImage = _getBaseImage(placement);
+                final memKey =
+                    '${_baseKeyForImage(baseImage)}|${_adjustKey(placement.graphicAdjust)}';
+                if (processedPng.isNotEmpty) {
+                  final imgObj = _getMemoryImage(processedPng, memKey);
                   if (imgObj != null) {
                     final angle = rot.radians(placement.rotationDeg);
-                    final baseBytes = _getBaseBytes(placement);
-                    final ar = _getAspectRatioFromBytes(baseBytes);
+                    final ar = _getAspectRatioFromImage(baseImage);
                     final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
 
                     children.add(
@@ -356,30 +319,5 @@ class ExportService {
     }
   }
 
-  /// Remove near-white background by making pixels with high brightness transparent
-  img.Image _removeBackground(img.Image image) {
-    final result =
-        image.hasAlpha ? img.Image.from(image) : image.convert(numChannels: 4);
-
-    const int threshold = 245; // Near-white threshold (0-255)
-
-    for (int y = 0; y < result.height; y++) {
-      for (int x = 0; x < result.width; x++) {
-        final pixel = result.getPixel(x, y);
-
-        // Get RGB values
-        final r = pixel.r;
-        final g = pixel.g;
-        final b = pixel.b;
-
-        // Check if pixel is near-white (all channels above threshold)
-        if (r >= threshold && g >= threshold && b >= threshold) {
-          // Make transparent
-          result.setPixelRgba(x, y, r, g, b, 0);
-        }
-      }
-    }
-
-    return result;
-  }
+  // Background removal implemented in utils/background_removal.dart
 }

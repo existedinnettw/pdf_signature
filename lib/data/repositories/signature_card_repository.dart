@@ -1,43 +1,55 @@
-import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/model.dart';
 import '../../data/services/signature_image_processing_service.dart';
 
 class DisplaySignatureData {
-  final Uint8List bytes; // bytes to render
+  final img.Image image; // image to render (image-first path)
   final List<double>? colorMatrix; // optional GPU color matrix
-  const DisplaySignatureData({required this.bytes, this.colorMatrix});
+  const DisplaySignatureData({required this.image, this.colorMatrix});
 }
 
 /// CachedSignatureCard extends SignatureCard with an internal processed cache
 class CachedSignatureCard extends SignatureCard {
-  Uint8List? _cachedProcessed;
+  img.Image? _cachedProcessedImage;
 
   CachedSignatureCard({
     required super.asset,
     required super.rotationDeg,
     super.graphicAdjust,
-    Uint8List? initialProcessed,
-  });
+    img.Image? initialProcessedImage,
+  }) {
+    // Seed cache if provided
+    if (initialProcessedImage != null) {
+      _cachedProcessedImage = initialProcessedImage;
+    }
+  }
 
-  /// Returns cached processed bytes for the current [graphicAdjust], computing
+  /// Returns cached processed image for the current [graphicAdjust], computing
   /// via [service] if not cached yet.
-  Uint8List getOrComputeProcessed(SignatureImageProcessingService service) {
-    final existing = _cachedProcessed;
-    if (existing != null) return existing;
-    final computed = service.processImage(asset.bytes, graphicAdjust);
-    _cachedProcessed = computed;
-    return computed;
+  img.Image getOrComputeProcessedImage(
+    SignatureImageProcessingService service,
+  ) {
+    final existing = _cachedProcessedImage;
+    if (existing != null) {
+      return existing;
+    }
+    final computedImage = service.processImageToImage(
+      asset.sigImage,
+      graphicAdjust,
+    );
+    _cachedProcessedImage = computedImage;
+    return computedImage;
   }
 
-  /// Invalidate the cached processed bytes, forcing recompute next time.
+  /// Invalidate the cached processed image, forcing recompute next time.
   void invalidateCache() {
-    _cachedProcessed = null;
+    _cachedProcessedImage = null;
   }
 
-  /// Sets/updates the processed bytes explicitly (used after adjustments update)
-  void setProcessed(Uint8List bytes) {
-    _cachedProcessed = bytes;
+  /// Sets/updates the processed image explicitly (used after adjustments update)
+  void setProcessedImage(img.Image image) {
+    _cachedProcessedImage = image;
   }
 
   factory CachedSignatureCard.initial() => CachedSignatureCard(
@@ -90,8 +102,8 @@ class SignatureCardStateNotifier
           graphicAdjust: graphicAdjust ?? c.graphicAdjust,
         );
         // Compute and set the single processed bytes for the updated adjust
-        final processed = _processingService.processImage(
-          updated.asset.bytes,
+        final processedImage = _processingService.processImageToImage(
+          updated.asset.sigImage,
           updated.graphicAdjust,
         );
         final next = CachedSignatureCard(
@@ -99,7 +111,7 @@ class SignatureCardStateNotifier
           rotationDeg: updated.rotationDeg,
           graphicAdjust: updated.graphicAdjust,
         );
-        next.setProcessed(processed);
+        next.setProcessedImage(processedImage);
         list[i] = next;
         state = List<CachedSignatureCard>.unmodifiable(list);
         return;
@@ -117,47 +129,58 @@ class SignatureCardStateNotifier
     state = const <CachedSignatureCard>[];
   }
 
-  /// Returns processed image bytes for the given asset + adjustments.
-  /// Uses an internal cache to avoid re-processing.
-  Uint8List getProcessedBytes(SignatureAsset asset, GraphicAdjust adjust) {
+  /// New: Returns processed decoded image for the given asset + adjustments.
+  img.Image getProcessedImage(SignatureAsset asset, GraphicAdjust adjust) {
     // Try to find a matching card by asset
     for (final c in state) {
       if (c.asset == asset) {
-        // If requested adjust equals the card's current adjust, use per-card cache
         if (c.graphicAdjust == adjust) {
-          return c.getOrComputeProcessed(_processingService);
+          // If cached bytes exist, decode once; otherwise compute from image
+          if (c._cachedProcessedImage != null) {
+            return c._cachedProcessedImage!;
+          }
+          return _processingService.processImageToImage(
+            c.asset.sigImage,
+            c.graphicAdjust,
+          );
         }
-        // Previewing unsaved adjustments: compute without caching
-        return _processingService.processImage(asset.bytes, adjust);
+        // Previewing unsaved adjustments: compute from image without caching
+        return _processingService.processImageToImage(asset.sigImage, adjust);
       }
     }
     // Asset not found among cards (e.g., preview in dialog): compute on-the-fly
-    return _processingService.processImage(asset.bytes, adjust);
+    return _processingService.processImageToImage(asset.sigImage, adjust);
   }
 
-  /// Provide display data optimized: if bgRemoval false, returns original bytes + matrix;
-  /// if bgRemoval true, returns processed bytes with baked adjustments and null matrix.
+  /// Provide display data optimized: if bgRemoval false, returns original image + matrix;
+  /// if bgRemoval true, returns processed image with baked adjustments and null matrix.
   DisplaySignatureData getDisplayData(
     SignatureAsset asset,
     GraphicAdjust adjust,
   ) {
     if (!adjust.bgRemoval) {
-      // Find card for potential original bytes (identical object) - no CPU processing.
-      for (final c in state) {
-        if (c.asset == asset) {
-          final matrix = _processingService.buildColorMatrix(adjust);
-          return DisplaySignatureData(
-            bytes: c.asset.bytes,
-            colorMatrix: matrix,
-          );
-        }
-      }
+      // No CPU processing. Return original image + matrix for consumers.
       final matrix = _processingService.buildColorMatrix(adjust);
-      return DisplaySignatureData(bytes: asset.bytes, colorMatrix: matrix);
+      return DisplaySignatureData(image: asset.sigImage, colorMatrix: matrix);
     }
-    // bgRemoval path: need CPU processed bytes (includes brightness/contrast first)
-    final processed = getProcessedBytes(asset, adjust);
-    return DisplaySignatureData(bytes: processed, colorMatrix: null);
+    // bgRemoval path: provide processed image with baked adjustments.
+    final processed = getProcessedImage(asset, adjust);
+    return DisplaySignatureData(image: processed, colorMatrix: null);
+  }
+
+  /// New: Provide display image optimized for UI widgets that can accept img.Image.
+  /// If bgRemoval is false, returns original image and a GPU color matrix.
+  /// If bgRemoval is true, returns processed image with baked adjustments and null matrix.
+  (img.Image image, List<double>? colorMatrix) getDisplayImage(
+    SignatureAsset asset,
+    GraphicAdjust adjust,
+  ) {
+    if (!adjust.bgRemoval) {
+      final matrix = _processingService.buildColorMatrix(adjust);
+      return (asset.sigImage, matrix);
+    }
+    final processed = getProcessedImage(asset, adjust);
+    return (processed, null);
   }
 
   /// Clears all cached processed images.

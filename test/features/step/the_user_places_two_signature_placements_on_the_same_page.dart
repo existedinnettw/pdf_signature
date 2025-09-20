@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,16 +21,7 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
         page: page,
         rect: Rect.fromLTWH(10, 10, 100, 50),
         asset: SignatureAsset(
-          bytes: Uint8List.fromList([
-            0x89,
-            0x50,
-            0x4E,
-            0x47,
-            0x0D,
-            0x0A,
-            0x1A,
-            0x0A,
-          ]),
+          sigImage: img.Image(width: 1, height: 1),
           name: 'sig1.png',
         ),
       );
@@ -41,17 +32,7 @@ Future<void> theUserPlacesTwoSignaturePlacementsOnTheSamePage(
         page: page,
         rect: Rect.fromLTWH(120, 10, 100, 50),
         asset: SignatureAsset(
-          bytes: Uint8List.fromList([
-            0x89,
-            0x50,
-            0x4E,
-            0x47,
-            0x0D,
-            0x0A,
-            0x1A,
-            0x0A,
-            0x00,
-          ]),
+          sigImage: img.Image(width: 1, height: 1),
           name: 'sig2.png',
         ),
       );

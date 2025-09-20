@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:colorfilter_generator/colorfilter_generator.dart';
@@ -8,6 +7,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import '../../pdf/widgets/adjustments_panel.dart';
 import '../../../../domain/models/model.dart' as domain;
 import 'rotated_signature_image.dart';
+import '../../../../utils/background_removal.dart' as br;
 
 class ImageEditorResult {
   final double rotation;
@@ -44,10 +44,9 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
   late final ValueNotifier<double> _rotation;
 
   // Cached image data
-  late Uint8List _originalBytes; // Original asset bytes (never mutated)
-  Uint8List?
-  _processedBgRemovedBytes; // Cached brightness/contrast adjusted then bg-removed bytes
-  img.Image? _decodedBase; // Decoded original for processing
+  late img.Image _originalImage; // Original asset image
+  img.Image?
+  _processedBgRemovedImage; // Cached brightness/contrast adjusted then bg-removed image
 
   // Debounce for background removal (in case we later tie it to brightness/contrast)
   Timer? _bgRemovalDebounce;
@@ -60,17 +59,14 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
     _contrast = widget.initialGraphicAdjust.contrast;
     _brightness = widget.initialGraphicAdjust.brightness;
     _rotation = ValueNotifier<double>(widget.initialRotation);
-    _originalBytes = widget.asset.bytes;
-    // Decode lazily only if/when background removal is needed
+    _originalImage = widget.asset.sigImage;
+    // If background removal initially enabled, precompute immediately
     if (_bgRemoval) {
       _scheduleBgRemovalReprocess(immediate: true);
     }
   }
 
-  Uint8List get _displayBytes =>
-      _bgRemoval
-          ? (_processedBgRemovedBytes ?? _originalBytes)
-          : _originalBytes;
+  // No _displayBytes cache: the preview now uses img.Image directly.
 
   void _onBgRemovalChanged(bool value) {
     setState(() {
@@ -95,9 +91,7 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
   }
 
   void _recomputeBgRemoval() {
-    _decodedBase ??= img.decodeImage(_originalBytes);
-    final base = _decodedBase;
-    if (base == null) return;
+    final base = _originalImage;
     // Apply brightness & contrast first (domain uses 1.0 neutral)
     img.Image working = img.Image.from(base);
     final needAdjust = _brightness != 1.0 || _contrast != 1.0;
@@ -109,22 +103,11 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
       );
     }
     // Then remove background on adjusted pixels
-    const int threshold = 240;
-    if (!working.hasAlpha) {
-      working = working.convert(numChannels: 4);
-    }
-    for (int y = 0; y < working.height; y++) {
-      for (int x = 0; x < working.width; x++) {
-        final p = working.getPixel(x, y);
-        final r = p.r, g = p.g, b = p.b;
-        if (r >= threshold && g >= threshold && b >= threshold) {
-          working.setPixelRgba(x, y, r, g, b, 0);
-        }
-      }
-    }
-    final bytes = Uint8List.fromList(img.encodePng(working));
+    working = br.removeNearWhiteBackground(working, threshold: 240);
     if (!mounted) return;
-    setState(() => _processedBgRemovedBytes = bytes);
+    setState(() {
+      _processedBgRemovedImage = working;
+    });
   }
 
   ColorFilter _currentColorFilter() {
@@ -211,7 +194,11 @@ class _ImageEditorDialogState extends State<ImageEditorDialog> {
                         valueListenable: _rotation,
                         builder: (context, rot, child) {
                           final image = RotatedSignatureImage(
-                            bytes: _displayBytes,
+                            image:
+                                _bgRemoval
+                                    ? (_processedBgRemovedImage ??
+                                        _originalImage)
+                                    : _originalImage,
                             rotationDeg: rot,
                           );
                           if (_bgRemoval) return image;

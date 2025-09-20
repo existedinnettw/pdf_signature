@@ -378,19 +378,22 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
           notifier.addPlacement(
             page: 1,
             rect: const Rect.fromLTWH(0.1, 0.1, 0.3, 0.2),
-            asset: SignatureAsset(bytes: Uint8List.fromList(bytes)),
+            asset: SignatureAsset(
+              sigImage: img.decodeImage(Uint8List.fromList(bytes))!,
+            ),
           );
           return notifier;
         }),
         signatureAssetRepositoryProvider.overrideWith((ref) {
           final repo = SignatureAssetRepository();
-          repo.add(Uint8List.fromList(bytes), name: 'test');
+          final image = img.decodeImage(Uint8List.fromList(bytes))!;
+          repo.addImage(image, name: 'test');
           return repo;
         }),
         signatureCardRepositoryProvider.overrideWith((ref) {
           final cardRepo = SignatureCardStateNotifier();
           final asset = SignatureAsset(
-            bytes: Uint8List.fromList(bytes),
+            sigImage: img.decodeImage(Uint8List.fromList(bytes))!,
             name: 'test',
           );
           cardRepo.addWithAsset(asset, 0.0);

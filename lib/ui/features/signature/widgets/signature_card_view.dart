@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/domain/models/model.dart' as domain;
@@ -31,7 +30,6 @@ class SignatureCardView extends ConsumerStatefulWidget {
 }
 
 class _SignatureCardViewState extends ConsumerState<SignatureCardView> {
-  Uint8List? _lastBytesRef;
   Future<void> _showContextMenu(BuildContext context, Offset position) async {
     final selected = await showMenu<String>(
       context: context,
@@ -61,39 +59,27 @@ class _SignatureCardViewState extends ConsumerState<SignatureCardView> {
     }
   }
 
-  void _maybePrecache(Uint8List bytes) {
-    if (identical(_lastBytesRef, bytes)) return;
-    _lastBytesRef = bytes;
-    // Schedule after frame to avoid doing work during build.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Use single-dimension hints to preserve aspect ratio.
-      final img128 = ResizeImage(MemoryImage(bytes), height: 128);
-      final img256 = ResizeImage(MemoryImage(bytes), height: 256);
-      precacheImage(img128, context);
-      precacheImage(img256, context);
-    });
-  }
+  // No precache needed when using decoded images directly.
 
   @override
   Widget build(BuildContext context) {
-    final displayData = ref
+    final (displayImage, colorMatrix) = ref
         .watch(signatureViewModelProvider)
-        .getDisplaySignatureData(widget.asset, widget.graphicAdjust);
-    _maybePrecache(displayData.bytes);
+        .getDisplayImage(widget.asset, widget.graphicAdjust);
     // Fit inside 96x64 with 6px padding using the shared rotated image widget
     const boxW = 96.0, boxH = 64.0, pad = 6.0;
     // Hint decoder with small target size to reduce decode cost.
     // The card shows inside 96x64 with 6px padding; request ~128px max.
     Widget coreImage = RotatedSignatureImage(
-      bytes: displayData.bytes,
+      image: displayImage,
       rotationDeg: widget.rotationDeg,
       // Only set one dimension to keep aspect ratio
       cacheHeight: 128,
     );
     Widget img =
-        (displayData.colorMatrix != null)
+        (colorMatrix != null)
             ? ColorFiltered(
-              colorFilter: ColorFilter.matrix(displayData.colorMatrix!),
+              colorFilter: ColorFilter.matrix(colorMatrix),
               child: coreImage,
             )
             : coreImage;
@@ -180,19 +166,17 @@ class _SignatureCardViewState extends ConsumerState<SignatureCardView> {
             child: Padding(
               padding: const EdgeInsets.all(6.0),
               child:
-                  (displayData.colorMatrix != null)
+                  (colorMatrix != null)
                       ? ColorFiltered(
-                        colorFilter: ColorFilter.matrix(
-                          displayData.colorMatrix!,
-                        ),
+                        colorFilter: ColorFilter.matrix(colorMatrix),
                         child: RotatedSignatureImage(
-                          bytes: displayData.bytes,
+                          image: displayImage,
                           rotationDeg: widget.rotationDeg,
                           cacheHeight: 256,
                         ),
                       )
                       : RotatedSignatureImage(
-                        bytes: displayData.bytes,
+                        image: displayImage,
                         rotationDeg: widget.rotationDeg,
                         cacheHeight: 256,
                       ),

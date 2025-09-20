@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/services/export_service.dart';
@@ -58,7 +59,7 @@ class DocumentStateNotifier extends StateNotifier<Document> {
     list.add(
       SignaturePlacement(
         rect: rect,
-        asset: asset ?? SignatureAsset(bytes: _singleTransparentPng),
+        asset: asset ?? SignatureAsset(sigImage: _singleTransparentPng),
         rotationDeg: rotationDeg,
         graphicAdjust: graphicAdjust ?? const GraphicAdjust(),
       ),
@@ -69,75 +70,7 @@ class DocumentStateNotifier extends StateNotifier<Document> {
 
   // Tiny 1x1 transparent PNG to avoid decode crashes in tests when no real
   // signature bytes were provided.
-  static final Uint8List _singleTransparentPng = Uint8List.fromList([
-    0x89,
-    0x50,
-    0x4E,
-    0x47,
-    0x0D,
-    0x0A,
-    0x1A,
-    0x0A,
-    0x00,
-    0x00,
-    0x00,
-    0x0D,
-    0x49,
-    0x48,
-    0x44,
-    0x52,
-    0x00,
-    0x00,
-    0x00,
-    0x01,
-    0x00,
-    0x00,
-    0x00,
-    0x01,
-    0x08,
-    0x06,
-    0x00,
-    0x00,
-    0x00,
-    0x1F,
-    0x15,
-    0xC4,
-    0x89,
-    0x00,
-    0x00,
-    0x00,
-    0x0A,
-    0x49,
-    0x44,
-    0x41,
-    0x54,
-    0x78,
-    0x9C,
-    0x63,
-    0x60,
-    0x00,
-    0x00,
-    0x00,
-    0x02,
-    0x00,
-    0x01,
-    0xE5,
-    0x27,
-    0xD4,
-    0xA6,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x49,
-    0x45,
-    0x4E,
-    0x44,
-    0xAE,
-    0x42,
-    0x60,
-    0x82,
-  ]);
+  static final img.Image _singleTransparentPng = img.Image(width: 1, height: 1);
 
   void updatePlacementRotation({
     required int page,

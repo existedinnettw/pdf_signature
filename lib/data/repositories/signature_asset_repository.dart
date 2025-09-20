@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 
@@ -6,11 +6,9 @@ import 'package:pdf_signature/domain/models/model.dart';
 class SignatureAssetRepository extends StateNotifier<List<SignatureAsset>> {
   SignatureAssetRepository() : super(const []);
 
-  void add(Uint8List bytes, {String? name}) {
-    // Always add a new asset (allow duplicates). This lets users create multiple cards
-    // even when loading the same image repeatedly for different adjustments/usages.
-    if (bytes.isEmpty) return;
-    state = List.of(state)..add(SignatureAsset(bytes: bytes, name: name));
+  /// Preferred API: add from an already decoded image to avoid re-decodes.
+  void addImage(img.Image image, {String? name}) {
+    state = List.of(state)..add(SignatureAsset(sigImage: image, name: name));
   }
 
   void remove(SignatureAsset asset) {

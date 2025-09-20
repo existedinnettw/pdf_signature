@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,19 +28,28 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(10, 10, 50, 50),
-    asset: SignatureAsset(bytes: Uint8List(0), name: 'test1'),
+    asset: SignatureAsset(
+      sigImage: img.Image(width: 1, height: 1),
+      name: 'test1',
+    ),
   );
   await tester.pumpAndSettle();
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(70, 10, 50, 50),
-    asset: SignatureAsset(bytes: Uint8List(0), name: 'test2'),
+    asset: SignatureAsset(
+      sigImage: img.Image(width: 1, height: 1),
+      name: 'test2',
+    ),
   );
   await tester.pumpAndSettle();
   pdfN.addPlacement(
     page: page,
     rect: Rect.fromLTWH(130, 10, 50, 50),
-    asset: SignatureAsset(bytes: Uint8List(0), name: 'test3'),
+    asset: SignatureAsset(
+      sigImage: img.Image(width: 1, height: 1),
+      name: 'test3',
+    ),
   );
   await tester.pumpAndSettle();
 }

@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'signature_asset.dart';
+import 'package:image/image.dart' as img;
 import 'graphic_adjust.dart';
 
 /**
@@ -28,7 +28,7 @@ class SignatureCard {
   );
 
   factory SignatureCard.initial() => SignatureCard(
-    asset: SignatureAsset(bytes: Uint8List(0)),
+    asset: SignatureAsset(sigImage: img.Image(width: 1, height: 1)),
     rotationDeg: 0.0,
     graphicAdjust: const GraphicAdjust(),
   );

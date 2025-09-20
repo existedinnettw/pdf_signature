@@ -26,9 +26,9 @@ class SignatureOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final processedBytes = ref
+    final processedImage = ref
         .watch(signatureViewModelProvider)
-        .getProcessedBytes(placement.asset, placement.graphicAdjust);
+        .getProcessedImage(placement.asset, placement.graphicAdjust);
     return LayoutBuilder(
       builder: (context, constraints) {
         final pageW = constraints.maxWidth;
@@ -133,7 +133,7 @@ class SignatureOverlay extends ConsumerWidget {
                     child: FittedBox(
                       fit: BoxFit.contain,
                       child: RotatedSignatureImage(
-                        bytes: processedBytes,
+                        image: processedImage,
                         rotationDeg: placement.rotationDeg,
                       ),
                     ),

@@ -1,7 +1,7 @@
 import 'dart:typed_data';
-import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
@@ -108,7 +108,7 @@ void main() {
         .addPlacement(
           page: 1,
           rect: const Rect.fromLTWH(0.25, 0.50, 0.10, 0.10),
-          asset: SignatureAsset(bytes: bytes),
+          asset: SignatureAsset(sigImage: img.decodeImage(bytes)!),
         );
 
     await tester.pumpAndSettle();

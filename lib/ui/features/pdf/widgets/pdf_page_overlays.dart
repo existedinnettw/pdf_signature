@@ -70,9 +70,9 @@ class PdfPageOverlays extends ConsumerWidget {
                     .addPlacement(
                       page: pageNumber,
                       rect: rect,
-                      asset: d.card?.asset,
-                      rotationDeg: d.card?.rotationDeg ?? 0.0,
-                      graphicAdjust: d.card?.graphicAdjust,
+                      asset: d.card.asset,
+                      rotationDeg: d.card.rotationDeg,
+                      graphicAdjust: d.card.graphicAdjust,
                     );
               },
               builder: (context, candidateData, rejectedData) {

@@ -1,22 +1,21 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:pdf_signature/ui/features/signature/widgets/rotated_signature_image.dart';
 
-/// Generates a simple solid-color PNG with given width/height.
-Uint8List makePng({required int w, required int h}) {
+/// Generates a simple solid-color image with given width/height.
+img.Image makeImage({required int w, required int h}) {
   final im = img.Image(width: w, height: h);
   // Fill with opaque white
   img.fill(im, color: img.ColorRgba8(255, 255, 255, 255));
-  return Uint8List.fromList(img.encodePng(im));
+  return im;
 }
 
 void main() {
   testWidgets('4:3 image rotated -90 deg scales to 3/4', (tester) async {
     // 4:3 aspect image -> width/height = 4/3
-    final bytes = makePng(w: 400, h: 300);
+    final image = makeImage(w: 400, h: 300);
 
     // Pump widget under a fixed-size parent so Transform.scale is applied
     await tester.pumpWidget(
@@ -26,7 +25,7 @@ void main() {
             child: SizedBox(
               width: 200,
               height: 150, // same aspect as image bounds (4:3)
-              child: RotatedSignatureImage(bytes: bytes, rotationDeg: -90),
+              child: RotatedSignatureImage(image: image, rotationDeg: -90),
             ),
           ),
         ),

@@ -1,27 +1,25 @@
 import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 
 /// SignatureAsset store image file of a signature, stored in the device or cloud storage
 class SignatureAsset {
-  final Uint8List bytes;
+  final img.Image sigImage;
   // List<List<Offset>>? strokes;
   final String? name; // optional display name (e.g., filename)
-  const SignatureAsset({required this.bytes, this.name});
+  const SignatureAsset({required this.sigImage, this.name});
+
+  /// Encode this image to PNG bytes. Use a small compression level for speed by default.
+  Uint8List toPngBytes({int level = 3}) =>
+      Uint8List.fromList(img.encodePng(sigImage, level: level));
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is SignatureAsset &&
           name == other.name &&
-          _bytesEqual(bytes, other.bytes);
+          sigImage == other.sigImage;
 
   @override
-  int get hashCode => name.hashCode ^ bytes.length.hashCode;
-
-  static bool _bytesEqual(Uint8List a, Uint8List b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
+  int get hashCode =>
+      name.hashCode ^ sigImage.width.hashCode ^ sigImage.height.hashCode;
 }

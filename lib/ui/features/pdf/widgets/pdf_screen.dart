@@ -15,6 +15,7 @@ import 'signatures_sidebar.dart';
 import '../view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/utils/download.dart';
 import '../view_model/pdf_view_model.dart';
+import 'package:image/image.dart' as img;
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   final Future<void> Function() onPickPdf;
@@ -97,7 +98,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     if (controller.isReady) controller.goToPage(pageNumber: target);
   }
 
-  Future<Uint8List?> _loadSignatureFromFile() async {
+  Future<img.Image?> _loadSignatureFromFile() async {
     final typeGroup = fs.XTypeGroup(
       label:
           Localizations.of<AppLocalizations>(context, AppLocalizations)?.image,
@@ -106,20 +107,31 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
     final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
     if (file == null) return null;
     final bytes = await file.readAsBytes();
-    return bytes;
+    try {
+      var sigImage = img.decodeImage(bytes);
+      sigImage?.convert(numChannels: 4);
+      return sigImage;
+    } catch (_) {
+      return null;
+    }
   }
 
-  Future<Uint8List?> _openDrawCanvas() async {
+  Future<img.Image?> _openDrawCanvas() async {
     final result = await showModalBottomSheet<Uint8List>(
       context: context,
       isScrollControlled: true,
       enableDrag: false,
       builder: (_) => const DrawCanvas(closeOnConfirmImmediately: false),
     );
-    if (result != null && result.isNotEmpty) {
-      // In simplified UI, adding to library isn't implemented
+    if (result == null || result.isEmpty) return null;
+    // In simplified UI, adding to library isn't implemented
+    try {
+      var sigImage = img.decodeImage(result);
+      sigImage?.convert(numChannels: 4);
+      return sigImage;
+    } catch (_) {
+      return null;
     }
-    return result;
   }
 
   Future<void> _saveSignedPdf() async {

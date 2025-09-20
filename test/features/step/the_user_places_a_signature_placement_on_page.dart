@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +19,10 @@ Future<void> theUserPlacesASignaturePlacementOnPage(
       .addPlacement(
         page: page,
         rect: Rect.fromLTWH(20, 20, 100, 50),
-        asset: SignatureAsset(bytes: Uint8List(0), name: 'test.png'),
+        asset: SignatureAsset(
+          sigImage: img.Image(width: 1, height: 1),
+          name: 'test.png',
+        ),
       );
   // Allow Riverpod's scheduler to flush any pending microtasks/timers
   await tester.pumpAndSettle();

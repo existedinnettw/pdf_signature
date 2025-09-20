@@ -14,6 +14,8 @@ import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
+import 'package:image/image.dart' as img;
+import 'package:pdf_signature/domain/models/model.dart';
 
 class RecordingExporter extends ExportService {
   bool called = false;
@@ -22,8 +24,8 @@ class RecordingExporter extends ExportService {
     required Uint8List srcBytes,
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
-    Map<int, List<dynamic>>? placementsByPage,
-    Map<String, Uint8List>? libraryBytes,
+    Map<int, List<SignaturePlacement>>? placementsByPage,
+    Map<String, img.Image>? libraryImages,
     double targetDpi = 144.0,
   }) async {
     // Return tiny dummy PDF bytes

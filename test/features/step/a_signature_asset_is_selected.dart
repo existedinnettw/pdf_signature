@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
@@ -14,7 +14,7 @@ Future<void> aSignatureAssetIsSelected(WidgetTester tester) async {
   if (library.isEmpty) {
     container
         .read(signatureAssetRepositoryProvider.notifier)
-        .add(Uint8List(100), name: 'Selected Asset');
+        .addImage(img.Image(width: 1, height: 1), name: 'Selected Asset');
     // Re-read the library
     library = container.read(signatureAssetRepositoryProvider);
   }

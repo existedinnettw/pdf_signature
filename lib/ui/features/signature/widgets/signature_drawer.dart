@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+// no bytes here; image-first
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
@@ -7,6 +7,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/signature_asset.dart';
+import 'package:image/image.dart' as img;
 import 'image_editor_dialog.dart';
 import 'signature_card_view.dart';
 import '../../pdf/view_model/pdf_view_model.dart';
@@ -22,10 +23,10 @@ class SignatureDrawer extends ConsumerStatefulWidget {
   });
 
   final bool disabled;
-  // Return the loaded bytes (if any) so we can add the exact image to the library immediately.
-  final Future<Uint8List?> Function() onLoadSignatureFromFile;
-  // Return the drawn bytes (if any) so we can add it to the library immediately.
-  final Future<Uint8List?> Function() onOpenDrawCanvas;
+  // Return decoded image so inner layers don't decode.
+  final Future<img.Image?> Function() onLoadSignatureFromFile;
+  // Return decoded image so inner layers don't decode.
+  final Future<img.Image?> Function() onOpenDrawCanvas;
 
   @override
   ConsumerState<SignatureDrawer> createState() => _SignatureDrawerState();
@@ -120,12 +121,11 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                           disabled
                               ? null
                               : () async {
-                                final loaded =
+                                final image =
                                     await widget.onLoadSignatureFromFile();
-                                final b = loaded;
-                                if (b != null) {
+                                if (image != null) {
                                   final asset = SignatureAsset(
-                                    bytes: b,
+                                    sigImage: image,
                                     name: 'image',
                                   );
                                   ref
@@ -133,7 +133,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                         signatureAssetRepositoryProvider
                                             .notifier,
                                       )
-                                      .add(b, name: 'image');
+                                      .addImage(image, name: 'image');
                                   ref
                                       .read(
                                         signatureCardRepositoryProvider
@@ -151,11 +151,10 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                           disabled
                               ? null
                               : () async {
-                                final drawn = await widget.onOpenDrawCanvas();
-                                final b = drawn;
-                                if (b != null) {
+                                final image = await widget.onOpenDrawCanvas();
+                                if (image != null) {
                                   final asset = SignatureAsset(
-                                    bytes: b,
+                                    sigImage: image,
                                     name: 'drawing',
                                   );
                                   ref
@@ -163,7 +162,7 @@ class _SignatureDrawerState extends ConsumerState<SignatureDrawer> {
                                         signatureAssetRepositoryProvider
                                             .notifier,
                                       )
-                                      .add(b, name: 'drawing');
+                                      .addImage(image, name: 'drawing');
                                   ref
                                       .read(
                                         signatureCardRepositoryProvider

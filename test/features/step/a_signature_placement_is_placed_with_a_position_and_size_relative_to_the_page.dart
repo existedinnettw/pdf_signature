@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
@@ -25,7 +25,10 @@ Future<void> aSignaturePlacementIsPlacedWithAPositionAndSizeRelativeToThePage(
         page: currentPage,
         // Use normalized 0..1 fractions relative to page size as required
         rect: const Rect.fromLTWH(0.2, 0.3, 0.4, 0.2),
-        asset: SignatureAsset(bytes: Uint8List(0), name: 'test.png'),
+        asset: SignatureAsset(
+          sigImage: img.Image(width: 1, height: 1),
+          name: 'test.png',
+        ),
       );
   await tester.pumpAndSettle();
 }

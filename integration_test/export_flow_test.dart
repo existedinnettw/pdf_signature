@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:image/image.dart' as img;
 import 'dart:io';
 import 'package:file_selector/file_selector.dart' as fs;
 
@@ -18,6 +17,7 @@ import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_view_model.d
 import 'package:pdf_signature/ui/features/pdf/widgets/pages_sidebar.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image/image.dart' as img;
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
@@ -38,7 +38,7 @@ class LightweightExporter extends ExportService {
     required Size uiPageSize,
     required Uint8List? signatureImageBytes,
     Map<int, List<SignaturePlacement>>? placementsByPage,
-    Map<String, Uint8List>? libraryBytes,
+    Map<String, img.Image>? libraryImages,
     double targetDpi = 144.0,
   }) async {
     // Return minimal non-empty bytes; content isn't used further in tests
@@ -147,12 +147,15 @@ void main() {
           ),
           signatureAssetRepositoryProvider.overrideWith((ref) {
             final c = SignatureAssetRepository();
-            c.add(sigBytes, name: 'image');
+            c.addImage(img.decodeImage(sigBytes)!, name: 'image');
             return c;
           }),
           signatureCardRepositoryProvider.overrideWith((ref) {
             final cardRepo = SignatureCardStateNotifier();
-            final asset = SignatureAsset(bytes: sigBytes, name: 'image');
+            final asset = SignatureAsset(
+              sigImage: img.decodeImage(sigBytes)!,
+              name: 'image',
+            );
             cardRepo.addWithAsset(asset, 0.0);
             return cardRepo;
           }),

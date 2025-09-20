@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,10 +22,8 @@ Future<void> nearwhiteBackgroundBecomesTransparentInThePreview(
   src.setPixelRgba(0, 0, 250, 250, 250, 255);
   // Solid black stays opaque
   src.setPixelRgba(1, 0, 0, 0, 0, 255);
-  final png = Uint8List.fromList(img.encodePng(src, level: 6));
-
-  // Create a widget with the image
-  final widget = RotatedSignatureImage(bytes: png);
+  // Create a widget with the decoded image
+  final widget = RotatedSignatureImage(image: src);
 
   // Pump the widget
   await tester.pumpWidget(MaterialApp(home: Scaffold(body: widget)));
@@ -40,14 +37,11 @@ Future<void> nearwhiteBackgroundBecomesTransparentInThePreview(
   expect(find.byType(RotatedSignatureImage), findsOneWidget);
 
   // Test the processing logic directly
-  final decoded = img.decodeImage(png);
-  expect(decoded, isNotNull);
-  final processedImg = _removeBackground(decoded!);
-  final processed = Uint8List.fromList(img.encodePng(processedImg));
-  expect(processed, isNotNull);
-  final outImg = img.decodeImage(processed);
-  expect(outImg, isNotNull);
-  final resultImg = outImg!.hasAlpha ? outImg : outImg.convert(numChannels: 4);
+  final processedImg = _removeBackground(src);
+  final resultImg =
+      processedImg.hasAlpha
+          ? img.Image.from(processedImg)
+          : processedImg.convert(numChannels: 4);
 
   final p0 = resultImg.getPixel(0, 0);
   final p1 = resultImg.getPixel(1, 0);

@@ -29,7 +29,10 @@ void main() {
       color: img.ColorUint8.rgb(0, 0, 0),
     );
     final bytes = img.encodePng(canvas);
-    testAsset = SignatureAsset(bytes: bytes, name: 'test_signature.png');
+    testAsset = SignatureAsset(
+      sigImage: img.decodeImage(bytes)!,
+      name: 'test_signature.png',
+    );
 
     container = ProviderContainer(
       overrides: [
