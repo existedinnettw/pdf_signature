@@ -6,6 +6,10 @@ import 'pdf_page_overlays.dart';
 import './pdf_mock_continuous_list.dart';
 import '../view_model/pdf_view_model.dart';
 
+// Provider to control whether viewer overlays (like scroll thumbs) are enabled.
+// Integration tests can override this to false to avoid long-running animations.
+final viewerOverlaysEnabledProvider = Provider<bool>((ref) => true);
+
 class PdfViewerWidget extends ConsumerStatefulWidget {
   const PdfViewerWidget({
     super.key,
@@ -13,12 +17,15 @@ class PdfViewerWidget extends ConsumerStatefulWidget {
     this.pageKeyBuilder,
     this.scrollToPage,
     required this.controller,
+    this.innerViewerKey,
   });
 
   final Size pageSize;
   final GlobalKey Function(int page)? pageKeyBuilder;
   final void Function(int page)? scrollToPage;
   final PdfViewerController controller;
+  // Optional key applied to the inner Pdfrx PdfViewer to force disposal/rebuild
+  final Key? innerViewerKey;
 
   @override
   ConsumerState<PdfViewerWidget> createState() => _PdfViewerWidgetState();
@@ -81,11 +88,10 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
       );
     }
 
+    final overlaysEnabled = ref.watch(viewerOverlaysEnabledProvider);
     return PdfViewer(
       _documentRef!,
-      key: const Key(
-        'pdf_continuous_mock_list',
-      ), // Keep the same key for test compatibility
+      key: widget.innerViewerKey ?? const Key('pdf_continuous_mock_list'),
       controller: widget.controller,
       params: PdfViewerParams(
         onViewerReady: (document, controller) {
@@ -100,48 +106,53 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
             ref.read(pdfViewModelProvider.notifier).jumpToPage(page);
           }
         },
-        viewerOverlayBuilder: (context, size, handle) {
-          return [
-            // Vertical scroll thumb on the right
-            PdfViewerScrollThumb(
-              controller: widget.controller,
-              orientation: ScrollbarOrientation.right,
-              thumbSize: const Size(40, 25),
-              thumbBuilder:
-                  (context, thumbSize, pageNumber, controller) => Container(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    child: Center(
-                      child: Text(
-                        'Pg $pageNumber',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
+        viewerOverlayBuilder:
+            overlaysEnabled
+                ? (context, size, handle) {
+                  return [
+                    // Vertical scroll thumb on the right
+                    PdfViewerScrollThumb(
+                      controller: widget.controller,
+                      orientation: ScrollbarOrientation.right,
+                      thumbSize: const Size(40, 25),
+                      thumbBuilder:
+                          (context, thumbSize, pageNumber, controller) =>
+                              Container(
+                                color: Colors.black.withValues(alpha: 0.7),
+                                child: Center(
+                                  child: Text(
+                                    'Pg $pageNumber',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
                     ),
-                  ),
-            ),
-            // Horizontal scroll thumb on the bottom
-            PdfViewerScrollThumb(
-              controller: widget.controller,
-              orientation: ScrollbarOrientation.bottom,
-              thumbSize: const Size(40, 25),
-              thumbBuilder:
-                  (context, thumbSize, pageNumber, controller) => Container(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    child: Center(
-                      child: Text(
-                        'Pg $pageNumber',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
+                    // Horizontal scroll thumb on the bottom
+                    PdfViewerScrollThumb(
+                      controller: widget.controller,
+                      orientation: ScrollbarOrientation.bottom,
+                      thumbSize: const Size(40, 25),
+                      thumbBuilder:
+                          (context, thumbSize, pageNumber, controller) =>
+                              Container(
+                                color: Colors.black.withValues(alpha: 0.7),
+                                child: Center(
+                                  child: Text(
+                                    'Pg $pageNumber',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
                     ),
-                  ),
-            ),
-          ];
-        },
+                  ];
+                }
+                : (context, size, handle) => const <Widget>[],
         // Per-page overlays to enable page-specific drag targets and placed signatures
         pageOverlaysBuilder: (context, pageRect, page) {
           return [

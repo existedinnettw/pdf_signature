@@ -8,6 +8,11 @@ void main() {
   // Ensure Flutter bindings are initialized before platform channel usage
   WidgetsFlutterBinding.ensureInitialized();
   // Disable right-click context menu on web using Flutter API
+  if (kReleaseMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {
+      // Empty implementation in release mode, effectively disabling debugPrint
+    };
+  }
   if (kIsWeb) {
     BrowserContextMenu.disableContextMenu();
   }

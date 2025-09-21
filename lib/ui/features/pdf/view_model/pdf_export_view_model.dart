@@ -1,7 +1,8 @@
 import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf_signature/data/services/export_service.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 
 /// ViewModel for export-related UI state and helpers.
 class PdfExportViewModel extends ChangeNotifier {
@@ -9,7 +10,6 @@ class PdfExportViewModel extends ChangeNotifier {
   bool _exporting = false;
 
   // Dependencies (injectable via constructor for tests)
-  final ExportService _exporter;
   // Zero-arg picker retained for backward compatibility with tests.
   final Future<String?> Function() _savePathPicker;
   // Preferred picker that accepts a suggested filename.
@@ -18,12 +18,10 @@ class PdfExportViewModel extends ChangeNotifier {
 
   PdfExportViewModel(
     this.ref, {
-    ExportService? exporter,
     Future<String?> Function()? savePathPicker,
     Future<String?> Function(String suggestedName)?
     savePathPickerWithSuggestedName,
-  }) : _exporter = exporter ?? ExportService(),
-       _savePathPicker = savePathPicker ?? _defaultSavePathPicker,
+  }) : _savePathPicker = savePathPicker ?? _defaultSavePathPicker,
        // Prefer provided suggested-name picker; otherwise, if only zero-arg
        // picker is given (tests), wrap it; else use default that honors name.
        _savePathPickerWithSuggestedName =
@@ -40,8 +38,22 @@ class PdfExportViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Get the export service (overridable in tests via constructor).
-  ExportService get exporter => _exporter;
+  /// Perform export via document repository. Returns true on success.
+  Future<bool> exportToPath({
+    required String outputPath,
+    required Size uiPageSize,
+    required Uint8List? signatureImageBytes,
+    double targetDpi = 144.0,
+  }) async {
+    return await ref
+        .read(documentRepositoryProvider.notifier)
+        .exportDocument(
+          outputPath: outputPath,
+          uiPageSize: uiPageSize,
+          signatureImageBytes: signatureImageBytes,
+          targetDpi: targetDpi,
+        );
+  }
 
   /// Show save dialog and return the chosen path (null if canceled).
   Future<String?> pickSavePath() async {

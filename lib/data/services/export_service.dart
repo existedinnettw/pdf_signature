@@ -1,13 +1,12 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:image/image.dart' as img;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart' as pdf;
-import 'package:printing/printing.dart' as printing;
-import 'package:image/image.dart' as img;
+import 'package:pdfrx_engine/pdfrx_engine.dart' as engine;
 import '../../domain/models/model.dart';
-// math moved to utils in rot
 import '../../utils/rotation_utils.dart' as rot;
 import '../../utils/background_removal.dart' as br;
 
@@ -18,32 +17,32 @@ import '../../utils/background_removal.dart' as br;
 //   cannot import/modify existing PDF pages. If/when a suitable FOSS library exists, wire it here.
 
 class ExportService {
-  /// Compose a new PDF from source PDF bytes; returns the resulting PDF bytes.
+  ExportService({this.enableRaster = true});
+  // Deprecated: retained for API compatibility. Raster is no longer used.
+  final bool enableRaster;
+
+  /// Compose a new PDF by rendering source pages to images (FOSS path via pdfrx)
+  /// and overlaying signature images at normalized rects. Returns resulting bytes.
   Future<Uint8List?> exportSignedPdfFromBytes({
     required Uint8List srcBytes,
-    required Size uiPageSize,
-    required Uint8List? signatureImageBytes,
+    required Size uiPageSize, // not used in this implementation
+    required Uint8List?
+    signatureImageBytes, // not used; placements carry images
     Map<int, List<SignaturePlacement>>? placementsByPage,
     Map<String, img.Image>? libraryImages,
     double targetDpi = 144.0,
   }) async {
-    // Per-call caches to avoid redundant decode/encode and image embedding work
+    // Caches per call
     final Map<String, img.Image> _baseImageCache = <String, img.Image>{};
     final Map<String, img.Image> _processedImageCache = <String, img.Image>{};
     final Map<String, Uint8List> _encodedPngCache = <String, Uint8List>{};
-    final Map<String, pw.MemoryImage> _memoryImageCache =
-        <String, pw.MemoryImage>{};
     final Map<String, double> _aspectRatioCache = <String, double>{};
 
-    // Returns a stable-ish cache key for bytes within this process (not content-hash, but good enough per-call)
     String _baseKeyForImage(img.Image im) =>
         'im:${identityHashCode(im)}:${im.width}x${im.height}';
     String _adjustKey(GraphicAdjust adj) =>
         'c=${adj.contrast}|b=${adj.brightness}|bg=${adj.bgRemoval}';
 
-    // Removed: PNG signature helper is no longer needed; we always encode to PNG explicitly.
-
-    // Resolve base (unprocessed) image for a placement, considering library override.
     img.Image _getBaseImage(SignaturePlacement placement) {
       final libKey = placement.asset.name;
       if (libKey != null && libraryImages != null) {
@@ -58,7 +57,6 @@ class ExportService {
       return placement.asset.sigImage;
     }
 
-    // Get processed image for a placement, with caching.
     img.Image _getProcessedImage(SignaturePlacement placement) {
       final base = _getBaseImage(placement);
       final key =
@@ -74,14 +72,15 @@ class ExportService {
           brightness: adj.brightness,
         );
       }
+      Future<void> _ = Future<void>.delayed(Duration.zero);
       if (adj.bgRemoval) {
         processed = br.removeNearWhiteBackground(processed, threshold: 240);
       }
+      Future<void> _ = Future<void>.delayed(Duration.zero);
       _processedImageCache[key] = processed;
       return processed;
     }
 
-    // Get PNG bytes for the processed image, caching the encoding.
     Uint8List _getProcessedPng(SignaturePlacement placement) {
       final base = _getBaseImage(placement);
       final key =
@@ -94,20 +93,6 @@ class ExportService {
       return png;
     }
 
-    // Wrap bytes in a pw.MemoryImage with caching.
-    pw.MemoryImage? _getMemoryImage(Uint8List bytes, String key) {
-      final cached = _memoryImageCache[key];
-      if (cached != null) return cached;
-      try {
-        final imgObj = pw.MemoryImage(bytes);
-        _memoryImageCache[key] = imgObj;
-        return imgObj;
-      } catch (_) {
-        return null;
-      }
-    }
-
-    // Compute and cache aspect ratio (width/height) for given image
     double? _getAspectRatioFromImage(img.Image image) {
       final key = _baseKeyForImage(image);
       final c = _aspectRatioCache[key];
@@ -118,119 +103,55 @@ class ExportService {
       return ar;
     }
 
-    final out = pw.Document(version: pdf.PdfVersion.pdf_1_4, compress: false);
-    int pageIndex = 0;
-    bool anyPage = false;
+    // Initialize engine (safe to call multiple times)
     try {
-      await for (final raster in printing.Printing.raster(
-        srcBytes,
-        dpi: targetDpi,
-      )) {
-        anyPage = true;
-        pageIndex++;
-        final widthPx = raster.width;
-        final heightPx = raster.height;
-        final widthPts = widthPx * 72.0 / targetDpi;
-        final heightPts = heightPx * 72.0 / targetDpi;
+      await engine.pdfrxInitialize();
+    } catch (_) {}
 
-        final bgPng = await raster.toPng();
-        final bgImg = pw.MemoryImage(bgPng);
-
-        final hasMulti =
-            (placementsByPage != null && placementsByPage.isNotEmpty);
-        final pagePlacements =
-            hasMulti
-                ? (placementsByPage[pageIndex] ?? const <SignaturePlacement>[])
-                : const <SignaturePlacement>[];
-
-        out.addPage(
-          pw.Page(
-            pageTheme: pw.PageTheme(
-              margin: pw.EdgeInsets.zero,
-              pageFormat: pdf.PdfPageFormat(widthPts, heightPts),
-            ),
-            build: (ctx) {
-              final children = <pw.Widget>[
-                pw.Positioned(
-                  left: 0,
-                  top: 0,
-                  child: pw.Image(
-                    bgImg,
-                    width: widthPts,
-                    height: heightPts,
-                    fit: pw.BoxFit.fill,
-                  ),
-                ),
-              ];
-              // Multi-placement stamping: per-placement image from libraryBytes
-              if (hasMulti && pagePlacements.isNotEmpty) {
-                for (var i = 0; i < pagePlacements.length; i++) {
-                  final placement = pagePlacements[i];
-                  final r = placement.rect;
-                  // rect is stored in normalized units (0..1) relative to page
-                  final left = r.left * widthPts;
-                  final top = r.top * heightPts;
-                  final w = r.width * widthPts;
-                  final h = r.height * heightPts;
-
-                  // Get processed image and embed as MemoryImage (cached)
-                  final processedPng = _getProcessedPng(placement);
-                  final baseImage = _getBaseImage(placement);
-                  final memKey =
-                      '${_baseKeyForImage(baseImage)}|${_adjustKey(placement.graphicAdjust)}';
-                  if (processedPng.isNotEmpty) {
-                    final imgObj = _getMemoryImage(processedPng, memKey);
-                    if (imgObj != null) {
-                      // Align with RotatedSignatureImage: counterclockwise positive
-                      final angle = rot.radians(placement.rotationDeg);
-                      // Use AR from base image
-                      final ar = _getAspectRatioFromImage(baseImage);
-                      final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
-
-                      children.add(
-                        pw.Positioned(
-                          left: left,
-                          top: top,
-                          child: pw.SizedBox(
-                            width: w,
-                            height: h,
-                            child: pw.FittedBox(
-                              fit: pw.BoxFit.contain,
-                              child: pw.Transform.scale(
-                                scale: scaleToFit,
-                                child: pw.Transform.rotate(
-                                  angle: angle,
-                                  child: pw.Image(imgObj),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                }
-              }
-              return pw.Stack(children: children);
-            },
-          ),
-        );
-      }
-    } catch (e) {
-      anyPage = false;
+    // Open source document from memory; if not supported, write temp file
+    engine.PdfDocument? doc;
+    try {
+      doc = await engine.PdfDocument.openData(srcBytes);
+    } catch (_) {
+      final tmp = File(
+        '${Directory.systemTemp.path}/pdfrx_src_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      );
+      await tmp.writeAsBytes(srcBytes, flush: true);
+      doc = await engine.PdfDocument.openFile(tmp.path);
+      try {
+        tmp.deleteSync();
+      } catch (_) {}
     }
+    // doc is guaranteed to be assigned by either openData or openFile above
 
-    if (!anyPage) {
-      // Fallback as A4 blank page with optional signature
-      final widthPts = pdf.PdfPageFormat.a4.width;
-      final heightPts = pdf.PdfPageFormat.a4.height;
+    final out = pw.Document(version: pdf.PdfVersion.pdf_1_4, compress: false);
+    final pages = doc.pages;
+    final scale = targetDpi / 72.0;
+    for (int i = 0; i < pages.length; i++) {
+      // Cooperative yield between pages so the UI can animate the spinner.
+      await Future<void>.delayed(Duration.zero);
+      final page = pages[i];
+      final pageIndex = i + 1;
+      final widthPts = page.width;
+      final heightPts = page.height;
 
-      final hasMulti =
-          (placementsByPage != null && placementsByPage.isNotEmpty);
+      // Render background image via engine
+      final imgPage = await page.render(
+        fullWidth: widthPts * scale,
+        fullHeight: heightPts * scale,
+      );
+      if (imgPage == null) continue;
+      final bgImage = imgPage.createImageNF();
+      imgPage.dispose();
+      // Lower compression for background snapshot too.
+      final bgPng = Uint8List.fromList(img.encodePng(bgImage, level: 1));
+      final _ = Future<void>.delayed(Duration.zero);
+      final bgMem = pw.MemoryImage(bgPng);
+
       final pagePlacements =
-          hasMulti
-              ? (placementsByPage[1] ?? const <SignaturePlacement>[])
-              : const <SignaturePlacement>[];
+          (placementsByPage ??
+              const <int, List<SignaturePlacement>>{})[pageIndex] ??
+          const <SignaturePlacement>[];
 
       out.addPage(
         pw.Page(
@@ -240,72 +161,69 @@ class ExportService {
           ),
           build: (ctx) {
             final children = <pw.Widget>[
-              pw.Container(
-                width: widthPts,
-                height: heightPts,
-                color: pdf.PdfColors.white,
+              pw.Positioned(
+                left: 0,
+                top: 0,
+                child: pw.Image(
+                  bgMem,
+                  width: widthPts,
+                  height: heightPts,
+                  fit: pw.BoxFit.fill,
+                ),
               ),
             ];
 
-            if (hasMulti && pagePlacements.isNotEmpty) {
-              for (var i = 0; i < pagePlacements.length; i++) {
-                final placement = pagePlacements[i];
-                final r = placement.rect;
-                // rect is stored in normalized units (0..1) relative to page
-                final left = r.left * widthPts;
-                final top = r.top * heightPts;
-                final w = r.width * widthPts;
-                final h = r.height * heightPts;
+            for (final placement in pagePlacements) {
+              final r = placement.rect;
+              final left = r.left * widthPts;
+              final top = r.top * heightPts;
+              final w = r.width * widthPts;
+              final h = r.height * heightPts;
 
-                final processedPng = _getProcessedPng(placement);
-                final baseImage = _getBaseImage(placement);
-                final memKey =
-                    '${_baseKeyForImage(baseImage)}|${_adjustKey(placement.graphicAdjust)}';
-                if (processedPng.isNotEmpty) {
-                  final imgObj = _getMemoryImage(processedPng, memKey);
-                  if (imgObj != null) {
-                    final angle = rot.radians(placement.rotationDeg);
-                    final ar = _getAspectRatioFromImage(baseImage);
-                    final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
+              final processedPng = _getProcessedPng(placement);
+              if (processedPng.isEmpty) continue;
+              final memImg = pw.MemoryImage(processedPng);
+              final angle = rot.radians(placement.rotationDeg);
+              final baseImage = _getBaseImage(placement);
+              final ar = _getAspectRatioFromImage(baseImage);
+              final scaleToFit = rot.scaleToFitForAngle(angle, ar: ar);
 
-                    children.add(
-                      pw.Positioned(
-                        left: left,
-                        top: top,
-                        child: pw.SizedBox(
-                          width: w,
-                          height: h,
-                          child: pw.FittedBox(
-                            fit: pw.BoxFit.contain,
-                            child: pw.Transform.scale(
-                              scale: scaleToFit,
-                              child: pw.Transform.rotate(
-                                angle: angle,
-                                child: pw.Image(imgObj),
-                              ),
-                            ),
-                          ),
+              children.add(
+                pw.Positioned(
+                  left: left,
+                  top: top,
+                  child: pw.SizedBox(
+                    width: w,
+                    height: h,
+                    child: pw.FittedBox(
+                      fit: pw.BoxFit.contain,
+                      child: pw.Transform.scale(
+                        scale: scaleToFit,
+                        child: pw.Transform.rotate(
+                          angle: angle,
+                          child: pw.Image(memImg),
                         ),
                       ),
-                    );
-                  }
-                }
-              }
+                    ),
+                  ),
+                ),
+              );
+              // Yield occasionally within large placement lists to keep UI responsive.
+              // ignore: unused_local_variable
+              final _ = Future<void>.delayed(Duration.zero);
             }
             return pw.Stack(children: children);
           },
         ),
       );
+      final _ = Future<void>.delayed(Duration.zero);
     }
 
-    try {
-      return await out.save();
-    } catch (_) {
-      return null;
-    }
+    final bytes = await out.save();
+    doc.dispose();
+    return bytes;
   }
 
-  /// Helper: write bytes returned from [exportSignedPdfFromBytes] to a file path.
   Future<bool> saveBytesToFile({
     required Uint8List bytes,
     required String outputPath,
@@ -318,6 +236,4 @@ class ExportService {
       return false;
     }
   }
-
-  // Background removal implemented in utils/background_removal.dart
 }

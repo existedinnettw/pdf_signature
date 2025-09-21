@@ -16,6 +16,7 @@ import '../view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/utils/download.dart';
 import '../view_model/pdf_view_model.dart';
 import 'package:image/image.dart' as img;
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   final Future<void> Function() onPickPdf;
@@ -144,105 +145,113 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   Future<void> _saveSignedPdf() async {
+    // Show exporting overlay and then run the heavy work asynchronously so
+    // the UI thread remains responsive to gestures like page navigation.
     ref.read(pdfExportViewModelProvider.notifier).setExporting(true);
-    try {
-      final pdf = _viewModel.document;
-      final messenger = ScaffoldMessenger.of(context);
-      if (!pdf.loaded) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).nothingToSaveYet),
-          ),
-        );
-        return;
-      }
-      final exporter = ref.read(pdfExportViewModelProvider).exporter;
-
-      // get DPI from preferences
-      final targetDpi = ref.read(preferencesRepositoryProvider).exportDpi;
-      bool ok = false;
-      String? savedPath;
-
-      // Derive a suggested filename based on the opened file. Prefer the
-      // provided display name if available (see Linux portal note above).
-      final display = widget.currentFileName;
-      final originalName =
-          (display != null && display.trim().isNotEmpty)
-              ? display.trim()
-              : widget.currentFile.name.isNotEmpty
-              ? widget.currentFile.name
-              : widget.currentFile.path.isNotEmpty
-              ? widget.currentFile.path.split('/').last.split('\\').last
-              : 'document.pdf';
-      final suggested = _suggestSignedName(originalName);
-
-      if (!kIsWeb) {
-        final path = await ref
-            .read(pdfExportViewModelProvider)
-            .pickSavePathWithSuggestedName(suggested);
-        if (path == null || path.trim().isEmpty) return;
-        final fullPath = _ensurePdfExtension(path.trim());
-        savedPath = fullPath;
-        final src = pdf.pickedPdfBytes ?? Uint8List(0);
-        final out = await exporter.exportSignedPdfFromBytes(
-          srcBytes: src,
-          uiPageSize: _pageSize,
-          signatureImageBytes: null,
-          placementsByPage: pdf.placementsByPage,
-          targetDpi: targetDpi,
-        );
-        if (out != null) {
-          ok = await exporter.saveBytesToFile(bytes: out, outputPath: fullPath);
+    // ignore: avoid_print
+    debugPrint('_saveSignedPdf: exporting flag set true');
+    final weakContext = context;
+    Future<void>(() async {
+      try {
+        // ignore: avoid_print
+        debugPrint('_saveSignedPdf: async export task started');
+        final pdf = _viewModel.document;
+        final messenger = ScaffoldMessenger.of(weakContext);
+        if (!pdf.loaded) {
+          // ignore: avoid_print
+          debugPrint('_saveSignedPdf: document not loaded');
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(weakContext).nothingToSaveYet),
+            ),
+          );
+          return;
         }
-      } else {
-        // Web: export and trigger browser download
-        final src = pdf.pickedPdfBytes ?? Uint8List(0);
-        final out = await exporter.exportSignedPdfFromBytes(
-          srcBytes: src,
-          uiPageSize: _pageSize,
-          signatureImageBytes: null,
-          placementsByPage: pdf.placementsByPage,
-          targetDpi: targetDpi,
-        );
-        if (out != null) {
-          // Use suggested filename for browser download
-          ok = await downloadBytes(out, filename: suggested);
-          savedPath = suggested;
+        // get DPI from preferences
+        final targetDpi = ref.read(preferencesRepositoryProvider).exportDpi;
+        bool ok = false;
+        String? savedPath;
+
+        // Derive a suggested filename based on the opened file.
+        final display = widget.currentFileName;
+        final originalName =
+            (display != null && display.trim().isNotEmpty)
+                ? display.trim()
+                : widget.currentFile.name.isNotEmpty
+                ? widget.currentFile.name
+                : widget.currentFile.path.isNotEmpty
+                ? widget.currentFile.path.split('/').last.split('\\').last
+                : 'document.pdf';
+        final suggested = _suggestSignedName(originalName);
+
+        if (!kIsWeb) {
+          final path = await ref
+              .read(pdfExportViewModelProvider)
+              .pickSavePathWithSuggestedName(suggested);
+          if (path == null || path.trim().isEmpty) return;
+          final fullPath = _ensurePdfExtension(path.trim());
+          savedPath = fullPath;
+          // ignore: avoid_print
+          debugPrint('_saveSignedPdf: picked save path ' + fullPath);
+          ok = await ref
+              .read(pdfExportViewModelProvider)
+              .exportToPath(
+                outputPath: fullPath,
+                uiPageSize: _pageSize,
+                signatureImageBytes: null,
+                targetDpi: targetDpi,
+              );
+          // ignore: avoid_print
+          debugPrint('_saveSignedPdf: saveBytesToFile ok=' + ok.toString());
+        } else {
+          // Web: export and trigger browser download
+          final out = await ref
+              .read(documentRepositoryProvider.notifier)
+              .exportDocumentToBytes(
+                uiPageSize: _pageSize,
+                signatureImageBytes: null,
+                targetDpi: targetDpi,
+              );
+          if (out != null) {
+            ok = await downloadBytes(out, filename: suggested);
+            savedPath = suggested;
+          }
         }
-      }
-      if (!kIsWeb) {
-        if (ok) {
+        if (!kIsWeb) {
           messenger.showSnackBar(
             SnackBar(
               content: Text(
-                AppLocalizations.of(context).savedWithPath(savedPath ?? ''),
+                ok
+                    ? AppLocalizations.of(
+                      weakContext,
+                    ).savedWithPath(savedPath ?? '')
+                    : AppLocalizations.of(weakContext).failedToSavePdf,
               ),
             ),
           );
+          // ignore: avoid_print
+          debugPrint('_saveSignedPdf: SnackBar shown ok=' + ok.toString());
         } else {
           messenger.showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context).failedToSavePdf),
+              content: Text(
+                ok
+                    ? AppLocalizations.of(
+                      weakContext,
+                    ).savedWithPath(savedPath ?? 'signed.pdf')
+                    : AppLocalizations.of(weakContext).failedToSavePdf,
+              ),
             ),
           );
         }
-      } else {
-        // Web: show a toast-like confirmation
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              ok
-                  ? AppLocalizations.of(
-                    context,
-                  ).savedWithPath(savedPath ?? 'signed.pdf')
-                  : AppLocalizations.of(context).failedToSavePdf,
-            ),
-          ),
-        );
+      } finally {
+        if (mounted) {
+          ref.read(pdfExportViewModelProvider.notifier).setExporting(false);
+          // ignore: avoid_print
+          debugPrint('_saveSignedPdf: exporting flag set false');
+        }
       }
-    } finally {
-      ref.read(pdfExportViewModelProvider.notifier).setExporting(false);
-    }
+    });
   }
 
   String _ensurePdfExtension(String name) {

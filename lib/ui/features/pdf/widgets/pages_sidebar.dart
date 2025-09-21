@@ -40,11 +40,29 @@ class ThumbnailsView extends ConsumerWidget {
                   // to update provider when the page is actually reached.
                   // For mock/unready: update provider immediately to drive scroll.
                   final isRealViewer = !viewModel.useMockViewer;
+                  // Debug trace for navigation taps
+                  // ignore: avoid_print
+                  debugPrint(
+                    'PagesSidebar.onTap page=$pageNumber isRealViewer=$isRealViewer controllerReady=${controller.isReady}',
+                  );
                   if (isRealViewer && controller.isReady) {
-                    controller.goToPage(
-                      pageNumber: pageNumber,
-                      anchor: PdfPageAnchor.top,
-                    );
+                    try {
+                      controller.goToPage(
+                        pageNumber: pageNumber,
+                        anchor: PdfPageAnchor.top,
+                      );
+                      // ignore: avoid_print
+                      debugPrint(
+                        'controller.goToPage invoked for page=$pageNumber',
+                      );
+                    } catch (e, st) {
+                      // ignore: avoid_print
+                      debugPrint(
+                        '[ERR] controller.goToPage exception: ' + e.toString(),
+                      );
+                      // ignore: avoid_print
+                      debugPrint(st.toString());
+                    }
                     // Do not set provider here; let onPageChanged handle it
                   } else {
                     // In tests or when controller isn't ready, drive state directly
@@ -52,6 +70,8 @@ class ThumbnailsView extends ConsumerWidget {
                       ref
                           .read(pdfViewModelProvider.notifier)
                           .jumpToPage(pageNumber);
+                      // ignore: avoid_print
+                      debugPrint('jumpToPage set directly to $pageNumber');
                     } catch (_) {}
                   }
                 },

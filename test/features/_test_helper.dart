@@ -40,7 +40,6 @@ Future<ProviderContainer> pumpApp(
 }) async {
   SharedPreferences.setMockInitialValues(initialPrefs);
   final prefs = await SharedPreferences.getInstance();
-  final fakeExport = FakeExportService();
   final container = ProviderContainer(
     overrides: [
       preferencesRepositoryProvider.overrideWith(
@@ -53,11 +52,7 @@ Future<ProviderContainer> pumpApp(
         (ref) => PdfViewModel(ref, useMockViewer: true),
       ),
       pdfExportViewModelProvider.overrideWith(
-        (ref) => PdfExportViewModel(
-          ref,
-          exporter: fakeExport,
-          savePathPicker: () async => 'out.pdf',
-        ),
+        (ref) => PdfExportViewModel(ref, savePathPicker: () async => 'out.pdf'),
       ),
     ],
   );

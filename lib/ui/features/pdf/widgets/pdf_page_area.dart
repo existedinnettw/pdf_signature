@@ -6,6 +6,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'pdf_viewer_widget.dart';
 import 'package:pdfrx/pdfrx.dart';
 import '../view_model/pdf_view_model.dart';
+import '../view_model/pdf_export_view_model.dart';
 
 class PdfPageArea extends ConsumerStatefulWidget {
   const PdfPageArea({
@@ -38,10 +39,8 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     super.initState();
     // If app starts in continuous mode with a loaded PDF, ensure the viewer
     // is instructed to align to the provider's current page once ready.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      // initial scroll not needed; controller handles positioning
-    });
+    // Do not schedule mock scroll sync in real viewer mode.
+    // In mock mode, scrolling is driven on demand when currentPage changes.
   }
 
   // No dispose required for PdfViewerController (managed by owner if any)
@@ -54,6 +53,9 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
   void _scrollToPage(int page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // Only valid in mock viewer mode; skip otherwise
+      final useMock = ref.read(pdfViewModelProvider).useMockViewer;
+      if (!useMock) return;
       _programmaticTargetPage = page;
       // Mock continuous: try ensureVisible on the page container
       // Mock continuous: try ensureVisible on the page container
@@ -114,6 +116,13 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
     // React to PdfViewModel currentPage changes. With ChangeNotifierProvider,
     // prev/next are the same instance, so compare to a local cache.
     ref.listen(pdfViewModelProvider, (prev, next) {
+      // Only perform manual scrolling in mock viewer mode. In real viewer mode,
+      // PdfViewerController + onPageChanged keep things in sync, and attempting
+      // to scroll here (without mock page keys) creates repeated frame
+      // callbacks that never find targets, leading to hangs.
+      if (!next.useMockViewer) {
+        return;
+      }
       if (_suppressProviderListen) return;
       final target = next.currentPage;
       if (_lastListenedPage == target) return;
@@ -143,11 +152,18 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
     // Use real PDF viewer
     if (isContinuous) {
+      // While exporting, fully detach the viewer to avoid background activity
+      // and ensure a clean re-initialization afterward.
+      final exporting = ref.watch(pdfExportViewModelProvider).exporting;
+      if (exporting) {
+        return const SizedBox.expand(key: Key('exporting_viewer_placeholder'));
+      }
       return PdfViewerWidget(
         pageSize: widget.pageSize,
         pageKeyBuilder: _pageKey,
         scrollToPage: _scrollToPage,
         controller: widget.controller,
+        innerViewerKey: const ValueKey('viewer_idle'),
       );
     }
     return const SizedBox.shrink();

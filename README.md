@@ -23,7 +23,7 @@ flutter analyze
 flutter test
 # > run integration tests
 flutter test integration_test/ -d <device_id>
-# dart run tool/run_integration_tests.dart --device=linux
+# dart run tool/run_integration_tests.dart --device=linux (necessary for linux)
 
 # dart run tool/gen_view_wireframe_md.dart
 # flutter pub run dead_code_analyzer
@@ -37,6 +37,7 @@ flutter run -d <device_id>
 #### Windows
 
 ```bash
+dart run pdfrx:remove_wasm_modules
 flutter build windows
 # create windows installer
 flutter pub run msix:create
@@ -70,6 +71,7 @@ Access your app at [http://localhost:8080](http://localhost:8080)
 For Linux
 
 ```bash
+dart run pdfrx:remove_wasm_modules
 flutter build linux
 cp -r build/linux/x64/release/bundle/ AppDir
 appimagetool-x86_64.AppImage AppDir

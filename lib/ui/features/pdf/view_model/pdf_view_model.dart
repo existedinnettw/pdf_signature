@@ -43,6 +43,8 @@ class PdfViewModel extends ChangeNotifier {
 
   set currentPage(int value) {
     _currentPage = value.clamp(1, document.pageCount);
+    // ignore: avoid_print
+    debugPrint('PdfViewModel.currentPage set to $_currentPage');
     if (!_isDisposed) {
       notifyListeners();
     }
@@ -54,6 +56,8 @@ class PdfViewModel extends ChangeNotifier {
   Document get document => ref.read(documentRepositoryProvider);
 
   void jumpToPage(int page) {
+    // ignore: avoid_print
+    debugPrint('PdfViewModel.jumpToPage ' + page.toString());
     currentPage = page;
   }
 

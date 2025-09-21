@@ -7,6 +7,7 @@ import '../../../../domain/models/model.dart';
 import 'signature_overlay.dart';
 import '../../signature/widgets/signature_drag_data.dart';
 import '../../signature/view_model/dragging_signature_view_model.dart';
+import 'pdf_viewer_widget.dart' show viewerOverlaysEnabledProvider;
 
 /// Builds all overlays for a given page: placed signatures and the active one.
 class PdfPageOverlays extends ConsumerWidget {
@@ -31,6 +32,10 @@ class PdfPageOverlays extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final overlaysEnabled = ref.watch(viewerOverlaysEnabledProvider);
+    if (!overlaysEnabled) {
+      return const SizedBox.shrink();
+    }
     final pdfViewModel = ref.watch(pdfViewModelProvider);
     // Subscribe to document changes to rebuild overlays
     final pdf = ref.watch(documentRepositoryProvider);
