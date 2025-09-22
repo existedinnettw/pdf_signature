@@ -74,24 +74,44 @@ class PdfExportViewModel extends ChangeNotifier {
   static Future<String?> _defaultSavePathPickerWithSuggestedName(
     String suggestedName,
   ) async {
-    // Desktop/web platforms: show save dialog via file_picker
-    // Mobile (Android/iOS): fall back to app-writable directory with suggested name
+    // Prefer native save dialog via file_picker on all non-web platforms.
+    // If the user cancels (null) simply bubble up null. If an exception occurs
+    // (unsupported platform or plugin issue), fall back to an app documents path.
     try {
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        final result = await fp.FilePicker.platform.saveFile(
-          dialogTitle: 'Save as',
-          fileName: suggestedName,
-          type: fp.FileType.custom,
-          allowedExtensions: const ['pdf'],
-          lockParentWindow: true,
-        );
-        return result; // null if canceled
-      }
+      final result = await fp.FilePicker.platform.saveFile(
+        dialogTitle: 'Please select an output file:',
+        fileName: suggestedName,
+        type: fp.FileType.custom,
+        allowedExtensions: const ['pdf'],
+        // lockParentWindow is ignored on mobile; useful on desktop.
+        lockParentWindow: true,
+      );
+      return result; // null if canceled
     } catch (_) {
-      // Platform not available (e.g., web) falls through to default
+      // Fall through to app documents fallback below.
     }
 
-    // Mobile or unsupported platform: build a default path in app documents
+    debugPrint(
+      'Fallback: select a folder and build path with suggested name (mobile platform)',
+    );
+
+    // On some mobile providers, saveFile may not present a picker or returns null.
+    // Offer a folder picker and compose the final path.
+    if (Platform.isAndroid || Platform.isIOS) {
+      final dir = await fp.FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Select folder to save',
+        lockParentWindow: true,
+      );
+      if (dir != null && dir.trim().isNotEmpty) {
+        final d = dir.trim();
+        final needsSep = !(d.endsWith('/') || d.endsWith('\\'));
+        return (needsSep ? (d + '/') : d) + suggestedName;
+      }
+      // User canceled directory selection; bubble up null.
+      return null;
+    }
+
+    debugPrint('Fallback: build a default path (web platform)');
     try {
       final dir = await pp.getApplicationDocumentsDirectory();
       return '${dir.path}/$suggestedName';
