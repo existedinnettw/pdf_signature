@@ -94,3 +94,5 @@ Some rule of thumb:
   * whole app use its image object as image representation.
   * aware that minimize, encode/decode usage, because its has poor performance on web
   * `ColorFilterGenerator` can not replace `adjustColor` due to custom background removal algorithm need at last stage. It is GPU based, and offscreen-render then readback is not ideal.
+* [responsive_framework]
+  * RWD support

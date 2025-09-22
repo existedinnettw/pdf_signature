@@ -5,6 +5,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/routing/router.dart';
 import 'package:pdf_signature/ui/features/preferences/widgets/settings_screen.dart';
 import 'data/repositories/preferences_repository.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -56,7 +57,7 @@ class MyApp extends StatelessWidget {
             routerConfig: ref.watch(routerProvider),
             builder: (context, child) {
               final router = ref.watch(routerProvider);
-              return Scaffold(
+              final content = Scaffold(
                 appBar: AppBar(
                   title: Text(AppLocalizations.of(context).appTitle),
                   actions: [
@@ -77,6 +78,17 @@ class MyApp extends StatelessWidget {
                   ],
                 ),
                 body: child,
+              );
+
+              // Apply Responsive Framework globally for layout and scrolling.
+              return ResponsiveBreakpoints.builder(
+                child: ClampingScrollWrapper.builder(context, content),
+                breakpoints: const [
+                  Breakpoint(start: 0, end: 450, name: MOBILE),
+                  Breakpoint(start: 451, end: 800, name: TABLET),
+                  Breakpoint(start: 801, end: 1920, name: DESKTOP),
+                  Breakpoint(start: 1921, end: double.infinity, name: '4K'),
+                ],
               );
             },
           );
