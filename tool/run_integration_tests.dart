@@ -12,7 +12,15 @@ import 'dart:io';
 ///   --reporter=compact
 ///   --pattern=*.dart (all files in integration_test/)
 Future<int> main(List<String> args) async {
-  String device = 'linux';
+  // Default device depends on host OS for a better out-of-the-box experience.
+  String device =
+      Platform.isWindows
+          ? 'windows'
+          : Platform.isMacOS
+          ? 'macos'
+          : Platform.isLinux
+          ? 'linux'
+          : 'chrome';
   String reporter = 'compact';
   String pattern = '*.dart';
 
@@ -84,16 +92,34 @@ Future<int> main(List<String> args) async {
     return 3;
   }
 
+  // Normalize and map device aliases (helpful on Windows/macOS)
+  device = _normalizedDeviceId(device);
+
+  // Preflight: ensure `flutter` is invokable in this environment.
+  final flutterOk = await _checkFlutterAvailable();
+  if (!flutterOk) {
+    stderr.writeln(
+      'Could not execute `flutter`. Ensure Flutter is installed and on PATH.',
+    );
+    return 4;
+  }
+
   stdout.writeln(
-    'Running ${selected.length} integration test file(s) sequentially...',
+    'Running ${selected.length} integration test file(s) sequentially on device: $device...',
   );
   final results = <String, int>{};
 
   for (final f in selected) {
-    final rel = f.path;
+    // Convert to forward slashes for tool compatibility across platforms.
+    final rel = f.path.replaceAll('\\', '/');
     stdout.writeln('\n=== Running: $rel ===');
     final args = <String>['test', rel, '-d', device, '-r', reporter];
-    final proc = await Process.start('flutter', args);
+    stdout.writeln('> flutter ${args.join(' ')}');
+    final proc = await Process.start(
+      'flutter',
+      args,
+      runInShell: Platform.isWindows, // ensures flutter.bat resolves on Windows
+    );
     // Pipe output live
     unawaited(proc.stdout.transform(utf8.decoder).forEach(stdout.write));
     unawaited(proc.stderr.transform(utf8.decoder).forEach(stderr.write));
@@ -104,8 +130,12 @@ Future<int> main(List<String> args) async {
     } else {
       stderr.writeln('=== FAILED (exit $code): $rel ===');
     }
-    // Small pause between launches to let desktop/device settle
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // Small pause between launches to let desktop/device settle (slightly longer for desktop)
+    await Future<void>.delayed(
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux
+          ? const Duration(milliseconds: 1200)
+          : const Duration(milliseconds: 300),
+    );
   }
 
   stdout.writeln('\nSummary:');
@@ -117,4 +147,39 @@ Future<int> main(List<String> args) async {
   }
 
   return failures == 0 ? 0 : 1;
+}
+
+String _normalizedDeviceId(String input) {
+  final lower = input.toLowerCase();
+  switch (lower) {
+    case 'win':
+    case 'windows':
+    case 'windows-desktop':
+      return 'windows';
+    case 'mac':
+    case 'macos':
+    case 'darwin':
+      return 'macos';
+    case 'linux':
+    case 'gnu/linux':
+      return 'linux';
+    case 'web':
+    case 'chrome':
+    case 'browser':
+      return 'chrome';
+    default:
+      return input; // assume caller provided a concrete device id
+  }
+}
+
+Future<bool> _checkFlutterAvailable() async {
+  try {
+    final result = await Process.run('flutter', const [
+      '--version',
+      '--suppress-analytics',
+    ], runInShell: Platform.isWindows);
+    return result.exitCode == 0;
+  } catch (_) {
+    return false;
+  }
 }

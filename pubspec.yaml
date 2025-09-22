@@ -37,7 +37,6 @@ dependencies:
   flutter_riverpod: ^2.6.1
   shared_preferences: ^2.5.3
   flutter_dotenv: ^6.0.0
-  file_selector: ^1.0.3
   path_provider: ^2.1.5
   pdfrx: ^2.1.9
   pdf: ^3.10.8
@@ -59,6 +58,7 @@ dependencies:
   riverpod_annotation: ^2.6.1
   colorfilter_generator: ^0.0.8
   flutter_box_transform: ^0.4.7
+  file_picker: ^10.3.3
   # disable_web_context_menu: ^1.1.0
   # ml_linalg: ^13.12.6
 

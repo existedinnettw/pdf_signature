@@ -1,4 +1,5 @@
-import 'package:file_selector/file_selector.dart' as fs;
+import 'package:cross_file/cross_file.dart';
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +22,7 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   final Future<void> Function() onPickPdf;
   final VoidCallback onClosePdf;
-  final fs.XFile currentFile;
+  final XFile currentFile;
   // Optional display name for the currently opened file. On Linux
   // xdg-desktop-portal, XFile.name/path can be a UUID-like value. When
   // available, this name preserves the user-selected filename so we can
@@ -111,15 +112,18 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   Future<img.Image?> _loadSignatureFromFile() async {
-    final typeGroup = fs.XTypeGroup(
-      label:
-          Localizations.of<AppLocalizations>(context, AppLocalizations)?.image,
-      extensions: ['png', 'jpg', 'jpeg', 'webp'],
+    final result = await fp.FilePicker.platform.pickFiles(
+      type: fp.FileType.custom,
+      allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp'],
+      withData: true,
     );
-    final file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
-    if (file == null) return null;
-    final bytes = await file.readAsBytes();
+    if (result == null || result.files.isEmpty) return null;
+    final picked = result.files.single;
+    final Uint8List? bytes =
+        picked.bytes ??
+        (picked.path != null ? await XFile(picked.path!).readAsBytes() : null);
     try {
+      if (bytes == null) return null;
       var sigImage = img.decodeImage(bytes);
       return _toStdSignatureImage(sigImage);
     } catch (_) {

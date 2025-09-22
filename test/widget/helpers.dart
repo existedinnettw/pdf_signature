@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:file_selector/file_selector.dart' as fs;
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,7 +36,7 @@ Future<void> pumpWithOpenPdf(WidgetTester tester) async {
         home: PdfSignatureHomePage(
           onPickPdf: () async {},
           onClosePdf: () {},
-          currentFile: fs.XFile(''),
+          currentFile: XFile(''),
         ),
       ),
     ),
@@ -413,7 +413,7 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
         home: PdfSignatureHomePage(
           onPickPdf: () async {},
           onClosePdf: () {},
-          currentFile: fs.XFile(''),
+          currentFile: XFile(''),
         ),
       ),
     ),

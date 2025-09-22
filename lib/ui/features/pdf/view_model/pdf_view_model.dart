@@ -1,12 +1,12 @@
 import 'dart:typed_data';
-import 'package:file_selector/file_selector.dart';
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdfrx/pdfrx.dart';
-import 'package:file_selector/file_selector.dart' as fs;
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:go_router/go_router.dart';
 
 class PdfViewModel extends ChangeNotifier {
@@ -247,7 +247,7 @@ final pdfViewModelProvider = ChangeNotifierProvider<PdfViewModel>((ref) {
 class PdfSessionViewModel extends ChangeNotifier {
   final Ref ref;
   final GoRouter router;
-  fs.XFile _currentFile = fs.XFile('');
+  XFile _currentFile = XFile('');
   // Keep a human display name in addition to XFile, because on Linux via
   // xdg-desktop-portal the path can look like /run/user/.../doc/<UUID>, and
   // XFile.name derives from that basename, yielding a random UUID instead of
@@ -257,21 +257,29 @@ class PdfSessionViewModel extends ChangeNotifier {
 
   PdfSessionViewModel({required this.ref, required this.router});
 
-  fs.XFile get currentFile => _currentFile;
+  XFile get currentFile => _currentFile;
   String get displayFileName => _displayFileName;
 
   Future<void> pickAndOpenPdf() async {
-    final typeGroup = const fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
-    final XFile? file = await fs.openFile(acceptedTypeGroups: [typeGroup]);
-    if (file != null) {
-      Uint8List? bytes;
+    final result = await fp.FilePicker.platform.pickFiles(
+      type: fp.FileType.custom,
+      allowedExtensions: const ['pdf'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final picked = result.files.single;
+    final String name = picked.name;
+    final String? path = picked.path;
+    final Uint8List? bytes = picked.bytes;
+    Uint8List? effectiveBytes = bytes;
+    if (effectiveBytes == null && path != null && path.isNotEmpty) {
       try {
-        bytes = await file.readAsBytes();
+        effectiveBytes = await XFile(path).readAsBytes();
       } catch (_) {
-        bytes = null;
+        effectiveBytes = null;
       }
-      await openPdf(path: file.path, bytes: bytes, fileName: file.name);
     }
+    await openPdf(path: path, bytes: effectiveBytes, fileName: name);
   }
 
   Future<void> openPdf({
@@ -289,20 +297,20 @@ class PdfSessionViewModel extends ChangeNotifier {
       }
     }
     if (path != null && path.isNotEmpty) {
-      _currentFile = fs.XFile(path);
+      _currentFile = XFile(path);
     } else if (bytes != null && (fileName != null && fileName.isNotEmpty)) {
       // Keep in-memory XFile so .name is available for suggestion
       try {
-        _currentFile = fs.XFile.fromData(
+        _currentFile = XFile.fromData(
           bytes,
           name: fileName,
           mimeType: 'application/pdf',
         );
       } catch (_) {
-        _currentFile = fs.XFile(fileName);
+        _currentFile = XFile(fileName);
       }
     } else {
-      _currentFile = fs.XFile('');
+      _currentFile = XFile('');
     }
 
     // Update display name: prefer explicit fileName (from picker/drop),
@@ -325,7 +333,7 @@ class PdfSessionViewModel extends ChangeNotifier {
   void closePdf() {
     ref.read(documentRepositoryProvider.notifier).close();
     ref.read(signatureCardRepositoryProvider.notifier).clearAll();
-    _currentFile = fs.XFile('');
+    _currentFile = XFile('');
     _displayFileName = '';
     router.go('/');
     notifyListeners();

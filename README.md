@@ -22,8 +22,9 @@ flutter analyze
 # > run unit tests and widget tests
 flutter test
 # > run integration tests
-flutter test integration_test/ -d <device_id>
-# dart run tool/run_integration_tests.dart --device=linux (necessary for linux)
+# flutter test integration_test/ -d <device_id>
+# Examples: --device=windows | --device=linux | --device=macos | --device=chrome
+dart run tool/run_integration_tests.dart --device=<device_id>
 
 # dart run tool/gen_view_wireframe_md.dart
 # flutter pub run dead_code_analyzer

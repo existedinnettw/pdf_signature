@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_selector/file_selector.dart' as fs;
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,7 +63,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -119,7 +119,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -177,7 +177,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -223,7 +223,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -272,7 +272,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -324,7 +324,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -390,7 +390,7 @@ void main() {
             home: PdfSignatureHomePage(
               onPickPdf: () async {},
               onClosePdf: () {},
-              currentFile: fs.XFile('test.pdf'),
+              currentFile: XFile('test.pdf'),
             ),
           ),
         ),

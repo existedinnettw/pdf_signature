@@ -1,4 +1,6 @@
-import 'package:file_selector/file_selector.dart' as fs;
+import 'dart:io' show Platform;
+import 'package:file_picker/file_picker.dart' as fp;
+import 'package:path_provider/path_provider.dart' as pp;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,13 +74,31 @@ class PdfExportViewModel extends ChangeNotifier {
   static Future<String?> _defaultSavePathPickerWithSuggestedName(
     String suggestedName,
   ) async {
-    final group = fs.XTypeGroup(label: 'PDF', extensions: ['pdf']);
-    final location = await fs.getSaveLocation(
-      acceptedTypeGroups: [group],
-      suggestedName: suggestedName,
-      confirmButtonText: 'Save',
-    );
-    return location?.path; // null if user cancels
+    // Desktop/web platforms: show save dialog via file_picker
+    // Mobile (Android/iOS): fall back to app-writable directory with suggested name
+    try {
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        final result = await fp.FilePicker.platform.saveFile(
+          dialogTitle: 'Save as',
+          fileName: suggestedName,
+          type: fp.FileType.custom,
+          allowedExtensions: const ['pdf'],
+          lockParentWindow: true,
+        );
+        return result; // null if canceled
+      }
+    } catch (_) {
+      // Platform not available (e.g., web) falls through to default
+    }
+
+    // Mobile or unsupported platform: build a default path in app documents
+    try {
+      final dir = await pp.getApplicationDocumentsDirectory();
+      return '${dir.path}/$suggestedName';
+    } catch (_) {
+      // Last resort: let the caller handle a null path
+      return null;
+    }
   }
 }
 

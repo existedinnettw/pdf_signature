@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'dart:io';
-import 'package:file_selector/file_selector.dart' as fs;
+import 'package:cross_file/cross_file.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pages_sidebar.dart';
@@ -47,7 +47,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -101,7 +101,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -155,7 +155,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -242,7 +242,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
@@ -308,7 +308,7 @@ void main() {
           home: PdfSignatureHomePage(
             onPickPdf: () async {},
             onClosePdf: () {},
-            currentFile: fs.XFile('test.pdf'),
+            currentFile: XFile('test.pdf'),
           ),
         ),
       ),
