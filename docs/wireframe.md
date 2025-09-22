@@ -78,6 +78,23 @@ Illustration:
 
 ---
 
+### Mobile PDF screen (phone)
+
+Purpose: compact PDF viewing and signature placement on small screens.
+Route: root --> opened (mobile)
+
+Design notes:
+- Top app bar with: menu (page thumbnails), title with current page and total pages (prev/next).
+- Center viewport supports scroll and pinch-zoom.
+- Bottom sheet button to show Signatures drawers.
+  - bottom drawer to add/drag a signature onto the page.
+
+Illustration:
+
+![](wireframe.assets/mobile_pdf_phone.excalidraw)
+
+---
+
 ## How to view and export
 
 We keep links in this file pointing to `.excalidraw`. To preview the SVGs and generate `docs/.wireframe.md` with `.svg` links, run from repo root:
