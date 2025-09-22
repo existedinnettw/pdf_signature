@@ -17,6 +17,7 @@ import 'package:pdf_signature/utils/download.dart';
 import '../view_model/pdf_view_model.dart';
 import 'package:image/image.dart' as img;
 import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 
 class PdfSignatureHomePage extends ConsumerStatefulWidget {
   final Future<void> Function() onPickPdf;
@@ -58,6 +59,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   final double _signaturesMin = 140;
   final double _signaturesMax = 250;
   late PdfViewModel _viewModel;
+  bool? _lastCanShowPagesSidebar;
 
   // Exposed for tests to trigger the invalid-file SnackBar without UI.
   @visibleForTesting
@@ -306,7 +308,9 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
         max: _pagesMax,
         builder:
             (context, area) => Offstage(
-              offstage: !_showPagesSidebar,
+              offstage:
+                  !(ResponsiveBreakpoints.of(context).largerThan(MOBILE) &&
+                      _showPagesSidebar),
               child: Consumer(
                 builder: (context, ref, child) {
                   final pdfViewModel = ref.watch(pdfViewModelProvider);
@@ -361,6 +365,24 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Detect breakpoint changes from Responsive Framework and update areas once.
+    bool canShowPagesSidebar = true;
+    try {
+      canShowPagesSidebar = ResponsiveBreakpoints.of(
+        context,
+      ).largerThan(MOBILE);
+    } catch (_) {
+      canShowPagesSidebar = true;
+    }
+    if (_lastCanShowPagesSidebar != canShowPagesSidebar) {
+      _lastCanShowPagesSidebar = canShowPagesSidebar;
+      _applySidebarVisibility();
+    }
+  }
+
+  @override
   void dispose() {
     _viewModel.controller.removeListener(_onControllerChanged);
     _splitController.dispose();
@@ -368,29 +390,65 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
   }
 
   void _applySidebarVisibility() {
+    // Respect responsive layout: disable Pages sidebar on MOBILE.
+    bool canShowPagesSidebar = true;
+    try {
+      canShowPagesSidebar = ResponsiveBreakpoints.of(
+        context,
+      ).largerThan(MOBILE);
+    } catch (_) {
+      // If ResponsiveBreakpoints isn't available yet (e.g., during early init),
+      // fall back to allowing sidebars to avoid crashes; builders also guard.
+      canShowPagesSidebar = true;
+    }
+
     // Left pages sidebar
     final left = _splitController.areas[0];
-    if (_showPagesSidebar) {
-      left.max = _pagesMax;
-      left.min = _pagesMin;
-      left.size = _lastPagesWidth.clamp(_pagesMin, _pagesMax);
+    final wantPagesVisible = _showPagesSidebar && canShowPagesSidebar;
+    final isPagesHidden =
+        (left.max == 1 && left.min == 0 && (left.size ?? 1) == 1);
+    if (wantPagesVisible) {
+      // Only expand if currently hidden; otherwise keep user's size.
+      if (isPagesHidden) {
+        left.max = _pagesMax;
+        left.min = _pagesMin;
+        left.size = _lastPagesWidth.clamp(_pagesMin, _pagesMax);
+      } else {
+        left.max = _pagesMax;
+        left.min = _pagesMin;
+        // Preserve current size (user may have adjusted it).
+        _lastPagesWidth = left.size ?? _lastPagesWidth;
+      }
     } else {
-      _lastPagesWidth = left.size ?? _lastPagesWidth;
-      left.min = 0;
-      left.max = 1;
-      left.size = 1; // effectively hidden
+      // Only collapse if currently visible; remember current size for restore.
+      if (!isPagesHidden) {
+        _lastPagesWidth = left.size ?? _lastPagesWidth;
+        left.min = 0;
+        left.max = 1;
+        left.size = 1; // effectively hidden
+      }
     }
     // Right signatures sidebar
     final right = _splitController.areas[2];
+    final isSignaturesHidden =
+        (right.max == 1 && right.min == 0 && (right.size ?? 1) == 1);
     if (_showSignaturesSidebar) {
-      right.max = _signaturesMax;
-      right.min = _signaturesMin;
-      right.size = _lastSignaturesWidth.clamp(_signaturesMin, _signaturesMax);
+      if (isSignaturesHidden) {
+        right.max = _signaturesMax;
+        right.min = _signaturesMin;
+        right.size = _lastSignaturesWidth.clamp(_signaturesMin, _signaturesMax);
+      } else {
+        right.max = _signaturesMax;
+        right.min = _signaturesMin;
+        _lastSignaturesWidth = right.size ?? _lastSignaturesWidth;
+      }
     } else {
-      _lastSignaturesWidth = right.size ?? _lastSignaturesWidth;
-      right.min = 0;
-      right.max = 1;
-      right.size = 1;
+      if (!isSignaturesHidden) {
+        _lastSignaturesWidth = right.size ?? _lastSignaturesWidth;
+        right.min = 0;
+        right.max = 1;
+        right.size = 1;
+      }
     }
   }
 

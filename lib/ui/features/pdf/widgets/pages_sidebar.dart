@@ -93,14 +93,18 @@ class ThumbnailsView extends ConsumerWidget {
                     padding: const EdgeInsets.all(6),
                     child: Column(
                       children: [
-                        SizedBox(
-                          height: 180,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: PdfPageView(
-                              document: document,
-                              pageNumber: pageNumber,
-                              alignment: Alignment.center,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 180),
+                          child: AspectRatio(
+                            // A4 portrait aspect: width:height ≈ 1:1.4142
+                            aspectRatio: 1 / 1.4142,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: PdfPageView(
+                                document: document,
+                                pageNumber: pageNumber,
+                                alignment: Alignment.center,
+                              ),
                             ),
                           ),
                         ),

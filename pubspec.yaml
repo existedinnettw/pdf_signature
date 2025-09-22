@@ -59,6 +59,7 @@ dependencies:
   riverpod_annotation: ^2.6.1
   colorfilter_generator: ^0.0.8
   flutter_box_transform: ^0.4.7
+  responsive_framework: ^1.5.1
   # disable_web_context_menu: ^1.1.0
   # ml_linalg: ^13.12.6
 

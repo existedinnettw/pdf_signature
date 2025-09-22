@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 
@@ -67,6 +68,16 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
       builder: (context, constraints) {
         final bool compact = constraints.maxWidth < 260;
         final double gotoWidth = 50;
+        final bool isLargerThanMobile = ResponsiveBreakpoints.of(
+          context,
+        ).largerThan(MOBILE);
+        final String fileDisplay = () {
+          final path = widget.filePath;
+          if (path == null || path.isEmpty) return 'No file selected';
+          if (isLargerThanMobile) return path;
+          // Extract file name for mobile (supports both / and \ separators)
+          return path.split('/').last.split('\\').last;
+        }();
 
         // Center content of the toolbar
         final center = Wrap(
@@ -82,14 +93,15 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                 children: [
                   const Icon(Icons.insert_drive_file, size: 18),
                   const SizedBox(width: 6),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 220),
-                    child: Text(
-                      // if filePath not null
-                      widget.filePath != null
-                          ? widget.filePath!
-                          : 'No file selected',
-                      overflow: TextOverflow.ellipsis,
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 220),
+                      child: Text(
+                        fileDisplay,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ],
@@ -130,62 +142,68 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                       ),
                     ],
                   ),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(l.goTo),
-                      SizedBox(
-                        width: gotoWidth,
-                        child: TextField(
-                          key: const Key('txt_goto'),
-                          controller: _goToController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          enabled: !widget.disabled,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            hintText: '1..${pdf.pageCount}',
+                  if (ResponsiveBreakpoints.of(context).largerThan(MOBILE))
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(l.goTo),
+                        SizedBox(
+                          width: gotoWidth,
+                          child: TextField(
+                            key: const Key('txt_goto'),
+                            controller: _goToController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            enabled: !widget.disabled,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: '1..${pdf.pageCount}',
+                            ),
+                            onSubmitted: (_) => _submitGoTo(),
                           ),
-                          onSubmitted: (_) => _submitGoTo(),
                         ),
-                      ),
-                      if (!compact)
+                        if (!compact)
+                          IconButton(
+                            key: const Key('btn_goto_apply'),
+                            tooltip: l.goTo,
+                            icon: const Icon(Icons.arrow_forward),
+                            onPressed: widget.disabled ? null : _submitGoTo,
+                          ),
+                      ],
+                    ),
+
+                  if (ResponsiveBreakpoints.of(context).largerThan(MOBILE)) ...[
+                    const SizedBox(width: 8),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
                         IconButton(
-                          key: const Key('btn_goto_apply'),
-                          tooltip: l.goTo,
-                          icon: const Icon(Icons.arrow_forward),
-                          onPressed: widget.disabled ? null : _submitGoTo,
+                          key: const Key('btn_zoom_out'),
+                          tooltip: 'Zoom out',
+                          onPressed: widget.disabled ? null : widget.onZoomOut,
+                          icon: const Icon(Icons.zoom_out),
                         ),
-                    ],
-                  ),
-                  const SizedBox(width: 8),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      IconButton(
-                        key: const Key('btn_zoom_out'),
-                        tooltip: 'Zoom out',
-                        onPressed: widget.disabled ? null : widget.onZoomOut,
-                        icon: const Icon(Icons.zoom_out),
-                      ),
-                      Text(
-                        //if not null
-                        widget.zoomLevel != null ? '${widget.zoomLevel}%' : '',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      IconButton(
-                        key: const Key('btn_zoom_in'),
-                        tooltip: 'Zoom in',
-                        onPressed: widget.disabled ? null : widget.onZoomIn,
-                        icon: const Icon(Icons.zoom_in),
-                      ),
-                    ],
-                  ),
-                  SizedBox(width: 6),
+                        Text(
+                          //if not null
+                          widget.zoomLevel != null
+                              ? '${widget.zoomLevel}%'
+                              : '',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        IconButton(
+                          key: const Key('btn_zoom_in'),
+                          tooltip: 'Zoom in',
+                          onPressed: widget.disabled ? null : widget.onZoomIn,
+                          icon: const Icon(Icons.zoom_in),
+                        ),
+                      ],
+                    ),
+                    SizedBox(width: 6),
+                  ],
                 ],
               ),
             ],
@@ -194,19 +212,21 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
 
         return Row(
           children: [
-            IconButton(
-              key: const Key('btn_toggle_pages_sidebar'),
-              tooltip: 'Toggle pages overview',
-              onPressed: widget.disabled ? null : widget.onTogglePagesSidebar,
-              icon: Icon(
-                Icons.view_sidebar,
-                color:
-                    widget.showPagesSidebar
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
+            if (ResponsiveBreakpoints.of(context).largerThan(MOBILE)) ...[
+              IconButton(
+                key: const Key('btn_toggle_pages_sidebar'),
+                tooltip: 'Toggle pages overview',
+                onPressed: widget.disabled ? null : widget.onTogglePagesSidebar,
+                icon: Icon(
+                  Icons.view_sidebar,
+                  color:
+                      widget.showPagesSidebar
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
+              const SizedBox(width: 8),
+            ],
             Expanded(child: center),
             const SizedBox(width: 8),
             IconButton(
