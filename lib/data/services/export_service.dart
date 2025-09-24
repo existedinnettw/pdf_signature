@@ -6,6 +6,7 @@ import 'package:image/image.dart' as img;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart' as pdf;
 import 'package:pdfrx_engine/pdfrx_engine.dart' as engine;
+import 'package:pdfrx/pdfrx.dart' show pdfrxFlutterInitialize;
 import '../../domain/models/model.dart';
 import '../../utils/rotation_utils.dart' as rot;
 import '../../utils/background_removal.dart' as br;
@@ -104,15 +105,14 @@ class ExportService {
     }
 
     // Initialize engine (safe to call multiple times)
-    try {
-      await engine.pdfrxInitialize();
-    } catch (_) {}
+    pdfrxFlutterInitialize();
 
     // Open source document from memory; if not supported, write temp file
     engine.PdfDocument? doc;
     try {
       doc = await engine.PdfDocument.openData(srcBytes);
     } catch (_) {
+      debugPrint('Warning: pdfrx openData failed');
       final tmp = File(
         '${Directory.systemTemp.path}/pdfrx_src_${DateTime.now().millisecondsSinceEpoch}.pdf',
       );
@@ -120,7 +120,9 @@ class ExportService {
       doc = await engine.PdfDocument.openFile(tmp.path);
       try {
         tmp.deleteSync();
-      } catch (_) {}
+      } catch (_) {
+        debugPrint('Warning: temp file delete failed');
+      }
     }
     // doc is guaranteed to be assigned by either openData or openFile above
 
@@ -221,6 +223,7 @@ class ExportService {
 
     final bytes = await out.save();
     doc.dispose();
+    debugPrint('exportSignedPdfFromBytes succeeded');
     return bytes;
   }
 
@@ -233,6 +236,7 @@ class ExportService {
       await file.writeAsBytes(bytes, flush: true);
       return true;
     } catch (_) {
+      debugPrint('Error: saveBytesToFile failed');
       return false;
     }
   }
