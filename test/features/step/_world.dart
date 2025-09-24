@@ -36,6 +36,9 @@ class TestWorld {
   // Generic flags/values
   static int? selectedPage;
   static int? pendingGoTo; // for simulating typed Go To value across steps
+  static int?
+  nextDocPageCount; // for BDD: desired page count for the next opened document
+  static Map<int, int>? prevPlacementsCount; // snapshot before an action
 
   // Preferences & settings
   static Map<String, String> prefs = {};
@@ -61,6 +64,8 @@ class TestWorld {
     nothingToSaveAttempt = false;
     selectedPage = null;
     pendingGoTo = null;
+    nextDocPageCount = null;
+    prevPlacementsCount = null;
 
     // Preferences
     prefs = {};

@@ -325,7 +325,9 @@ class PdfSessionViewModel extends ChangeNotifier {
     ref
         .read(documentRepositoryProvider.notifier)
         .openPicked(pageCount: pageCount, bytes: bytes);
-    ref.read(signatureCardRepositoryProvider.notifier).clearAll();
+    // Keep existing signature cards when opening a new document.
+    // The feature "Open a different document will reset signature placements but keep signature cards"
+    // relies on this behavior. Placements are reset by openPicked() above.
     router.go('/pdf');
     notifyListeners();
   }

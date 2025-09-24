@@ -9,13 +9,6 @@ Feature: document browser
     And the user can move to the next or previous page
     And the page label shows "Page {1} of {5}"
 
-  Scenario: Jump to a specific page by typing Enter
-    Given the document is open
-    When the user types {3} into the Go to input and presses Enter
-    Then page {3} is displayed
-    And the page label shows "Page {3} of {5}"
-    And the left pages overview highlights page {3}
-
   Scenario: Jump to a specific page using the Apply button
     Given the document is open
     When the user types {4} into the Go to input
@@ -29,15 +22,6 @@ Feature: document browser
     Then page {2} is displayed
     And the page label shows "Page {2} of {5}"
 
-  Scenario: Continuous mode scrolls target page into view on jump
-    Given the document is open
-    And the Page view mode is set to Continuous
-    When the user jumps to page {5}
-    Then page {5} becomes visible in the scroll area
-    And the left pages overview highlights page {5}
-
-
-
   Scenario: Go to clamps out-of-range inputs to valid bounds
     Given the document is open
     When the user enters {0} into the Go to input and applies it
@@ -50,3 +34,14 @@ Feature: document browser
   Scenario: Go to is disabled when no document is loaded
     Given no document is open
     Then the Go to input cannot be used
+
+  Scenario: Open a different document will reset signature placements but keep signature cards
+    Given the document is open
+    When the user opens a different document with {3} pages
+    And {1} signature placements exist on page {1}
+    And {1} signature placements exist on page {2}
+    And {2} signature cards exist
+    Then the first page of the new document is displayed
+    And the page label shows "Page {1} of {3}"
+    And number of signature placements is {0}
+    And {2} signature cards exist

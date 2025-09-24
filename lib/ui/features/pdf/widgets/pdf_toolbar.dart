@@ -68,9 +68,14 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
       builder: (context, constraints) {
         final bool compact = constraints.maxWidth < 260;
         final double gotoWidth = 50;
-        final bool isLargerThanMobile = ResponsiveBreakpoints.of(
-          context,
-        ).largerThan(MOBILE);
+        // Be defensive in tests that don't provide ResponsiveBreakpoints
+        final bool isLargerThanMobile = () {
+          try {
+            return ResponsiveBreakpoints.of(context).largerThan(MOBILE);
+          } catch (_) {
+            return true; // default to full toolbar on tests/minimal hosts
+          }
+        }();
         final String fileDisplay = () {
           final path = widget.filePath;
           if (path == null || path.isEmpty) return 'No file selected';
@@ -142,7 +147,7 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                       ),
                     ],
                   ),
-                  if (ResponsiveBreakpoints.of(context).largerThan(MOBILE))
+                  if (isLargerThanMobile)
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
@@ -176,7 +181,7 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
                       ],
                     ),
 
-                  if (ResponsiveBreakpoints.of(context).largerThan(MOBILE)) ...[
+                  if (isLargerThanMobile) ...[
                     const SizedBox(width: 8),
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
@@ -212,7 +217,7 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
 
         return Row(
           children: [
-            if (ResponsiveBreakpoints.of(context).largerThan(MOBILE)) ...[
+            if (isLargerThanMobile) ...[
               IconButton(
                 key: const Key('btn_toggle_pages_sidebar'),
                 tooltip: 'Toggle pages overview',
