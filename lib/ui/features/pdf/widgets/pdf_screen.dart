@@ -221,6 +221,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
           if (out != null) {
             ok = await downloadBytes(out, filename: suggested);
             savedPath = suggested;
+          } else {
+            debugPrint('_saveSignedPdf: export to bytes failed');
           }
         }
         if (!kIsWeb) {
@@ -235,7 +237,6 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               ),
             ),
           );
-          // ignore: avoid_print
           debugPrint('_saveSignedPdf: SnackBar shown ok=' + ok.toString());
         } else {
           messenger.showSnackBar(

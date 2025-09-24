@@ -182,6 +182,7 @@ class DocumentStateNotifier extends StateNotifier<Document> {
       );
       if (result != null) return result;
     } catch (_) {
+      debugPrint('Warning: export in isolate failed');
       // Fall back to main-isolate export if isolate fails (e.g., engine limitations).
     }
 
