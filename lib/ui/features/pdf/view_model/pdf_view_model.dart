@@ -1,3 +1,4 @@
+// ignore_for_file: unnecessary_import
 import 'dart:typed_data';
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 
 class PdfViewModel extends ChangeNotifier {
   final Ref ref;
@@ -322,10 +324,8 @@ class PdfSessionViewModel extends ChangeNotifier {
     int pageCount = 1; // default
     try {
       // Defensive: ensure Pdfrx cache directory set (in case main init skipped in tests)
-      if (Pdfrx.getCacheDirectory == null) {
-        debugPrint(
-          '[PdfSessionViewModel] Pdfrx.getCacheDirectory was null; setting temp directory',
-        );
+      if (Pdfrx.getCacheDirectory == null && !kIsWeb) {
+        debugPrint('[PdfSessionViewModel] Setting Pdfrx cache directory (io)');
         try {
           final temp = await getTemporaryDirectory();
           Pdfrx.getCacheDirectory = () async => temp.path;
@@ -336,6 +336,8 @@ class PdfSessionViewModel extends ChangeNotifier {
           debugPrint(st.toString());
         }
       }
+      // Ensure engine initialized (safe multiple calls)
+      pdfrxFlutterInitialize();
       final doc = await PdfDocument.openData(bytes);
       pageCount = doc.pages.length;
       debugPrint(
