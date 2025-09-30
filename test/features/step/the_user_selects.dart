@@ -10,7 +10,9 @@ Future<void> theUserSelects(WidgetTester tester, dynamic file) async {
   final container = ProviderContainer();
   TestWorld.container = container;
   // Mark page for signing to enable signature ops
-  container.read(documentRepositoryProvider.notifier).openPickedWithPageCount(pageCount: 1);
+  container
+      .read(documentRepositoryProvider.notifier)
+      .openDocument(pageCount: 1);
   // For invalid/unsupported/empty selections we do NOT set image bytes.
   // This simulates a failed load and keeps rect null.
   final token = file.toString();

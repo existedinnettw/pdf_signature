@@ -33,8 +33,11 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()
-                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+                DocumentStateNotifier()..openDocument(
+                  bytes: pdfBytes,
+                  pageCount: 3,
+                  knownPageCount: true,
+                ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -104,8 +107,11 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()
-                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+                DocumentStateNotifier()..openDocument(
+                  bytes: pdfBytes,
+                  pageCount: 3,
+                  knownPageCount: true,
+                ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -158,8 +164,11 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()
-                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+                DocumentStateNotifier()..openDocument(
+                  bytes: pdfBytes,
+                  pageCount: 3,
+                  knownPageCount: true,
+                ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -245,8 +254,11 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()
-                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+                DocumentStateNotifier()..openDocument(
+                  bytes: pdfBytes,
+                  pageCount: 3,
+                  knownPageCount: true,
+                ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -311,8 +323,11 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()
-                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+                DocumentStateNotifier()..openDocument(
+                  bytes: pdfBytes,
+                  pageCount: 3,
+                  knownPageCount: true,
+                ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -377,7 +392,7 @@ void main() {
     Future<void> simulatePick() async {
       container
           .read(documentRepositoryProvider.notifier)
-          .openPicked(bytes: newBytes);
+          .openDocument(bytes: newBytes);
       // Reset the current page explicitly to 1 as openPicked establishes new doc
       container.read(pdfViewModelProvider.notifier).jumpToPage(1);
     }
@@ -391,8 +406,11 @@ void main() {
           ),
           documentRepositoryProvider.overrideWith(
             (ref) =>
-                DocumentStateNotifier()
-                  ..openPickedWithPageCount(pageCount: 3, bytes: initialBytes),
+                DocumentStateNotifier()..openDocument(
+                  bytes: initialBytes,
+                  pageCount: 3,
+                  knownPageCount: true,
+                ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),

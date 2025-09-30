@@ -26,6 +26,6 @@ Future<void> theUserDragsHandlesToResizeAndDragsToReposition(
       height: currentRect.height + 30,
     );
 
-    pdfN.updatePlacementRect(page: currentPage, index: 0, rect: newRect);
+    pdfN.modifyPlacement(page: currentPage, index: 0, rect: newRect);
   }
 }

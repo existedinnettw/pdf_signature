@@ -11,10 +11,6 @@ Future<void> theUserUsesRotateControls(WidgetTester tester) async {
   final currentPage = container.read(pdfViewModelProvider).currentPage;
   final placements = pdfN.placementsOn(currentPage);
   if (placements.isNotEmpty) {
-    pdfN.updatePlacementRotation(
-      page: currentPage,
-      index: 0,
-      rotationDeg: 45.0,
-    );
+    pdfN.modifyPlacement(page: currentPage, index: 0, rotationDeg: 45.0);
   }
 }

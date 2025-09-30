@@ -22,7 +22,9 @@ Future<void> threeSignaturePlacementsArePlacedOnTheCurrentPage(
   container.read(signatureCardRepositoryProvider.notifier).state = [
     SignatureCard.initial(),
   ];
-  container.read(documentRepositoryProvider.notifier).openPickedWithPageCount(pageCount: 5);
+  container
+      .read(documentRepositoryProvider.notifier)
+      .openDocument(pageCount: 5);
   final pdfN = container.read(documentRepositoryProvider.notifier);
   final page = container.read(pdfViewModelProvider).currentPage;
   pdfN.addPlacement(

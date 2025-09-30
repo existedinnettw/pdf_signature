@@ -11,7 +11,7 @@ Future<void> aDocumentPageIsSelectedForSigning(WidgetTester tester) async {
   // Ensure a document is open
   final repo = container.read(documentRepositoryProvider.notifier);
   if (!container.read(documentRepositoryProvider).loaded) {
-    repo.openPickedWithPageCount(pageCount: 5);
+    repo.openDocument(pageCount: 5);
   }
   // Ensure current page is 1 for consistent subsequent steps
   try {

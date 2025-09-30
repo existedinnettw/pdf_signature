@@ -37,9 +37,12 @@ void main() {
             (ref) => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) =>
-                DocumentStateNotifier(service: ExportService())
-                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+            (ref) => DocumentStateNotifier(service: ExportService())
+              ..openDocument(
+                bytes: pdfBytes,
+                pageCount: 3,
+                knownPageCount: true,
+              ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -93,9 +96,12 @@ void main() {
             (ref) => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) =>
-                DocumentStateNotifier(service: ExportService())
-                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+            (ref) => DocumentStateNotifier(service: ExportService())
+              ..openDocument(
+                bytes: pdfBytes,
+                pageCount: 3,
+                knownPageCount: true,
+              ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -164,7 +170,11 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) => DocumentStateNotifier(
               service: ExportService(enableRaster: false),
-            )..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+            )..openDocument(
+              bytes: pdfBytes,
+              pageCount: 3,
+              knownPageCount: true,
+            ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -210,7 +220,11 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) => DocumentStateNotifier(
               service: ExportService(enableRaster: false),
-            )..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+            )..openDocument(
+              bytes: pdfBytes,
+              pageCount: 3,
+              knownPageCount: true,
+            ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -259,7 +273,11 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) => DocumentStateNotifier(
               service: ExportService(enableRaster: false),
-            )..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+            )..openDocument(
+              bytes: pdfBytes,
+              pageCount: 3,
+              knownPageCount: true,
+            ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -309,9 +327,12 @@ void main() {
             (ref) => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) =>
-                DocumentStateNotifier(service: ExportService())
-                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+            (ref) => DocumentStateNotifier(service: ExportService())
+              ..openDocument(
+                bytes: pdfBytes,
+                pageCount: 3,
+                knownPageCount: true,
+              ),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -361,9 +382,12 @@ void main() {
               (ref) => PreferencesStateNotifier(prefs),
             ),
             documentRepositoryProvider.overrideWith(
-              (ref) =>
-                  DocumentStateNotifier(service: ExportService())
-                    ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
+              (ref) => DocumentStateNotifier(service: ExportService())
+                ..openDocument(
+                  bytes: pdfBytes,
+                  pageCount: 3,
+                  knownPageCount: true,
+                ),
             ),
             pdfViewModelProvider.overrideWith(
               (ref) => PdfViewModel(ref, useMockViewer: false),

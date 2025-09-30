@@ -18,7 +18,9 @@ Future<void> aMultipageDocumentIsOpen(WidgetTester tester) async {
   container.read(signatureCardRepositoryProvider.notifier).state = [
     SignatureCard.initial(),
   ];
-  container.read(documentRepositoryProvider.notifier).openPickedWithPageCount(pageCount: 5);
+  container
+      .read(documentRepositoryProvider.notifier)
+      .openDocument(pageCount: 5);
   // Reset page state providers
   try {
     container.read(pdfViewModelProvider.notifier).jumpToPage(1);

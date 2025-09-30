@@ -25,24 +25,55 @@ class DocumentStateNotifier extends StateNotifier<Document> {
     );
   }
 
-  void openPicked({Uint8List? bytes}) {
+  /// Unified open API replacing multiple legacy variants.
+  ///
+  /// Usage patterns:
+  ///  openDocument(bytes: data) -> derive page count asynchronously.
+  ///  openDocument(bytes: data, pageCount: 203, knownPageCount: true) -> fast path.
+  ///  openDocument(pageCount: 5) -> open empty placeholder document (tests).
+  void openDocument({
+    Uint8List? bytes,
+    int? pageCount,
+    bool knownPageCount = false,
+  }) {
     debugPrint(
-      '[DocumentRepository] openPicked called (bytes length: ${bytes?.length})',
+      '[DocumentRepository] openDocument called (bytes=${bytes?.length} pageCount=$pageCount known=$knownPageCount)',
     );
-
-    // For real usage, determine page count from PDF bytes asynchronously
-    if (bytes != null) {
-      _openPickedAsync(bytes);
-    } else {
-      // Handle null bytes case
+    if (bytes == null) {
+      // No bytes: treat as synthetic document (tests) using provided pageCount or default 1
+      final pc = pageCount ?? 1;
       state = state.copyWith(
         loaded: true,
-        pageCount: 1,
+        pageCount: pc,
+        pickedPdfBytes: null,
+        placementsByPage: <int, List<SignaturePlacement>>{},
+      );
+      return;
+    }
+    // Bytes provided
+    if ((knownPageCount || pageCount != null) && pageCount != null) {
+      // Fast path: caller already determined count
+      state = state.copyWith(
+        loaded: true,
+        pageCount: pageCount.clamp(1, 9999),
         pickedPdfBytes: bytes,
         placementsByPage: <int, List<SignaturePlacement>>{},
       );
+      return;
     }
+    // Derive asynchronously
+    _openPickedAsync(bytes);
   }
+
+  // --- Deprecated wrappers for backward compatibility (can be removed later) ---
+  @Deprecated('Use openDocument(bytes: ...) instead')
+  void openPicked({Uint8List? bytes}) => openDocument(bytes: bytes);
+
+  @Deprecated(
+    'Use openDocument(bytes: ..., pageCount: x, knownPageCount: true) instead',
+  )
+  void openPickedKnown({required int pageCount, required Uint8List bytes}) =>
+      openDocument(bytes: bytes, pageCount: pageCount, knownPageCount: true);
 
   Future<void> _openPickedAsync(Uint8List bytes) async {
     int pageCount = 1; // default fallback
@@ -63,30 +94,15 @@ class DocumentStateNotifier extends StateNotifier<Document> {
       pickedPdfBytes: bytes,
       placementsByPage: <int, List<SignaturePlacement>>{},
     );
-
-    // Schedule delayed check to ensure our page count wasn't overridden by UI callbacks
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (state.loaded &&
-          state.pickedPdfBytes == bytes &&
-          state.pageCount != pageCount) {
-        state = state.copyWith(pageCount: pageCount);
-      }
-    });
   }
 
   // For tests that need to specify page count explicitly
   @visibleForTesting
-  void openPickedWithPageCount({required int pageCount, Uint8List? bytes}) {
-    debugPrint(
-      '[DocumentRepository] openPickedWithPageCount called (pageCount=$pageCount)',
-    );
-    state = state.copyWith(
-      loaded: true,
-      pageCount: pageCount,
-      pickedPdfBytes: bytes,
-      placementsByPage: <int, List<SignaturePlacement>>{},
-    );
-  }
+  @Deprecated(
+    'Use openDocument(pageCount: x) for synthetic docs or with bytes+knownPageCount',
+  )
+  void openPickedWithPageCount({required int pageCount, Uint8List? bytes}) =>
+      openDocument(bytes: bytes, pageCount: pageCount, knownPageCount: true);
 
   void close() {
     state = Document.initial();
@@ -133,21 +149,12 @@ class DocumentStateNotifier extends StateNotifier<Document> {
   // signature bytes were provided.
   static final img.Image _singleTransparentPng = img.Image(width: 1, height: 1);
 
+  @Deprecated('Use modifyPlacement')
   void updatePlacementRotation({
     required int page,
     required int index,
     required double rotationDeg,
-  }) {
-    if (!state.loaded) return;
-    final p = page.clamp(1, state.pageCount);
-    final map = Map<int, List<SignaturePlacement>>.from(state.placementsByPage);
-    final list = List<SignaturePlacement>.from(map[p] ?? const []);
-    if (index >= 0 && index < list.length) {
-      list[index] = list[index].copyWith(rotationDeg: rotationDeg);
-      map[p] = list;
-      state = state.copyWith(placementsByPage: map);
-    }
-  }
+  }) => modifyPlacement(page: page, index: index, rotationDeg: rotationDeg);
 
   void removePlacement({required int page, required int index}) {
     if (!state.loaded) return;
@@ -166,21 +173,36 @@ class DocumentStateNotifier extends StateNotifier<Document> {
   }
 
   // Update the rect of an existing placement on a page.
+  @Deprecated('Use modifyPlacement')
   void updatePlacementRect({
     required int page,
     required int index,
     required Rect rect,
+  }) => modifyPlacement(page: page, index: index, rect: rect);
+
+  /// Generic partial update for a placement. Any non-null field is applied.
+  void modifyPlacement({
+    required int page,
+    required int index,
+    Rect? rect,
+    double? rotationDeg,
+    SignatureAsset? asset,
+    GraphicAdjust? graphicAdjust,
   }) {
     if (!state.loaded) return;
     final p = page.clamp(1, state.pageCount);
     final map = Map<int, List<SignaturePlacement>>.from(state.placementsByPage);
     final list = List<SignaturePlacement>.from(map[p] ?? const []);
-    if (index >= 0 && index < list.length) {
-      final existing = list[index];
-      list[index] = existing.copyWith(rect: rect);
-      map[p] = list;
-      state = state.copyWith(placementsByPage: map);
-    }
+    if (index < 0 || index >= list.length) return;
+    final current = list[index];
+    list[index] = current.copyWith(
+      rect: rect ?? current.rect,
+      rotationDeg: rotationDeg ?? current.rotationDeg,
+      asset: asset ?? current.asset,
+      graphicAdjust: graphicAdjust ?? current.graphicAdjust,
+    );
+    map[p] = list;
+    state = state.copyWith(placementsByPage: map);
   }
 
   List<SignaturePlacement> placementsOn(int page) {

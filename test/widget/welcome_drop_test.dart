@@ -51,7 +51,7 @@ void main() {
     }) async {
       final container = ProviderScope.containerOf(stateful.context);
       final repo = container.read(documentRepositoryProvider.notifier);
-      repo.openPickedWithPageCount(pageCount: 1, bytes: bytes);
+      repo.openDocument(bytes: bytes, pageCount: 1, knownPageCount: true);
     }, [fake]);
     await tester.pump();
 

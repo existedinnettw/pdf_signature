@@ -138,11 +138,7 @@ class PdfViewModel extends ChangeNotifier {
   }) {
     ref
         .read(documentRepositoryProvider.notifier)
-        .updatePlacementRotation(
-          page: page,
-          index: index,
-          rotationDeg: rotationDeg,
-        );
+        .modifyPlacement(page: page, index: index, rotationDeg: rotationDeg);
   }
 
   void removePlacement({required int page, required int index}) {
@@ -163,7 +159,7 @@ class PdfViewModel extends ChangeNotifier {
   }) {
     ref
         .read(documentRepositoryProvider.notifier)
-        .updatePlacementRect(page: page, index: index, rect: rect);
+        .modifyPlacement(page: page, index: index, rect: rect);
   }
 
   List<SignaturePlacement> placementsOn(int page) {
@@ -343,6 +339,16 @@ class PdfSessionViewModel extends ChangeNotifier {
       debugPrint(
         '[PdfSessionViewModel] Opened PDF bytes length=${bytes.length} pages=$pageCount',
       );
+      // Use fast path to populate repository BEFORE navigation so the first
+      // build of PdfViewerWidget sees a loaded document and avoids showing
+      // transient "No PDF loaded".
+      ref
+          .read(documentRepositoryProvider.notifier)
+          .openDocument(
+            bytes: bytes,
+            pageCount: pageCount,
+            knownPageCount: true,
+          );
     } catch (e, st) {
       debugPrint(
         '[PdfSessionViewModel] Failed to read PDF data from bytes error=$e',
@@ -379,8 +385,13 @@ class PdfSessionViewModel extends ChangeNotifier {
     } else {
       _displayFileName = '';
     }
-    debugPrint('[PdfSessionViewModel] Calling openPicked with bytes');
-    ref.read(documentRepositoryProvider.notifier).openPicked(bytes: bytes);
+    // If fast path failed to set repository (e.g., exception earlier), fallback to async derive.
+    if (ref.read(documentRepositoryProvider).pickedPdfBytes != bytes) {
+      debugPrint(
+        '[PdfSessionViewModel] Fallback deriving page count via openDocument',
+      );
+      ref.read(documentRepositoryProvider.notifier).openDocument(bytes: bytes);
+    }
     // Keep existing signature cards when opening a new document.
     // The feature "Open a different document will reset signature placements but keep signature cards"
     // relies on this behavior. Placements are reset by openPicked() above.

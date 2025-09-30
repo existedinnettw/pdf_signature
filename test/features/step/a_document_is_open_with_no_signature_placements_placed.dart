@@ -11,6 +11,6 @@ Future<void> aDocumentIsOpenWithNoSignaturePlacementsPlaced(
   TestWorld.container = container;
   container
       .read(documentRepositoryProvider.notifier)
-      .openPickedWithPageCount(pageCount: 5);
+      .openDocument(pageCount: 5);
   // No placements added
 }

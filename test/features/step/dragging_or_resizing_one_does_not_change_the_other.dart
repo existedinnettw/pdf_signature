@@ -22,7 +22,7 @@ Future<void> draggingOrResizingOneDoesNotChangeTheOther(
   final changedFirst = firstRectBefore.inflate(5);
   container
       .read(documentRepositoryProvider.notifier)
-      .updatePlacementRect(page: page, index: 0, rect: changedFirst);
+      .modifyPlacement(page: page, index: 0, rect: changedFirst);
 
   final after = container
       .read(documentRepositoryProvider.notifier)
