@@ -1,52 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg
-	xmlns="http://www.w3.org/2000/svg"
-	xmlns:xlink="http://www.w3.org/1999/xlink"
-	viewBox="0 0 64 64"
-	width="64"
-	height="64"
-	role="img"
-	aria-labelledby="title desc"
->
-	<title id="title">PDF Signature</title>
-	<desc id="desc">An app icon showing a PDF page with a folded corner and a handwritten signature.</desc>
-
-	<!-- Background tile -->
-	<rect x="4" y="4" width="56" height="56" rx="12" fill="#2563EB" />
-
-	<!-- Paper with folded corner -->
-	<g>
-		<path
-			d="M20 16h18l10 10v22c0 2.2-1.8 4-4 4H20c-2.2 0-4-1.8-4-4V20c0-2.2 1.8-4 4-4z"
-			fill="#FFFFFF"
-		/>
-		<path
-			d="M38 16v8c0 3.3 2.7 6 6 6h8l-14-14z"
-			fill="#F3F4F6"
-		/>
-	</g>
-
-	<!-- Signature stroke -->
-	<path
-		d="M18 42c3-2 6-2.2 8.5 0 2.5 2.2 4.8 1.8 8.2-1.2 3.4-3 6.9-5.3 9.4-2.8 1.2 1.2 0.5 3.2-1.2 3.6-3.5 0.9 3.3-6.8 6.4-4.6 2 1.4-1.5 6.7-4.8 7.8-4.6 1.6-10.9-0.6-13.8-0.6-4.4 0-7.5 2.4-12 2.8"
-		fill="none"
-		stroke="#1F2937"
-		stroke-width="2.5"
-		stroke-linecap="round"
-		stroke-linejoin="round"
-	/>
-
-	<!-- Subtle page shadow for depth (kept minimal for clarity) -->
-	<path
-		d="M20 16h18l10 10v1H44c-4.4 0-8-3.6-8-8v-3H20c-1.1 0-2 .9-2 2v0c0-1.1.9-2 2-2z"
-		fill="#000"
-		opacity=".05"
-	/>
-
-	<!-- Optional PDF label dots (very subtle) -->
-	<g fill="#E53935" opacity=".9">
-		<circle cx="24" cy="28" r="1" />
-		<circle cx="28" cy="28" r="1" />
-		<circle cx="32" cy="28" r="1" />
-	</g>
+<!-- Cropped viewBox from 0 0 128 128 to 8 8 112 112 so icon artwork occupies full box -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="128px" height="128px" viewBox="8 8 112 112" version="1.1">
+<defs>
+<filter id="alpha" filterUnits="objectBoundingBox" x="0%" y="0%" width="100%" height="100%">
+  <feColorMatrix type="matrix" in="SourceGraphic" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0"/>
+</filter>
+<mask id="mask0">
+  <g filter="url(#alpha)">
+<rect x="0" y="0" width="128" height="128" style="fill:rgb(0%,0%,0%);fill-opacity:0.0509804;stroke:none;"/>
+  </g>
+</mask>
+<clipPath id="clip1">
+  <rect x="0" y="0" width="128" height="128"/>
+</clipPath>
+<g id="surface5" clip-path="url(#clip1)">
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;" d="M 40 32 L 76 32 L 96 52 L 96 54 L 88 54 C 79.199219 54 72 46.800781 72 38 L 72 32 L 40 32 C 37.800781 32 36 33.800781 36 36 C 36 33.800781 37.800781 32 40 32 Z M 40 32 "/>
+</g>
+<mask id="mask1">
+  <g filter="url(#alpha)">
+<rect x="0" y="0" width="128" height="128" style="fill:rgb(0%,0%,0%);fill-opacity:0.898039;stroke:none;"/>
+  </g>
+</mask>
+<clipPath id="clip2">
+  <rect x="0" y="0" width="128" height="128"/>
+</clipPath>
+<g id="surface8" clip-path="url(#clip2)">
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(89.803922%,22.352941%,20.784314%);fill-opacity:1;" d="M 50 56 C 50 54.894531 49.105469 54 48 54 C 46.894531 54 46 54.894531 46 56 C 46 57.105469 46.894531 58 48 58 C 49.105469 58 50 57.105469 50 56 Z M 50 56 "/>
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(89.803922%,22.352941%,20.784314%);fill-opacity:1;" d="M 58 56 C 58 54.894531 57.105469 54 56 54 C 54.894531 54 54 54.894531 54 56 C 54 57.105469 54.894531 58 56 58 C 57.105469 58 58 57.105469 58 56 Z M 58 56 "/>
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(89.803922%,22.352941%,20.784314%);fill-opacity:1;" d="M 66 56 C 66 54.894531 65.105469 54 64 54 C 62.894531 54 62 54.894531 62 56 C 62 57.105469 62.894531 58 64 58 C 65.105469 58 66 57.105469 66 56 Z M 66 56 "/>
+</g>
+</defs>
+<g id="surface1">
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(14.509805%,38.82353%,92.156863%);fill-opacity:1;" d="M 32 8 L 96 8 C 109.253906 8 120 18.746094 120 32 L 120 96 C 120 109.253906 109.253906 120 96 120 L 32 120 C 18.746094 120 8 109.253906 8 96 L 8 32 C 8 18.746094 18.746094 8 32 8 Z M 32 8 "/>
+<!-- Slight enlargement (1.05x) of document artwork -->
+<g id="doc" transform="matrix(1.05 0 0 1.05 -4.8 -3.4)">
+  <path style=" stroke:none;fill-rule:nonzero;fill:rgb(100%,100%,100%);fill-opacity:1;" d="M 40 32 L 76 32 L 96 52 L 96 96 C 96 100.398438 92.398438 104 88 104 L 40 104 C 35.601562 104 32 100.398438 32 96 L 32 40 C 32 35.601562 35.601562 32 40 32 Z M 40 32 "/>
+  <path style=" stroke:none;fill-rule:nonzero;fill:rgb(95.294118%,95.686275%,96.470588%);fill-opacity:1;" d="M 76 32 L 76 48 C 76 54.601562 81.398438 60 88 60 L 104 60 Z M 76 32 "/>
+  <path style="fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(12.156863%,16.078432%,21.568628%);stroke-opacity:1;stroke-miterlimit:4;" d="M 18 42 C 21 40 24 39.800781 26.5 42 C 29 44.199219 31.300781 43.800781 34.699219 40.800781 C 38.099609 37.800781 41.599609 35.5 44.099609 38 C 45.300781 39.199219 44.599609 41.199219 42.900391 41.599609 C 39.400391 42.5 46.199219 34.800781 49.300781 37 C 51.300781 38.400391 47.800781 43.699219 44.5 44.800781 C 39.900391 46.400391 33.599609 44.199219 30.699219 44.199219 C 26.300781 44.199219 23.199219 46.599609 18.699219 47 " transform="matrix(2,0,0,2,0,0)"/>
+  <use xlink:href="#surface5" mask="url(#mask0)"/>
+  <use xlink:href="#surface8" mask="url(#mask1)"/>
+</g>
+</g>
 </svg>
