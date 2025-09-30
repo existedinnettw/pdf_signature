@@ -33,7 +33,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ({String? path, Uint8List? bytes, String? fileName}) =>
                     sessionVm.openPdf(
                       path: path,
-                      bytes: bytes,
+                      bytes: bytes ?? Uint8List(0),
                       fileName: fileName,
                     ),
           );

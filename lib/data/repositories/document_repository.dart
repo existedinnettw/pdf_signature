@@ -4,6 +4,7 @@ import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/services/export_service.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import '../../domain/models/model.dart';
 
@@ -24,7 +25,61 @@ class DocumentStateNotifier extends StateNotifier<Document> {
     );
   }
 
-  void openPicked({required int pageCount, Uint8List? bytes}) {
+  void openPicked({Uint8List? bytes}) {
+    debugPrint(
+      '[DocumentRepository] openPicked called (bytes length: ${bytes?.length})',
+    );
+
+    // For real usage, determine page count from PDF bytes asynchronously
+    if (bytes != null) {
+      _openPickedAsync(bytes);
+    } else {
+      // Handle null bytes case
+      state = state.copyWith(
+        loaded: true,
+        pageCount: 1,
+        pickedPdfBytes: bytes,
+        placementsByPage: <int, List<SignaturePlacement>>{},
+      );
+    }
+  }
+
+  Future<void> _openPickedAsync(Uint8List bytes) async {
+    int pageCount = 1; // default fallback
+
+    try {
+      // Determine actual page count from PDF bytes
+      final doc = await PdfDocument.openData(bytes);
+      pageCount = doc.pages.length;
+      debugPrint('[DocumentRepository] PDF has $pageCount pages');
+    } catch (e) {
+      debugPrint('[DocumentRepository] Failed to read PDF page count: $e');
+      // Keep default pageCount = 1 on error
+    }
+
+    state = state.copyWith(
+      loaded: true,
+      pageCount: pageCount,
+      pickedPdfBytes: bytes,
+      placementsByPage: <int, List<SignaturePlacement>>{},
+    );
+
+    // Schedule delayed check to ensure our page count wasn't overridden by UI callbacks
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (state.loaded &&
+          state.pickedPdfBytes == bytes &&
+          state.pageCount != pageCount) {
+        state = state.copyWith(pageCount: pageCount);
+      }
+    });
+  }
+
+  // For tests that need to specify page count explicitly
+  @visibleForTesting
+  void openPickedWithPageCount({required int pageCount, Uint8List? bytes}) {
+    debugPrint(
+      '[DocumentRepository] openPickedWithPageCount called (pageCount=$pageCount)',
+    );
     state = state.copyWith(
       loaded: true,
       pageCount: pageCount,
@@ -39,6 +94,9 @@ class DocumentStateNotifier extends StateNotifier<Document> {
 
   void setPageCount(int count) {
     if (!state.loaded) return;
+    debugPrint(
+      '[DocumentRepository] setPageCount called: $count (current: ${state.pageCount})',
+    );
     state = state.copyWith(pageCount: count.clamp(1, 9999));
   }
 

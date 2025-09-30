@@ -5,6 +5,9 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'pdf_page_overlays.dart';
 import './pdf_mock_continuous_list.dart';
 import '../view_model/pdf_view_model.dart';
+import 'package:pdf_signature/domain/models/document.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'dart:typed_data';
 
 // Provider to control whether viewer overlays (like scroll thumbs) are enabled.
 // Integration tests can override this to false to avoid long-running animations.
@@ -18,6 +21,7 @@ class PdfViewerWidget extends ConsumerStatefulWidget {
     this.scrollToPage,
     required this.controller,
     this.innerViewerKey,
+    this.onDocumentChanged,
   });
 
   final Size pageSize;
@@ -26,13 +30,43 @@ class PdfViewerWidget extends ConsumerStatefulWidget {
   final PdfViewerController controller;
   // Optional key applied to the inner Pdfrx PdfViewer to force disposal/rebuild
   final Key? innerViewerKey;
+  // External hook to observe document changes (forwarded from Pdfrx onDocumentChanged)
+  final void Function(PdfDocument?)? onDocumentChanged;
 
   @override
   ConsumerState<PdfViewerWidget> createState() => _PdfViewerWidgetState();
 }
 
 class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
-  PdfDocumentRef? _documentRef;
+  final ValueNotifier<PdfDocumentRef?> _docRefNotifier = ValueNotifier(null);
+  Uint8List? _lastBytes;
+  void _updateDocRef(Document doc) {
+    if (!doc.loaded || doc.pickedPdfBytes == null) {
+      if (_docRefNotifier.value != null) {
+        debugPrint('[PdfViewerWidget] Clearing docRef (no document loaded)');
+        _docRefNotifier.value = null;
+      }
+      return;
+    }
+    final bytes = doc.pickedPdfBytes!;
+    if (!identical(bytes, _lastBytes)) {
+      _lastBytes = bytes;
+      final viewModel = ref.read(pdfViewModelProvider);
+      debugPrint(
+        '[PdfViewerWidget] New PDF bytes detected -> ${viewModel.documentSourceName}',
+      );
+      // Force a full detach by setting null first so PdfViewer unmounts even if the
+      // framework would otherwise optimize rebuilds with same key ordering.
+      if (_docRefNotifier.value != null) {
+        _docRefNotifier.value = null;
+      }
+      final newRef = PdfDocumentRefData(
+        bytes,
+        sourceName: viewModel.documentSourceName,
+      );
+      _docRefNotifier.value = newRef;
+    }
+  }
 
   // Public getter for testing the actual viewer page
   int? get viewerCurrentPage => widget.controller.pageNumber;
@@ -51,31 +85,9 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
   @override
   Widget build(BuildContext context) {
     final pdfViewModel = ref.watch(pdfViewModelProvider);
-    final document = pdfViewModel.document;
+    final document = ref.watch(documentRepositoryProvider);
     final useMock = pdfViewModel.useMockViewer;
-    // trigger rebuild when active rect changes
-
-    // Update document ref when document changes
-    if (document.loaded && document.pickedPdfBytes != null) {
-      if (_documentRef == null) {
-        _documentRef = PdfDocumentRefData(
-          document.pickedPdfBytes!,
-          sourceName: 'document.pdf',
-        );
-      }
-    } else {
-      _documentRef = null;
-    }
-
-    if (_documentRef == null && !useMock) {
-      String text;
-      try {
-        text = AppLocalizations.of(context).noPdfLoaded;
-      } catch (_) {
-        text = 'No PDF loaded';
-      }
-      return Center(child: Text(text));
-    }
+    _updateDocRef(document);
 
     if (useMock) {
       return PdfMockContinuousList(
@@ -89,80 +101,119 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
     }
 
     final overlaysEnabled = ref.watch(viewerOverlaysEnabledProvider);
-    return PdfViewer(
-      _documentRef!,
-      key: widget.innerViewerKey ?? const Key('pdf_continuous_mock_list'),
-      controller: widget.controller,
-      params: PdfViewerParams(
-        onViewerReady: (document, controller) {
-          // Update page count in repository
-          ref
-              .read(pdfViewModelProvider.notifier)
-              .setPageCount(document.pages.length);
-        },
-        onPageChanged: (page) {
-          if (page != null) {
-            // Also update the view model to keep them in sync
-            ref.read(pdfViewModelProvider.notifier).jumpToPage(page);
+    return ValueListenableBuilder<PdfDocumentRef?>(
+      valueListenable: _docRefNotifier,
+      builder: (context, docRef, _) {
+        if (docRef == null) {
+          String text;
+          try {
+            text = AppLocalizations.of(context).noPdfLoaded;
+          } catch (_) {
+            text = 'No PDF loaded';
           }
-        },
-        viewerOverlayBuilder:
-            overlaysEnabled
-                ? (context, size, handle) {
-                  return [
-                    // Vertical scroll thumb on the right
-                    PdfViewerScrollThumb(
-                      controller: widget.controller,
-                      orientation: ScrollbarOrientation.right,
-                      thumbSize: const Size(40, 25),
-                      thumbBuilder:
-                          (context, thumbSize, pageNumber, controller) =>
-                              Container(
-                                color: Colors.black.withValues(alpha: 0.7),
-                                child: Center(
-                                  child: Text(
-                                    'Pg $pageNumber',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
+          return Center(child: Text(text));
+        }
+        final pdfViewModel = ref.read(pdfViewModelProvider);
+        final viewerKey =
+            widget.innerViewerKey ??
+            Key('pdf_viewer_${pdfViewModel.documentSourceName}');
+
+        return PdfViewer(
+          docRef,
+          key: viewerKey,
+          controller: widget.controller,
+          params: PdfViewerParams(
+            onViewerReady: (document, controller) {
+              // Update page count in repository
+              ref
+                  .read(pdfViewModelProvider.notifier)
+                  .setPageCount(document.pages.length);
+            },
+            onPageChanged: (page) {
+              if (page != null) {
+                // Also update the view model to keep them in sync
+                ref.read(pdfViewModelProvider.notifier).jumpToPage(page);
+              }
+            },
+            onDocumentChanged: (doc) async {
+              final pc = doc?.pages.length;
+              debugPrint(
+                '[PdfViewerWidget] onDocumentChanged called (pages=$pc)',
+              );
+              if (doc != null) {
+                // Update internal page count state
+                ref
+                    .read(pdfViewModelProvider.notifier)
+                    .setPageCount(doc.pages.length);
+              }
+              // Invoke external listener after internal handling
+              try {
+                widget.onDocumentChanged?.call(doc);
+              } catch (e, st) {
+                debugPrint(
+                  '[PdfViewerWidget] external onDocumentChanged threw: $e\n$st',
+                );
+              }
+            },
+            viewerOverlayBuilder:
+                overlaysEnabled
+                    ? (context, size, handle) {
+                      return [
+                        // Vertical scroll thumb on the right
+                        PdfViewerScrollThumb(
+                          controller: widget.controller,
+                          orientation: ScrollbarOrientation.right,
+                          thumbSize: const Size(40, 25),
+                          thumbBuilder:
+                              (context, thumbSize, pageNumber, controller) =>
+                                  Container(
+                                    color: Colors.black.withValues(alpha: 0.7),
+                                    child: Center(
+                                      child: Text(
+                                        'Pg $pageNumber',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                    ),
-                    // Horizontal scroll thumb on the bottom
-                    PdfViewerScrollThumb(
-                      controller: widget.controller,
-                      orientation: ScrollbarOrientation.bottom,
-                      thumbSize: const Size(40, 25),
-                      thumbBuilder:
-                          (context, thumbSize, pageNumber, controller) =>
-                              Container(
-                                color: Colors.black.withValues(alpha: 0.7),
-                                child: Center(
-                                  child: Text(
-                                    'Pg $pageNumber',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
+                        ),
+                        // Horizontal scroll thumb on the bottom
+                        PdfViewerScrollThumb(
+                          controller: widget.controller,
+                          orientation: ScrollbarOrientation.bottom,
+                          thumbSize: const Size(40, 25),
+                          thumbBuilder:
+                              (context, thumbSize, pageNumber, controller) =>
+                                  Container(
+                                    color: Colors.black.withValues(alpha: 0.7),
+                                    child: Center(
+                                      child: Text(
+                                        'Pg $pageNumber',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                    ),
-                  ];
-                }
-                : (context, size, handle) => const <Widget>[],
-        // Per-page overlays to enable page-specific drag targets and placed signatures
-        pageOverlaysBuilder: (context, pageRect, page) {
-          return [
-            PdfPageOverlays(
-              pageSize: Size(pageRect.width, pageRect.height),
-              pageNumber: page.pageNumber,
-            ),
-          ];
-        },
-      ),
+                        ),
+                      ];
+                    }
+                    : (context, size, handle) => const <Widget>[],
+            // Per-page overlays to enable page-specific drag targets and placed signatures
+            pageOverlaysBuilder: (context, pageRect, page) {
+              return [
+                PdfPageOverlays(
+                  pageSize: Size(pageRect.width, pageRect.height),
+                  pageNumber: page.pageNumber,
+                ),
+              ];
+            },
+          ),
+        );
+      },
     );
   }
 }

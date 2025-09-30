@@ -29,6 +29,8 @@ class PdfSignatureHomePage extends ConsumerStatefulWidget {
   // available, this name preserves the user-selected filename so we can
   // suggest a proper "signed_*.pdf" on save.
   final String? currentFileName;
+  // Optional listener for underlying Pdfrx document change events.
+  final void Function(PdfDocument?)? onDocumentChanged;
 
   const PdfSignatureHomePage({
     super.key,
@@ -36,6 +38,7 @@ class PdfSignatureHomePage extends ConsumerStatefulWidget {
     required this.onClosePdf,
     required this.currentFile,
     this.currentFileName,
+    this.onDocumentChanged,
   });
 
   @override
@@ -333,7 +336,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                       pdf.loaded && pdf.pickedPdfBytes != null
                           ? PdfDocumentRefData(
                             pdf.pickedPdfBytes!,
-                            sourceName: 'document.pdf',
+                            sourceName: pdfViewModel.documentSourceName,
                           )
                           : null;
 
@@ -354,6 +357,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
                 controller: _viewModel.controller,
                 key: const ValueKey('pdf_page_area'),
                 pageSize: _pageSize,
+                onDocumentChanged: widget.onDocumentChanged,
               ),
             ),
       ),

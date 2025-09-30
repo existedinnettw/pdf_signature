@@ -49,7 +49,7 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) =>
                 DocumentStateNotifier()
-                  ..openPicked(pageCount: 5, bytes: Uint8List(0)),
+                  ..openPickedWithPageCount(pageCount: 5, bytes: Uint8List(0)),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: true),

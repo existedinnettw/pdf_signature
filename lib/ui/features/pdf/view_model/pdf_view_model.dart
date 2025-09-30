@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/document_version.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 
 class PdfViewModel extends ChangeNotifier {
   final Ref ref;
@@ -30,6 +32,26 @@ class PdfViewModel extends ChangeNotifier {
   // Locked placements: Set of (page, index) tuples
   final Set<String> _lockedPlacements = {};
   Set<String> get lockedPlacements => Set.unmodifiable(_lockedPlacements);
+
+  // Document version tracking for UI consistency
+  DocumentVersion _documentVersion = DocumentVersion.initial();
+
+  // Get current document source name for PdfDocumentRefData
+  String get documentSourceName {
+    // Ensure document version is up to date, but only update if really needed
+    _updateDocumentVersionIfNeeded();
+    return _documentVersion.sourceName;
+  }
+
+  void _updateDocumentVersionIfNeeded() {
+    final document = ref.read(documentRepositoryProvider);
+    if (!identical(_documentVersion.lastBytes, document.pickedPdfBytes)) {
+      _documentVersion = DocumentVersion(
+        version: _documentVersion.version + 1,
+        lastBytes: document.pickedPdfBytes,
+      );
+    }
+  }
 
   // const bool.fromEnvironment('FLUTTER_TEST', defaultValue: false);
   PdfViewModel(this.ref, {bool? useMockViewer})
@@ -275,30 +297,59 @@ class PdfSessionViewModel extends ChangeNotifier {
     if (effectiveBytes == null && path != null && path.isNotEmpty) {
       try {
         effectiveBytes = await XFile(path).readAsBytes();
-      } catch (_) {
+      } catch (e, st) {
         effectiveBytes = null;
+        debugPrint(
+          '[PdfSessionViewModel] Failed to read PDF data from path=$path error=$e',
+        );
+        debugPrint(st.toString());
       }
     }
-    await openPdf(path: path, bytes: effectiveBytes, fileName: name);
+    if (effectiveBytes != null) {
+      await openPdf(path: path, bytes: effectiveBytes, fileName: name);
+    } else {
+      debugPrint(
+        '[PdfSessionViewModel] No PDF data available to open (path=$path, name=$name)',
+      );
+    }
   }
 
   Future<void> openPdf({
     String? path,
-    Uint8List? bytes,
+    required Uint8List bytes,
     String? fileName,
   }) async {
     int pageCount = 1; // default
-    if (bytes != null) {
-      try {
-        final doc = await PdfDocument.openData(bytes);
-        pageCount = doc.pages.length;
-      } catch (_) {
-        // ignore invalid bytes
+    try {
+      // Defensive: ensure Pdfrx cache directory set (in case main init skipped in tests)
+      if (Pdfrx.getCacheDirectory == null) {
+        debugPrint(
+          '[PdfSessionViewModel] Pdfrx.getCacheDirectory was null; setting temp directory',
+        );
+        try {
+          final temp = await getTemporaryDirectory();
+          Pdfrx.getCacheDirectory = () async => temp.path;
+        } catch (e, st) {
+          debugPrint(
+            '[PdfSessionViewModel] Failed to set fallback cache dir error=$e',
+          );
+          debugPrint(st.toString());
+        }
       }
+      final doc = await PdfDocument.openData(bytes);
+      pageCount = doc.pages.length;
+      debugPrint(
+        '[PdfSessionViewModel] Opened PDF bytes length=${bytes.length} pages=$pageCount',
+      );
+    } catch (e, st) {
+      debugPrint(
+        '[PdfSessionViewModel] Failed to read PDF data from bytes error=$e',
+      );
+      debugPrint(st.toString());
     }
     if (path != null && path.isNotEmpty) {
       _currentFile = XFile(path);
-    } else if (bytes != null && (fileName != null && fileName.isNotEmpty)) {
+    } else if ((fileName != null && fileName.isNotEmpty)) {
       // Keep in-memory XFile so .name is available for suggestion
       try {
         _currentFile = XFile.fromData(
@@ -306,8 +357,12 @@ class PdfSessionViewModel extends ChangeNotifier {
           name: fileName,
           mimeType: 'application/pdf',
         );
-      } catch (_) {
+      } catch (e, st) {
         _currentFile = XFile(fileName);
+        debugPrint(
+          '[PdfSessionViewModel] Failed to create XFile.fromData name=$fileName error=$e',
+        );
+        debugPrint(st.toString());
       }
     } else {
       _currentFile = XFile('');
@@ -322,13 +377,14 @@ class PdfSessionViewModel extends ChangeNotifier {
     } else {
       _displayFileName = '';
     }
-    ref
-        .read(documentRepositoryProvider.notifier)
-        .openPicked(pageCount: pageCount, bytes: bytes);
+    debugPrint('[PdfSessionViewModel] Calling openPicked with bytes');
+    ref.read(documentRepositoryProvider.notifier).openPicked(bytes: bytes);
     // Keep existing signature cards when opening a new document.
     // The feature "Open a different document will reset signature placements but keep signature cards"
     // relies on this behavior. Placements are reset by openPicked() above.
+    debugPrint('[PdfSessionViewModel] Navigating to /pdf');
     router.go('/pdf');
+    debugPrint('[PdfSessionViewModel] Notifying listeners after open');
     notifyListeners();
   }
 

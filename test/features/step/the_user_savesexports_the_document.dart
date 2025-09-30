@@ -17,7 +17,7 @@ Future<void> theUserSavesexportsTheDocument(WidgetTester tester) async {
     // Load a minimal sample so the expectation passes in logic-only tests
     container
         .read(documentRepositoryProvider.notifier)
-        .openPicked(pageCount: 2, bytes: Uint8List(10));
+        .openPickedWithPageCount(pageCount: 2, bytes: Uint8List(10));
   }
   expect(pdf.loaded, isTrue, reason: 'PDF must be loaded before export');
   // Check if there are placements

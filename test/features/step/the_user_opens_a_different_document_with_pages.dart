@@ -19,7 +19,7 @@ Future<void> theUserOpensADifferentDocumentWithPages(
   // Simulate "open a different document": reset placements and set page count.
   container
       .read(documentRepositoryProvider.notifier)
-      .openPicked(pageCount: pageCount);
+      .openPickedWithPageCount(pageCount: pageCount);
   // Ensure there are 2 signature cards available as per scenario.
   final cards = container.read(signatureCardRepositoryProvider);
   if (cards.length < 2) {

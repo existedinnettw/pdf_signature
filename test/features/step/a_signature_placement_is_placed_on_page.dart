@@ -17,7 +17,7 @@ Future<void> aSignaturePlacementIsPlacedOnPage(
   if (!container.read(documentRepositoryProvider).loaded) {
     container
         .read(documentRepositoryProvider.notifier)
-        .openPicked(pageCount: 5);
+        .openPickedWithPageCount(pageCount: 5);
   }
   final page = param1.toInt();
   container

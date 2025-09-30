@@ -13,10 +13,12 @@ class PdfPageArea extends ConsumerStatefulWidget {
     super.key,
     required this.pageSize,
     required this.controller,
+    this.onDocumentChanged,
   });
 
   final Size pageSize;
   final PdfViewerController controller;
+  final void Function(PdfDocument?)? onDocumentChanged;
   @override
   ConsumerState<PdfPageArea> createState() => _PdfPageAreaState();
 }
@@ -163,7 +165,9 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
         pageKeyBuilder: _pageKey,
         scrollToPage: _scrollToPage,
         controller: widget.controller,
-        innerViewerKey: const ValueKey('viewer_idle'),
+        // Remove fixed innerViewerKey to allow PdfViewerWidget to generate dynamic keys
+        // innerViewerKey: const ValueKey('viewer_idle'),
+        onDocumentChanged: widget.onDocumentChanged,
       );
     }
     return const SizedBox.shrink();

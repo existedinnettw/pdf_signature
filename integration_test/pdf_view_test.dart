@@ -34,7 +34,7 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) =>
                 DocumentStateNotifier()
-                  ..openPicked(pageCount: 3, bytes: pdfBytes),
+                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -62,14 +62,31 @@ void main() {
     final vm = container.read(pdfViewModelProvider);
     expect(vm.currentPage, 1);
 
-    container.read(pdfViewModelProvider.notifier).jumpToPage(2);
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 120));
-    expect(container.read(pdfViewModelProvider).currentPage, 2);
+    final controller = container.read(pdfViewModelProvider).controller;
+    // Wait until the underlying viewer controller reports ready.
+    final readyStart = DateTime.now();
+    while (!controller.isReady) {
+      await tester.pump(const Duration(milliseconds: 40));
+      if (DateTime.now().difference(readyStart) > const Duration(seconds: 5)) {
+        fail('PdfViewerController never became ready');
+      }
+    }
+    Future<void> goAndAwait(int target) async {
+      controller.goToPage(pageNumber: target);
+      final start = DateTime.now();
+      while (container.read(pdfViewModelProvider).currentPage != target) {
+        await tester.pump(const Duration(milliseconds: 40));
+        if (DateTime.now().difference(start) > const Duration(seconds: 3)) {
+          fail(
+            'Timeout waiting to reach page $target (current=${container.read(pdfViewModelProvider).currentPage})',
+          );
+        }
+      }
+    }
 
-    container.read(pdfViewModelProvider.notifier).jumpToPage(3);
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 120));
+    await goAndAwait(2);
+    expect(container.read(pdfViewModelProvider).currentPage, 2);
+    await goAndAwait(3);
     expect(container.read(pdfViewModelProvider).currentPage, 3);
   });
 
@@ -88,7 +105,7 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) =>
                 DocumentStateNotifier()
-                  ..openPicked(pageCount: 3, bytes: pdfBytes),
+                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -142,7 +159,7 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) =>
                 DocumentStateNotifier()
-                  ..openPicked(pageCount: 3, bytes: pdfBytes),
+                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -229,7 +246,7 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) =>
                 DocumentStateNotifier()
-                  ..openPicked(pageCount: 3, bytes: pdfBytes),
+                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -295,7 +312,7 @@ void main() {
           documentRepositoryProvider.overrideWith(
             (ref) =>
                 DocumentStateNotifier()
-                  ..openPicked(pageCount: 3, bytes: pdfBytes),
+                  ..openPickedWithPageCount(pageCount: 3, bytes: pdfBytes),
           ),
           pdfViewModelProvider.overrideWith(
             (ref) => PdfViewModel(ref, useMockViewer: false),
@@ -338,5 +355,114 @@ void main() {
     await tester.drag(pagesSidebar, const Offset(0, 300));
     await tester.pumpAndSettle();
     expect(container.read(pdfViewModelProvider).currentPage, 3);
+  });
+
+  testWidgets('PDF View: reopen another PDF via toolbar picker updates viewer', (
+    tester,
+  ) async {
+    final initialBytes =
+        await File('integration_test/data/sample-local-pdf.pdf').readAsBytes();
+    // 3 pages
+    final newBytes =
+        await File(
+          'integration_test/data/PPFZ-Local-Purchase-Form.pdf',
+        ).readAsBytes();
+    // 10 pages
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    // We'll override onPickPdf to simulate opening a new file with a different page count
+    // TODO: Replace PPFZ-Local-Purchase-Form.pdf with a 10-page PDF to test page count change
+    late ProviderContainer container; // capture to use inside callback
+    Future<void> simulatePick() async {
+      container
+          .read(documentRepositoryProvider.notifier)
+          .openPicked(bytes: newBytes);
+      // Reset the current page explicitly to 1 as openPicked establishes new doc
+      container.read(pdfViewModelProvider.notifier).jumpToPage(1);
+    }
+
+    int? lastDocPageCount; // capture page count from callback
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          preferencesRepositoryProvider.overrideWith(
+            (ref) => PreferencesStateNotifier(prefs),
+          ),
+          documentRepositoryProvider.overrideWith(
+            (ref) =>
+                DocumentStateNotifier()
+                  ..openPickedWithPageCount(pageCount: 3, bytes: initialBytes),
+          ),
+          pdfViewModelProvider.overrideWith(
+            (ref) => PdfViewModel(ref, useMockViewer: false),
+          ),
+        ],
+        child: Builder(
+          builder: (context) {
+            container = ProviderScope.containerOf(context);
+            return MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: const Locale('en'),
+              home: PdfSignatureHomePage(
+                onPickPdf: simulatePick,
+                onClosePdf: () {},
+                currentFile: XFile('initial.pdf'),
+                // The only reliable way to detect the new document load correctly
+                onDocumentChanged: (doc) {
+                  if (doc != null) {
+                    lastDocPageCount = doc.pages.length;
+                  }
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    // Verify initial state Page 1/3
+    expect(find.byKey(const Key('lbl_page_info')), findsOneWidget);
+    final initialLabel =
+        tester.widget<Text>(find.byKey(const Key('lbl_page_info'))).data;
+    expect(initialLabel, contains('/3'));
+
+    // Tap open picker button to simulate opening new PDF
+    await tester.tap(find.byKey(const Key('btn_open_pdf_picker')));
+    // Allow frame to process state changes from simulatePick
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pumpAndSettle();
+
+    // Wait for async page count detection to complete in repository
+    await tester.runAsync(() async {
+      final start = DateTime.now();
+      while (container.read(documentRepositoryProvider).pageCount != 10) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await tester.pump();
+
+        if (DateTime.now().difference(start) > const Duration(seconds: 8)) {
+          final pageCount =
+              container.read(documentRepositoryProvider).pageCount;
+          fail(
+            'Timeout waiting for repository page count to update to 10 (current=$pageCount)',
+          );
+        }
+      }
+
+      // Wait for restoration mechanism to complete
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await tester.pump();
+    });
+
+    final updatedLabel =
+        tester.widget<Text>(find.byKey(const Key('lbl_page_info'))).data;
+    expect(updatedLabel, contains('/10'));
+    // Verify that repository correctly analyzed PDF bytes and updated page count
+    expect(container.read(documentRepositoryProvider).pageCount, 10);
+    expect(lastDocPageCount, 10);
+    expect(container.read(pdfViewModelProvider).currentPage, 1);
   });
 }

@@ -5,6 +5,7 @@ import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import 'package:pdf_signature/data/repositories/document_repository.dart';
 
 class PdfToolbar extends ConsumerStatefulWidget {
   const PdfToolbar({
@@ -59,7 +60,9 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
   @override
   Widget build(BuildContext context) {
     final pdfViewModel = ref.watch(pdfViewModelProvider);
-    final pdf = pdfViewModel.document;
+    final pdf = ref.watch(
+      documentRepositoryProvider,
+    ); // Watch document directly for updates
     final currentPage = pdfViewModel.currentPage;
     final l = AppLocalizations.of(context);
     final pageInfo = l.pageInfo(currentPage, pdf.pageCount);

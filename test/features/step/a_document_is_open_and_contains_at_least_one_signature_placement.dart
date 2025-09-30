@@ -12,7 +12,7 @@ Future<void> aDocumentIsOpenAndContainsAtLeastOneSignaturePlacement(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   TestWorld.container = container;
-  container.read(documentRepositoryProvider.notifier).openPicked(pageCount: 5);
+  container.read(documentRepositoryProvider.notifier).openPickedWithPageCount(pageCount: 5);
   container
       .read(documentRepositoryProvider.notifier)
       .addPlacement(
