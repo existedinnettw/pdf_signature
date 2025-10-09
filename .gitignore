@@ -139,3 +139,4 @@ appimage-build/
 *.patch
 *.freezed.dart
 *.g.dart
+/output/

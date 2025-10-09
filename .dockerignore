@@ -2,6 +2,8 @@
 .dockerignore
 .git
 .gitignore
+.env
+.secrets
 .idea
 .vscode
 **/.DS_Store
