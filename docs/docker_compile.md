@@ -10,7 +10,7 @@ docker buildx create --use --name multiarch
 build
 
 ```bash
-docker buildx build --platform linux/arm64 -f Dockerfile.arm64 -t pdf_signature_arm64 .
+docker buildx build --platform linux/arm64 -f Dockerfile.arm64 -t pdf_signature_arm64 --load .
 ```
 
 Extract the Built App

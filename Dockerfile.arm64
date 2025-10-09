@@ -4,12 +4,23 @@
 # Multi-arch Dockerfile for building Flutter Linux app on ARM64 using emulation
 # Build with: docker buildx build --platform linux/arm64 -t pdf_signature_arm64 .
 
-FROM --platform=linux/arm64 ghcr.io/cirruslabs/flutter:latest AS build
+# ----------------------------------------------------------------------------
+# Build stage (Ubuntu 18.04) — glibc 2.27 to maximize compatibility (<= 2.30)
+# ----------------------------------------------------------------------------
+FROM --platform=linux/arm64 ubuntu:18.04 AS build
 
-# Install dependencies for Linux build (if not already in the image)
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC \
+    FLUTTER_CHANNEL=stable
+
+# Install build dependencies and tooling
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    git \
+    unzip \
+    xz-utils \
     clang \
-    cmake \
     ninja-build \
     pkg-config \
     libgtk-3-dev \
@@ -17,8 +28,23 @@ RUN apt-get update && apt-get install -y \
     liblzma-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Enable Linux desktop support
-RUN flutter config --enable-linux-desktop
+# Install a newer CMake (>= 3.13 required by Flutter linux build) for ARM64
+ARG CMAKE_VERSION=3.27.9
+RUN curl -fsSL -o /tmp/cmake.tar.gz \
+      https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-aarch64.tar.gz \
+    && tar -C /opt -xzf /tmp/cmake.tar.gz \
+    && ln -sf /opt/cmake-${CMAKE_VERSION}-linux-aarch64/bin/cmake /usr/local/bin/cmake \
+    && ln -sf /opt/cmake-${CMAKE_VERSION}-linux-aarch64/bin/ctest /usr/local/bin/ctest \
+    && ln -sf /opt/cmake-${CMAKE_VERSION}-linux-aarch64/bin/cpack /usr/local/bin/cpack \
+    && rm -f /tmp/cmake.tar.gz
+
+# Install Flutter SDK (ARM64) from source repo (channel: stable)
+RUN git clone -b ${FLUTTER_CHANNEL} https://github.com/flutter/flutter.git /opt/flutter
+ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}"
+
+# Precache Linux desktop artifacts and enable linux desktop
+RUN flutter config --enable-linux-desktop && \
+    flutter precache --linux
 
 # Set working directory
 WORKDIR /app
@@ -32,24 +58,31 @@ RUN flutter pub get
 # Copy the rest of the project
 COPY . .
 
-# Enable Linux desktop platform for the project
-RUN flutter create . --platforms linux
+# Ensure Linux desktop project files are present (do not overwrite existing files/pubspec)
+RUN [ -d linux ] || flutter create . --platforms=linux
 
-# Generate localization and build runner
-RUN flutter gen-l10n
-RUN flutter pub run build_runner build --delete-conflicting-outputs
+# Refresh dependencies after full context is copied
+RUN flutter pub get
+
+# Generate build_runner outputs if codegen files are referenced
+RUN bash -lc "if grep -R \"part '.*\\.g\\.dart'\|part '.*\\.freezed\\.dart'\" -n lib >/dev/null; then dart --disable-analytics >/dev/null 2>&1 || true; dart run build_runner build --delete-conflicting-outputs; fi"
 
 # Build the Linux app for ARM64 (explicitly specify, though container is ARM64)
 RUN flutter build linux --target-platform linux-arm64 --release
 
-# Final stage: Create a minimal runtime image
-FROM --platform=linux/arm64 ubuntu:22.04 AS runtime
+# ----------------------------------------------------------------------------
+# Runtime stage (Ubuntu 18.04) — matches glibc from builder (2.27)
+# ----------------------------------------------------------------------------
+FROM --platform=linux/arm64 ubuntu:18.04 AS runtime
 
-# Install runtime dependencies
+ENV DEBIAN_FRONTEND=noninteractive TZ=UTC
+
+# Install runtime dependencies only (do not ship libc from builder)
 RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libblkid1 \
     liblzma5 \
+    libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the built app
@@ -59,4 +92,4 @@ COPY --from=build /app/build/linux/arm64/release/bundle /app
 WORKDIR /app
 
 # Run the app with bundled libraries
-CMD ["sh", "-c", "LD_LIBRARY_PATH=/app/lib:$LD_LIBRARY_PATH ./pdf_signature"]
+CMD ["./pdf_signature"]
