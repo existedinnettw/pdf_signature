@@ -1,13 +1,28 @@
-# TODO: support multi-arch building
-# TODO: https://docs.docker.com/reference/build-checks/from-platform-flag-const-disallowed/
+# Multi-arch Dockerfile for building Flutter Linux app images
+# - Uses BuildKit platform args to avoid hardcoding platforms in FROM
+# - Builds on the target architecture (via qemu when needed)
+# - Fixes: https://docs.docker.com/reference/build-checks/from-platform-flag-const-disallowed/
 
-# Multi-arch Dockerfile for building Flutter Linux app on ARM64 using emulation
-# Build with: docker buildx build --platform linux/arm64 -t pdf_signature_arm64 .
+# BuildKit-provided args available before FROM. Used to parameterize platforms.
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG BUILDPLATFORM
+
+# Build with (single arch, locally loadable):
+#   docker buildx build --platform linux/amd64 -f Dockerfile.arm64 -t pdf_signature:amd64 --load .
+#   docker buildx build --platform linux/arm64 -f Dockerfile.arm64 -t pdf_signature:arm64 --load .
+# Build multi-arch (requires a registry):
+#   docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.arm64 -t <your-registry>/pdf_signature:latest --push .
 
 # ----------------------------------------------------------------------------
 # Build stage (Ubuntu 18.04) — glibc 2.27 to maximize compatibility (<= 2.30)
 # ----------------------------------------------------------------------------
-FROM --platform=linux/arm64 ubuntu:18.04 AS build
+FROM ubuntu:18.04 AS build
+
+# Re-declare BuildKit args within the stage for RUN/CMD/ENV usage
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG BUILDPLATFORM
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
@@ -28,15 +43,21 @@ RUN apt-get update && apt-get install -y \
     liblzma-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install a newer CMake (>= 3.13 required by Flutter linux build) for ARM64
+# Install a newer CMake (>= 3.13 required by Flutter linux build) per-arch
 ARG CMAKE_VERSION=3.27.9
-RUN curl -fsSL -o /tmp/cmake.tar.gz \
-      https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-aarch64.tar.gz \
-    && tar -C /opt -xzf /tmp/cmake.tar.gz \
-    && ln -sf /opt/cmake-${CMAKE_VERSION}-linux-aarch64/bin/cmake /usr/local/bin/cmake \
-    && ln -sf /opt/cmake-${CMAKE_VERSION}-linux-aarch64/bin/ctest /usr/local/bin/ctest \
-    && ln -sf /opt/cmake-${CMAKE_VERSION}-linux-aarch64/bin/cpack /usr/local/bin/cpack \
-    && rm -f /tmp/cmake.tar.gz
+RUN set -eux; \
+    case "$TARGETARCH" in \
+        arm64) CMAKE_ARCH="aarch64" ;; \
+        amd64) CMAKE_ARCH="x86_64" ;; \
+        *) echo "Unsupported TARGETARCH for CMake: $TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL -o /tmp/cmake.tar.gz \
+        https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH}.tar.gz; \
+    tar -C /opt -xzf /tmp/cmake.tar.gz; \
+    ln -sf /opt/cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH}/bin/cmake /usr/local/bin/cmake; \
+    ln -sf /opt/cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH}/bin/ctest /usr/local/bin/ctest; \
+    ln -sf /opt/cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH}/bin/cpack /usr/local/bin/cpack; \
+    rm -f /tmp/cmake.tar.gz
 
 # Install Flutter SDK (ARM64) from source repo (channel: stable)
 RUN git clone -b ${FLUTTER_CHANNEL} https://github.com/flutter/flutter.git /opt/flutter
@@ -67,13 +88,19 @@ RUN flutter pub get
 # Generate build_runner outputs if codegen files are referenced
 RUN bash -lc "if grep -R \"part '.*\\.g\\.dart'\|part '.*\\.freezed\\.dart'\" -n lib >/dev/null; then dart --disable-analytics >/dev/null 2>&1 || true; dart run build_runner build --delete-conflicting-outputs; fi"
 
-# Build the Linux app for ARM64 (explicitly specify, though container is ARM64)
-RUN flutter build linux --target-platform linux-arm64 --release
+# Build the Linux app for the target architecture (x64 on amd64; arm64 on arm64)
+RUN set -eux; \
+    case "$TARGETARCH" in \
+        amd64) FLUTTER_LINUX_TARGET="linux-x64" ;; \
+        arm64) FLUTTER_LINUX_TARGET="linux-arm64" ;; \
+        *) echo "Unsupported TARGETARCH for Flutter: $TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    flutter build linux --target-platform "${FLUTTER_LINUX_TARGET}" --release
 
 # ----------------------------------------------------------------------------
 # Runtime stage (Ubuntu 18.04) — matches glibc from builder (2.27)
 # ----------------------------------------------------------------------------
-FROM --platform=linux/arm64 ubuntu:18.04 AS runtime
+FROM ubuntu:18.04 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive TZ=UTC
 
@@ -86,7 +113,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the built app
-COPY --from=build /app/build/linux/arm64/release/bundle /app
+# Use wildcard to accommodate both x64 and arm64 bundle directories
+COPY --from=build /app/build/linux/*/release/bundle /app
 
 # Set working directory
 WORKDIR /app
