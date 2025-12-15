@@ -7,14 +7,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_page_area.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_state.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/domain/models/model.dart';
+import 'helpers.dart';
 
 class _TestPdfController extends DocumentStateNotifier {
-  _TestPdfController() : super() {
-    state = Document.initial().copyWith(loaded: true, pageCount: 6);
+  @override
+  Document build() {
+    return Document.initial().copyWith(loaded: true, pageCount: 6);
+  }
+}
+
+class _TestPdfViewModel extends PdfViewModel {
+  @override
+  PdfViewState build() {
+    return PdfViewState.initial(useMockViewer: true);
   }
 }
 
@@ -25,12 +35,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: true),
-          ),
-          documentRepositoryProvider.overrideWith(
-            (ref) => _TestPdfController(),
-          ),
+          pdfViewModelProvider.overrideWith(() => _TestPdfViewModel()),
+          documentRepositoryProvider.overrideWith(() => _TestPdfController()),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -65,11 +71,9 @@ void main() {
     // Use a persistent container across rebuilds
     final container = ProviderContainer(
       overrides: [
-        pdfViewModelProvider.overrideWith(
-          (ref) => PdfViewModel(ref, useMockViewer: true),
-        ),
+        pdfViewModelProvider.overrideWith(() => _TestPdfViewModel()),
         documentRepositoryProvider.overrideWith(
-          (ref) => DocumentStateNotifier()..openSample(),
+          () => TestDocumentStateNotifier(),
         ),
       ],
     );

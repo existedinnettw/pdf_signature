@@ -32,38 +32,19 @@ Future<void> theAppLaunches(WidgetTester tester) async {
 
   final container = ProviderContainer(
     overrides: [
-      preferencesRepositoryProvider.overrideWith(
-        (ref) => PreferencesStateNotifier(prefs),
-      ),
-      documentRepositoryProvider.overrideWith(
-        (ref) => DocumentStateNotifier()..openSample(),
-      ),
-      pdfViewModelProvider.overrideWith(
-        (ref) => PdfViewModel(ref, useMockViewer: true),
-      ),
+      preferencesRepositoryProvider.overrideWith(() {
+        final notifier = PreferencesStateNotifier();
+        notifier.initWithPrefs(prefs);
+        return notifier;
+      }),
+      documentRepositoryProvider.overrideWith(() => DocumentStateNotifier()),
+      pdfViewModelProvider.overrideWith(() => PdfViewModel()),
       // Bridge: automatically mirror assets into signature cards so legacy
       // feature steps that expect SignatureCard widgets keep working even
       // though the production UI currently only stores raw assets.
-      signatureCardRepositoryProvider.overrideWith((ref) {
-        final notifier = _BridgedSignatureCardStateNotifier();
-        ref.listen<List<SignatureAsset>>(signatureAssetRepositoryProvider, (
-          prev,
-          next,
-        ) {
-          for (final asset in next) {
-            if (!notifier.state.any((c) => identical(c.asset, asset))) {
-              notifier.add(SignatureCard(asset: asset, rotationDeg: 0.0));
-            }
-          }
-          // Remove cards whose assets were removed
-          final remaining =
-              notifier.state.where((c) => next.contains(c.asset)).toList();
-          if (remaining.length != notifier.state.length) {
-            notifier.setAll(remaining);
-          }
-        });
-        return notifier;
-      }),
+      signatureCardRepositoryProvider.overrideWith(
+        () => _BridgedSignatureCardStateNotifier(),
+      ),
     ],
   );
   TestWorld.container = container;

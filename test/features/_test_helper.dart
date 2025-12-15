@@ -34,6 +34,19 @@ class FakeExportService extends ExportService {
   }
 }
 
+class _TestDocumentStateNotifier extends DocumentStateNotifier {
+  @override
+  Document build() {
+    // Initialize with sample document for tests, bypassing the parent build
+    return Document.initial().copyWith(
+      loaded: true,
+      pageCount: 5,
+      pickedPdfBytes: null,
+      placementsByPage: <int, List<SignaturePlacement>>{},
+    );
+  }
+}
+
 Future<ProviderContainer> pumpApp(
   WidgetTester tester, {
   Map<String, Object> initialPrefs = const {},
@@ -42,18 +55,16 @@ Future<ProviderContainer> pumpApp(
   final prefs = await SharedPreferences.getInstance();
   final container = ProviderContainer(
     overrides: [
-      preferencesRepositoryProvider.overrideWith(
-        (ref) => PreferencesStateNotifier(prefs),
-      ),
+      preferencesRepositoryProvider.overrideWith(() {
+        final notifier = PreferencesStateNotifier();
+        notifier.initWithPrefs(prefs);
+        return notifier;
+      }),
       documentRepositoryProvider.overrideWith(
-        (ref) => DocumentStateNotifier()..openSample(),
+        () => _TestDocumentStateNotifier(),
       ),
-      pdfViewModelProvider.overrideWith(
-        (ref) => PdfViewModel(ref, useMockViewer: true),
-      ),
-      pdfExportViewModelProvider.overrideWith(
-        (ref) => PdfExportViewModel(ref, savePathPicker: () async => 'out.pdf'),
-      ),
+      pdfViewModelProvider.overrideWith(() => PdfViewModel()),
+      pdfExportViewModelProvider.overrideWith(() => PdfExportViewModel()),
     ],
   );
   await tester.pumpWidget(

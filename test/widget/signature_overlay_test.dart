@@ -12,6 +12,8 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
+import 'helpers.dart';
+
 void main() {
   late ProviderContainer container;
   late SignatureAsset testAsset;
@@ -37,11 +39,9 @@ void main() {
     container = ProviderContainer(
       overrides: [
         documentRepositoryProvider.overrideWith(
-          (ref) => DocumentStateNotifier()..openSample(),
+          () => TestDocumentStateNotifier(),
         ),
-        pdfViewModelProvider.overrideWith(
-          (ref) => PdfViewModel(ref, useMockViewer: true),
-        ),
+        pdfViewModelProvider.overrideWith(() => PdfViewModel()),
       ],
     );
   });

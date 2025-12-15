@@ -5,15 +5,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_state.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 
 class _TestPdfController extends DocumentStateNotifier {
-  _TestPdfController() : super() {
+  @override
+  Document build() {
     // Start with a loaded multi-page doc, page 1 of 5
-    state = Document.initial().copyWith(loaded: true, pageCount: 5);
+    return Document.initial().copyWith(loaded: true, pageCount: 5);
+  }
+}
+
+class _TestPdfViewModel extends PdfViewModel {
+  @override
+  PdfViewState build() {
+    return PdfViewState.initial(useMockViewer: true);
   }
 }
 
@@ -24,12 +33,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: true),
-          ),
-          documentRepositoryProvider.overrideWith(
-            (ref) => _TestPdfController(),
-          ),
+          pdfViewModelProvider.overrideWith(() => _TestPdfViewModel()),
+          documentRepositoryProvider.overrideWith(() => _TestPdfController()),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

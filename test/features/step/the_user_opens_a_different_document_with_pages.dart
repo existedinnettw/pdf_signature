@@ -38,6 +38,6 @@ Future<void> theUserOpensADifferentDocumentWithPages(
     }
   }
   // Moving to a new document should show page 1.
-  container.read(pdfViewModelProvider).currentPage = 1;
+  container.read(pdfViewModelProvider.notifier).jumpToPage(1);
   await tester.pumpAndSettle();
 }

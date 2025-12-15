@@ -10,7 +10,8 @@ Future<void> onlyTheSelectedSignaturePlacementIsRemoved(
 ) async {
   final container = TestWorld.container ?? ProviderContainer();
   final pdf = container.read(documentRepositoryProvider);
-  final page = container.read(pdfViewModelProvider);
-  final placements = pdf.placementsByPage[page] ?? const [];
+  final pdfView = container.read(pdfViewModelProvider);
+  final currentPage = pdfView.currentPage;
+  final placements = pdf.placementsByPage[currentPage] ?? const [];
   expect(placements.length, 2); // Started with 3, removed 1, should have 2
 }

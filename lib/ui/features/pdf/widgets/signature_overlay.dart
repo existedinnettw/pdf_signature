@@ -118,9 +118,11 @@ class SignatureOverlay extends ConsumerWidget {
                       },
               // Keep default handles; you can customize later if needed
               contentBuilder: (context, boxRect, flip) {
-                final isLocked = ref
-                    .read(pdfViewModelProvider.notifier)
-                    .isPlacementLocked(page: pageNumber, index: placedIndex);
+                // Watch the provider state to rebuild when lock state changes
+                final pdfViewState = ref.watch(pdfViewModelProvider);
+                final isLocked = pdfViewState.lockedPlacements.contains(
+                  '${pageNumber}_$placedIndex',
+                );
                 return DecoratedBox(
                   decoration: BoxDecoration(
                     border: Border.all(

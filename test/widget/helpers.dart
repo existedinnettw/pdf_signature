@@ -7,28 +7,102 @@ import 'package:image/image.dart' as img;
 
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_state.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_asset_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/signature_asset.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 
 import 'package:pdf_signature/l10n/app_localizations.dart';
 // preferences_providers.dart no longer exports pageViewModeProvider
+
+// Test helper classes
+class TestPdfViewModel extends PdfViewModel {
+  @override
+  PdfViewState build() {
+    return PdfViewState.initial(useMockViewer: true);
+  }
+}
+
+class TestDocumentStateNotifier extends DocumentStateNotifier {
+  @override
+  Document build() {
+    // Initialize with sample document for tests, bypassing the parent build
+    return Document.initial().copyWith(
+      loaded: true,
+      pageCount: 5,
+      pickedPdfBytes: null,
+      placementsByPage: <int, List<SignaturePlacement>>{},
+    );
+  }
+}
+
+class TestDocumentStateNotifierWithPlacements extends DocumentStateNotifier {
+  final Uint8List pdfBytes;
+  final List<int> signatureBytes;
+
+  TestDocumentStateNotifierWithPlacements(this.pdfBytes, this.signatureBytes);
+
+  @override
+  Document build() {
+    final image = img.decodeImage(Uint8List.fromList(signatureBytes))!;
+    final asset = SignatureAsset(sigImage: image);
+
+    return Document.initial().copyWith(
+      loaded: true,
+      pageCount: 5,
+      pickedPdfBytes: pdfBytes,
+      placementsByPage: {
+        1: [
+          SignaturePlacement(
+            rect: const Rect.fromLTWH(0.1, 0.1, 0.3, 0.2),
+            asset: asset,
+          ),
+        ],
+      },
+    );
+  }
+}
+
+// Test notifier for SignatureCardRepository with pre-initialized card
+class TestSignatureCardStateNotifier extends SignatureCardStateNotifier {
+  final List<int> signatureBytes;
+
+  TestSignatureCardStateNotifier(this.signatureBytes);
+  @override
+  List<SignatureCard> build() {
+    // Initialize with a card already added
+    final image = img.decodeImage(Uint8List.fromList(signatureBytes))!;
+    final asset = SignatureAsset(sigImage: image, name: 'test');
+
+    return [SignatureCard(asset: asset, rotationDeg: 0.0)];
+  }
+}
+
+// Test notifier for SignatureAssetRepository with pre-loaded asset
+class TestSignatureAssetRepository extends SignatureAssetRepository {
+  final List<int> signatureBytes;
+
+  TestSignatureAssetRepository(this.signatureBytes);
+  @override
+  List<SignatureAsset> build() {
+    // Initialize with an asset already added
+    final image = img.decodeImage(Uint8List.fromList(signatureBytes))!;
+    return [SignatureAsset(sigImage: image, name: 'test')];
+  }
+}
 
 Future<void> pumpWithOpenPdf(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         documentRepositoryProvider.overrideWith(
-          (ref) => DocumentStateNotifier()..openSample(),
+          () => TestDocumentStateNotifier(),
         ),
-        pdfViewModelProvider.overrideWith(
-          (ref) => PdfViewModel(ref, useMockViewer: true),
-        ),
-        pdfExportViewModelProvider.overrideWith(
-          (ref) => PdfExportViewModel(ref),
-        ),
+        pdfViewModelProvider.overrideWith(() => TestPdfViewModel()),
+        pdfExportViewModelProvider.overrideWith(() => PdfExportViewModel()),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -370,42 +444,18 @@ Future<void> pumpWithOpenPdfAndSig(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        documentRepositoryProvider.overrideWith((ref) {
-          final notifier = DocumentStateNotifier()..openSample();
-          // Set PDF bytes so the viewer can display something
-          notifier.state = notifier.state.copyWith(pickedPdfBytes: pdfBytes);
-          // Add a signature placement on page 1
-          notifier.addPlacement(
-            page: 1,
-            rect: const Rect.fromLTWH(0.1, 0.1, 0.3, 0.2),
-            asset: SignatureAsset(
-              sigImage: img.decodeImage(Uint8List.fromList(bytes))!,
-            ),
-          );
-          return notifier;
-        }),
-        signatureAssetRepositoryProvider.overrideWith((ref) {
-          final repo = SignatureAssetRepository();
-          final image = img.decodeImage(Uint8List.fromList(bytes))!;
-          repo.addImage(image, name: 'test');
-          return repo;
-        }),
-        signatureCardRepositoryProvider.overrideWith((ref) {
-          final cardRepo = SignatureCardStateNotifier();
-          final asset = SignatureAsset(
-            sigImage: img.decodeImage(Uint8List.fromList(bytes))!,
-            name: 'test',
-          );
-          cardRepo.addWithAsset(asset, 0.0);
-          return cardRepo;
-        }),
+        documentRepositoryProvider.overrideWith(
+          () => TestDocumentStateNotifierWithPlacements(pdfBytes, bytes),
+        ),
+        signatureAssetRepositoryProvider.overrideWith(
+          () => TestSignatureAssetRepository(bytes),
+        ),
+        signatureCardRepositoryProvider.overrideWith(
+          () => TestSignatureCardStateNotifier(bytes),
+        ),
         // In new model, interactive overlay not implemented; keep library empty
-        pdfViewModelProvider.overrideWith(
-          (ref) => PdfViewModel(ref, useMockViewer: true),
-        ),
-        pdfExportViewModelProvider.overrideWith(
-          (ref) => PdfExportViewModel(ref),
-        ),
+        pdfViewModelProvider.overrideWith(() => TestPdfViewModel()),
+        pdfExportViewModelProvider.overrideWith(() => PdfExportViewModel()),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

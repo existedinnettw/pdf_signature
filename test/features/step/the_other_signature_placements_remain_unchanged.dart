@@ -9,7 +9,8 @@ Future<void> theOtherSignaturePlacementsRemainUnchanged(
 ) async {
   final container = TestWorld.container!;
   final pdf = container.read(documentRepositoryProvider);
-  final page = container.read(pdfViewModelProvider);
-  final placements = pdf.placementsByPage[page] ?? const [];
+  final pdfView = container.read(pdfViewModelProvider);
+  final currentPage = pdfView.currentPage;
+  final placements = pdf.placementsByPage[currentPage] ?? const [];
   expect(placements.length, 2); // Should have 2 remaining after deleting 1
 }

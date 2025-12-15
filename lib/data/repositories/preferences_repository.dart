@@ -90,12 +90,17 @@ String _normalizeLanguageTag(String tag) {
 }
 
 class PreferencesStateNotifier extends Notifier<PreferencesState> {
-  late final SharedPreferences _prefs;
+  SharedPreferences? _prefs;
   final Completer<void> _ready = Completer<void>();
 
   @override
   PreferencesState build() {
-    // Initialize with defaults
+    // If _prefs was already set by initWithPrefs (for testing), use it
+    if (_prefs != null) {
+      return _buildFromPrefs(_prefs!);
+    }
+
+    // Initialize with defaults for production
     final defaultState = PreferencesState(
       theme: 'system',
       language: _normalizeLanguageTag(
@@ -115,11 +120,24 @@ class PreferencesStateNotifier extends Notifier<PreferencesState> {
     _ready.complete();
   }
 
-  // For testing - can be called with mock SharedPreferences
+  // For testing - can be called with mock SharedPreferences BEFORE build
   void initWithPrefs(SharedPreferences prefs) {
     _prefs = prefs;
-    _load();
-    _ready.complete();
+  }
+
+  PreferencesState _buildFromPrefs(SharedPreferences prefs) {
+    final loaded = PreferencesState(
+      theme: prefs.getString(_kTheme) ?? 'system',
+      language: _normalizeLanguageTag(
+        prefs.getString(_kLanguage) ??
+            WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag(),
+      ),
+      exportDpi: _readDpi(prefs),
+      theme_color: prefs.getString(_kThemeColor) ?? '#FF2196F3',
+    );
+    // Complete ready immediately for tests
+    if (!_ready.isCompleted) _ready.complete();
+    return loaded;
   }
 
   static Color? _tryParseColor(String? s) {
@@ -193,15 +211,16 @@ class PreferencesStateNotifier extends Notifier<PreferencesState> {
   }
 
   Future<void> _load() async {
+    if (_prefs == null) return;
     // Load persisted values (with sane defaults)
     final loaded = PreferencesState(
-      theme: _prefs.getString(_kTheme) ?? 'system',
+      theme: _prefs!.getString(_kTheme) ?? 'system',
       language: _normalizeLanguageTag(
-        _prefs.getString(_kLanguage) ??
+        _prefs!.getString(_kLanguage) ??
             WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag(),
       ),
-      exportDpi: _readDpi(_prefs),
-      theme_color: _prefs.getString(_kThemeColor) ?? '#FF2196F3',
+      exportDpi: _readDpi(_prefs!),
+      theme_color: _prefs!.getString(_kThemeColor) ?? '#FF2196F3',
     );
     state = loaded;
     _ensureValid();
@@ -222,21 +241,22 @@ class PreferencesStateNotifier extends Notifier<PreferencesState> {
   }
 
   void _ensureValid() {
+    if (_prefs == null) return;
     final themeValid = {'light', 'dark', 'system'};
     if (!themeValid.contains(state.theme)) {
       state = state.copyWith(theme: 'system');
-      _prefs.setString(_kTheme, 'system');
+      _prefs!.setString(_kTheme, 'system');
     }
     final normalized = _normalizeLanguageTag(state.language);
     if (normalized != state.language) {
       state = state.copyWith(language: normalized);
-      _prefs.setString(_kLanguage, normalized);
+      _prefs!.setString(_kLanguage, normalized);
     }
     // Ensure DPI is one of allowed values
     const allowed = [96.0, 144.0, 200.0, 300.0];
     if (!allowed.contains(state.exportDpi)) {
       state = state.copyWith(exportDpi: 144.0);
-      _prefs.setDouble(_kExportDpi, 144.0);
+      _prefs!.setDouble(_kExportDpi, 144.0);
     }
     // Ensure theme color is a valid hex or known name; normalize to hex
     final parsed = _tryParseColor(state.theme_color);
@@ -244,12 +264,12 @@ class PreferencesStateNotifier extends Notifier<PreferencesState> {
       final fallback = Colors.blue;
       final hex = _toHex(fallback);
       state = state.copyWith(theme_color: hex);
-      _prefs.setString(_kThemeColor, hex);
+      _prefs!.setString(_kThemeColor, hex);
     } else {
       final hex = _toHex(parsed);
       if (state.theme_color != hex) {
         state = state.copyWith(theme_color: hex);
-        _prefs.setString(_kThemeColor, hex);
+        _prefs!.setString(_kThemeColor, hex);
       }
     }
   }
@@ -259,14 +279,14 @@ class PreferencesStateNotifier extends Notifier<PreferencesState> {
     if (!valid.contains(theme)) return;
     state = state.copyWith(theme: theme);
     await _ensureReady();
-    await _prefs.setString(_kTheme, theme);
+    await _prefs!.setString(_kTheme, theme);
   }
 
   Future<void> setLanguage(String language) async {
     final normalized = _normalizeLanguageTag(language);
     state = state.copyWith(language: normalized);
     await _ensureReady();
-    await _prefs.setString(_kLanguage, normalized);
+    await _prefs!.setString(_kLanguage, normalized);
   }
 
   Future<void> setThemeColor(String themeColor) async {
@@ -275,7 +295,7 @@ class PreferencesStateNotifier extends Notifier<PreferencesState> {
     final hex = _toHex(c);
     state = state.copyWith(theme_color: hex);
     await _ensureReady();
-    await _prefs.setString(_kThemeColor, hex);
+    await _prefs!.setString(_kThemeColor, hex);
   }
 
   Future<void> resetToDefaults() async {
@@ -289,11 +309,11 @@ class PreferencesStateNotifier extends Notifier<PreferencesState> {
       theme_color: '#FF2196F3',
     );
     await _ensureReady();
-    await _prefs.setString(_kTheme, 'system');
-    await _prefs.setString(_kLanguage, normalized);
-    await _prefs.setString(_kPageView, 'continuous');
-    await _prefs.setDouble(_kExportDpi, 144.0);
-    await _prefs.setString(_kThemeColor, '#FF2196F3');
+    await _prefs!.setString(_kTheme, 'system');
+    await _prefs!.setString(_kLanguage, normalized);
+    await _prefs!.setString(_kPageView, 'continuous');
+    await _prefs!.setDouble(_kExportDpi, 144.0);
+    await _prefs!.setString(_kThemeColor, '#FF2196F3');
   }
 
   Future<void> setExportDpi(double dpi) async {
@@ -301,7 +321,7 @@ class PreferencesStateNotifier extends Notifier<PreferencesState> {
     if (!allowed.contains(dpi)) return;
     state = state.copyWith(exportDpi: dpi);
     await _ensureReady();
-    await _prefs.setDouble(_kExportDpi, dpi);
+    await _prefs!.setDouble(_kExportDpi, dpi);
   }
 }
 

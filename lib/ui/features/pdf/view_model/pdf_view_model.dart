@@ -40,12 +40,12 @@ class PdfViewModel extends Notifier<PdfViewState> {
 
   // Get current document source name for PdfDocumentRefData
   String get documentSourceName {
-    // Ensure document version is up to date, but only update if really needed
-    _updateDocumentVersionIfNeeded();
+    // Return the current source name without updating state
+    // State updates should be done explicitly via updateDocumentVersionIfNeeded()
     return state.documentVersion.sourceName;
   }
 
-  void _updateDocumentVersionIfNeeded() {
+  void updateDocumentVersionIfNeeded() {
     final document = ref.read(documentRepositoryProvider);
     if (!identical(state.documentVersion.lastBytes, document.pickedPdfBytes)) {
       state = state.copyWith(

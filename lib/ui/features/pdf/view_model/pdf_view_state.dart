@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:pdf_signature/ui/features/pdf/view_model/document_version.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -21,12 +22,12 @@ class PdfViewState {
   });
 
   factory PdfViewState.initial({bool? useMockViewer}) {
+    // Default to false (no mocking) - tests should explicitly pass true if they want mock viewer
+    final defaultUseMock = useMockViewer ?? false;
     return PdfViewState(
       controller: PdfViewerController(),
       currentPage: 1,
-      useMockViewer:
-          useMockViewer ??
-          const bool.fromEnvironment('FLUTTER_TEST', defaultValue: false),
+      useMockViewer: defaultUseMock,
       activeRect: null,
       lockedPlacements: const {},
       documentVersion: DocumentVersion.initial(),

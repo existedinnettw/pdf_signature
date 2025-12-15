@@ -99,8 +99,9 @@ class MockSignatureState {
   }) : strokes = strokes ?? [];
 }
 
-class MockSignatureNotifier extends StateNotifier<MockSignatureState> {
-  MockSignatureNotifier() : super(MockSignatureState());
+class MockSignatureNotifier extends Notifier<MockSignatureState> {
+  @override
+  MockSignatureState build() => MockSignatureState();
 
   void setStrokes(List<List<Offset>> strokes) {
     state = MockSignatureState(
@@ -174,11 +175,32 @@ class MockSignatureNotifier extends StateNotifier<MockSignatureState> {
 }
 
 final signatureProvider =
-    StateNotifierProvider<MockSignatureNotifier, MockSignatureState>(
-      (ref) => MockSignatureNotifier(),
+    NotifierProvider<MockSignatureNotifier, MockSignatureState>(
+      () => MockSignatureNotifier(),
     );
 
-// Mock other providers
-final currentRectProvider = StateProvider<Rect?>((ref) => null);
-final editingEnabledProvider = StateProvider<bool>((ref) => false);
-final aspectLockedProvider = StateProvider<bool>((ref) => false);
+// Mock other providers using NotifierProvider instead of StateProvider
+class _CurrentRectNotifier extends Notifier<Rect?> {
+  @override
+  Rect? build() => null;
+}
+
+class _EditingEnabledNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+}
+
+class _AspectLockedNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+}
+
+final currentRectProvider = NotifierProvider<_CurrentRectNotifier, Rect?>(
+  () => _CurrentRectNotifier(),
+);
+final editingEnabledProvider = NotifierProvider<_EditingEnabledNotifier, bool>(
+  () => _EditingEnabledNotifier(),
+);
+final aspectLockedProvider = NotifierProvider<_AspectLockedNotifier, bool>(
+  () => _AspectLockedNotifier(),
+);

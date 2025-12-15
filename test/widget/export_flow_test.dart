@@ -13,14 +13,17 @@ import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/ui/features/pdf/widgets/pdf_screen.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
+import 'package:pdf_signature/domain/models/model.dart';
 
 // A fake export VM that always reports success, so this widget test doesn't
 // depend on PDF validity or platform specifics.
 bool exported = false;
 
 class _FakePdfExportViewModel extends PdfExportViewModel {
-  _FakePdfExportViewModel(Ref ref)
-    : super(ref, savePathPicker: () async => 'C:/tmp/output.pdf');
+  @override
+  Future<String?> pickSavePathWithSuggestedName(String suggestedName) async {
+    return '/fake/path/output.pdf'; // Return a fake path
+  }
 
   @override
   Future<bool> exportToPath({
@@ -34,6 +37,18 @@ class _FakePdfExportViewModel extends PdfExportViewModel {
   }
 }
 
+class _TestDocumentStateNotifier extends DocumentStateNotifier {
+  @override
+  Document build() {
+    return Document.initial().copyWith(
+      loaded: true,
+      pageCount: 5,
+      pickedPdfBytes: Uint8List(0),
+      placementsByPage: <int, List<SignaturePlacement>>{},
+    );
+  }
+}
+
 void main() {
   testWidgets('Save uses file selector (via provider) and injected exporter', (
     tester,
@@ -43,22 +58,17 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          preferencesRepositoryProvider.overrideWith(
-            (ref) => PreferencesStateNotifier(prefs),
-          ),
+          preferencesRepositoryProvider.overrideWith(() {
+            final notifier = PreferencesStateNotifier();
+            notifier.initWithPrefs(prefs);
+            return notifier;
+          }),
           documentRepositoryProvider.overrideWith(
-            (ref) =>
-                DocumentStateNotifier()..openDocument(
-                  bytes: Uint8List(0),
-                  pageCount: 5,
-                  knownPageCount: true,
-                ),
+            () => _TestDocumentStateNotifier(),
           ),
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: true),
-          ),
+          pdfViewModelProvider.overrideWith(() => PdfViewModel()),
           pdfExportViewModelProvider.overrideWith(
-            (ref) => _FakePdfExportViewModel(ref),
+            () => _FakePdfExportViewModel(),
           ),
         ],
         child: MaterialApp(

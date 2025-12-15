@@ -52,6 +52,10 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
     if (!identical(bytes, _lastBytes)) {
       _lastBytes = bytes;
       final viewModel = ref.read(pdfViewModelProvider.notifier);
+      // Update document version outside of build
+      Future.microtask(() {
+        viewModel.updateDocumentVersionIfNeeded();
+      });
       debugPrint(
         '[PdfViewerWidget] New PDF bytes detected -> ${viewModel.documentSourceName}',
       );
