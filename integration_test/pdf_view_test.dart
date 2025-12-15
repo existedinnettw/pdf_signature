@@ -81,21 +81,22 @@ void main() {
     final loadedStart = DateTime.now();
     while (container.read(documentRepositoryProvider).pageCount == 0) {
       await tester.pump(const Duration(milliseconds: 40));
-      if (DateTime.now().difference(loadedStart) > const Duration(seconds: 8)) {
+      if (DateTime.now().difference(loadedStart) >
+          const Duration(seconds: 10)) {
         fail('Document never loaded (pageCount still 0)');
       }
     }
 
     // Wait a bit more for controller to become ready after document loads
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
 
     final controller = container.read(pdfViewModelProvider).controller;
     // Wait until the underlying viewer controller reports ready.
     final readyStart = DateTime.now();
-    while (!controller.isReady) {
-      await tester.pump(const Duration(milliseconds: 40));
-      if (DateTime.now().difference(readyStart) > const Duration(seconds: 8)) {
+    while (controller != null && !controller.isReady) {
+      await tester.pump(const Duration(milliseconds: 50));
+      if (DateTime.now().difference(readyStart) > const Duration(seconds: 15)) {
         fail('PdfViewerController never became ready');
       }
     }

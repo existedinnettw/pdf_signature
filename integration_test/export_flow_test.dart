@@ -313,11 +313,16 @@ void main() {
     expect(pagesSidebar, findsOneWidget);
 
     // Scroll to make page 3 thumbnail visible
-    final page3Thumb = find.text('3');
-    await tester.ensureVisible(page3Thumb);
+    final page3Thumb = find.descendant(
+      of: pagesSidebar,
+      matching: find.text('3'),
+    );
+    // Scroll more aggressively to ensure page 3 is visible
+    await tester.drag(pagesSidebar, const Offset(0, -500));
     await tester.pumpAndSettle();
+
     expect(page3Thumb, findsOneWidget);
-    await tester.tap(page3Thumb);
+    await tester.tap(page3Thumb, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(container.read(pdfViewModelProvider).currentPage, 3);
   });

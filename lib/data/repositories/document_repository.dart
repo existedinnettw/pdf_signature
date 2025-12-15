@@ -49,8 +49,9 @@ class DocumentStateNotifier extends Notifier<Document> {
     );
     if (bytes == null) {
       // No bytes: treat as synthetic document (tests) using provided pageCount or default 1
+      // Reset max page count for new document
       final pc = pageCount ?? 1;
-      _maxPageCount = math.max(_maxPageCount, pc).toInt();
+      _maxPageCount = pc;
       state = state.copyWith(
         loaded: true,
         pageCount: _maxPageCount,
@@ -59,11 +60,11 @@ class DocumentStateNotifier extends Notifier<Document> {
       );
       return;
     }
-    // Bytes provided
+    // Bytes provided - reset max page count for new document
     if ((knownPageCount || pageCount != null) && pageCount != null) {
       // Fast path: caller already determined count
-      final pc = pageCount.clamp(1, 9999) as int;
-      _maxPageCount = math.max(_maxPageCount, pc).toInt();
+      final pc = pageCount.clamp(1, 9999);
+      _maxPageCount = pc;
       state = state.copyWith(
         loaded: true,
         pageCount: _maxPageCount,
@@ -125,7 +126,7 @@ class DocumentStateNotifier extends Notifier<Document> {
     debugPrint(
       '[DocumentRepository] setPageCount called: $count (current: ${state.pageCount})',
     );
-    final clamped = count.clamp(1, 9999) as int;
+    final clamped = count.clamp(1, 9999);
     _maxPageCount = math.max(_maxPageCount, clamped).toInt();
     state = state.copyWith(pageCount: _maxPageCount);
   }
