@@ -9,8 +9,20 @@ import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_state.dart';
 
 /// ViewModel for export-related UI state and helpers.
 class PdfExportViewModel extends Notifier<PdfExportState> {
+  PdfExportViewModel({
+    Future<String?> Function()? savePathPicker,
+    Future<String?> Function(String suggestedName)?
+    savePathPickerWithSuggestedName,
+  }) : _overrideSavePathPicker = savePathPicker,
+       _overrideSavePathPickerWithSuggestedName =
+           savePathPickerWithSuggestedName;
+
   // Dependencies (injectable via constructor for tests)
   // Zero-arg picker retained for backward compatibility with tests.
+  final Future<String?> Function()? _overrideSavePathPicker;
+  final Future<String?> Function(String suggestedName)?
+  _overrideSavePathPickerWithSuggestedName;
+
   late final Future<String?> Function() _savePathPicker;
   // Preferred picker that accepts a suggested filename.
   late final Future<String?> Function(String suggestedName)
@@ -19,8 +31,10 @@ class PdfExportViewModel extends Notifier<PdfExportState> {
   @override
   PdfExportState build() {
     // Initialize with default pickers
-    _savePathPicker = _defaultSavePathPicker;
-    _savePathPickerWithSuggestedName = _defaultSavePathPickerWithSuggestedName;
+    _savePathPicker = _overrideSavePathPicker ?? _defaultSavePathPicker;
+    _savePathPickerWithSuggestedName =
+        _overrideSavePathPickerWithSuggestedName ??
+        _defaultSavePathPickerWithSuggestedName;
     return PdfExportState.initial();
   }
 

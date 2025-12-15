@@ -1,4 +1,5 @@
 import 'dart:isolate';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
@@ -9,11 +10,16 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../domain/models/model.dart';
 
 class DocumentStateNotifier extends Notifier<Document> {
+  DocumentStateNotifier({ExportService? service}) : _serviceOverride = service;
+
+  final ExportService? _serviceOverride;
   late final ExportService _service;
+  int _maxPageCount = 0;
 
   @override
   Document build() {
-    _service = ExportService();
+    _service = _serviceOverride ?? ExportService();
+    _maxPageCount = 0;
     return Document.initial();
   }
 
@@ -44,9 +50,10 @@ class DocumentStateNotifier extends Notifier<Document> {
     if (bytes == null) {
       // No bytes: treat as synthetic document (tests) using provided pageCount or default 1
       final pc = pageCount ?? 1;
+      _maxPageCount = math.max(_maxPageCount, pc).toInt();
       state = state.copyWith(
         loaded: true,
-        pageCount: pc,
+        pageCount: _maxPageCount,
         pickedPdfBytes: null,
         placementsByPage: <int, List<SignaturePlacement>>{},
       );
@@ -55,9 +62,11 @@ class DocumentStateNotifier extends Notifier<Document> {
     // Bytes provided
     if ((knownPageCount || pageCount != null) && pageCount != null) {
       // Fast path: caller already determined count
+      final pc = pageCount.clamp(1, 9999) as int;
+      _maxPageCount = math.max(_maxPageCount, pc).toInt();
       state = state.copyWith(
         loaded: true,
-        pageCount: pageCount.clamp(1, 9999),
+        pageCount: _maxPageCount,
         pickedPdfBytes: bytes,
         placementsByPage: <int, List<SignaturePlacement>>{},
       );
@@ -90,9 +99,10 @@ class DocumentStateNotifier extends Notifier<Document> {
       // Keep default pageCount = 1 on error
     }
 
+    _maxPageCount = math.max(_maxPageCount, pageCount).toInt();
     state = state.copyWith(
       loaded: true,
-      pageCount: pageCount,
+      pageCount: _maxPageCount,
       pickedPdfBytes: bytes,
       placementsByPage: <int, List<SignaturePlacement>>{},
     );
@@ -115,7 +125,9 @@ class DocumentStateNotifier extends Notifier<Document> {
     debugPrint(
       '[DocumentRepository] setPageCount called: $count (current: ${state.pageCount})',
     );
-    state = state.copyWith(pageCount: count.clamp(1, 9999));
+    final clamped = count.clamp(1, 9999) as int;
+    _maxPageCount = math.max(_maxPageCount, clamped).toInt();
+    state = state.copyWith(pageCount: _maxPageCount);
   }
 
   void jumpTo(int page) {

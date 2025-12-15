@@ -90,6 +90,10 @@ String _normalizeLanguageTag(String tag) {
 }
 
 class PreferencesStateNotifier extends Notifier<PreferencesState> {
+  PreferencesStateNotifier([SharedPreferences? prefs]) {
+    _prefs = prefs;
+  }
+
   SharedPreferences? _prefs;
   final Completer<void> _ready = Completer<void>();
 

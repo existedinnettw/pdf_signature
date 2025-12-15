@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/preferences_repository.dart';
 import 'package:pdf_signature/data/services/export_service.dart';
+import 'package:pdf_signature/domain/models/document.dart';
 import 'package:pdf_signature/l10n/app_localizations.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_view_model.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_model.dart';
@@ -17,6 +19,23 @@ import 'package:pdf_signature/ui/features/pdf/widgets/pdf_viewer_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Note: We use the real ExportService via the repository; no mocks here.
+
+class _PreloadedDocumentStateNotifier extends DocumentStateNotifier {
+  _PreloadedDocumentStateNotifier({
+    required this.bytes,
+    required this.pageCount,
+    ExportService? service,
+  }) : super(service: service);
+
+  final Uint8List bytes;
+  final int pageCount;
+
+  @override
+  Document build() {
+    super.build();
+    return Document(loaded: true, pageCount: pageCount, pickedPdfBytes: bytes);
+  }
+}
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -34,25 +53,25 @@ void main() {
       ProviderScope(
         overrides: [
           preferencesRepositoryProvider.overrideWith(
-            (ref) => PreferencesStateNotifier(prefs),
+            () => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) => DocumentStateNotifier(service: ExportService())
-              ..openDocument(
-                bytes: pdfBytes,
-                pageCount: 3,
-                knownPageCount: true,
-              ),
+            () => _PreloadedDocumentStateNotifier(
+              bytes: pdfBytes,
+              pageCount: 3,
+              service: ExportService(),
+            ),
           ),
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: false),
-          ),
+          pdfViewModelProvider.overrideWith(() => PdfViewModel()),
           // Disable overlays to avoid long-lived overlay animations in CI
           viewerOverlaysEnabledProvider.overrideWith((ref) => false),
           pdfExportViewModelProvider.overrideWith(
-            (ref) => PdfExportViewModel(
-              ref,
+            () => PdfExportViewModel(
               savePathPicker: () async {
+                final dir = Directory.systemTemp.createTempSync('pdfsig_');
+                return '${dir.path}/output.pdf';
+              },
+              savePathPickerWithSuggestedName: (_) async {
                 final dir = Directory.systemTemp.createTempSync('pdfsig_');
                 return '${dir.path}/output.pdf';
               },
@@ -93,23 +112,25 @@ void main() {
       ProviderScope(
         overrides: [
           preferencesRepositoryProvider.overrideWith(
-            (ref) => PreferencesStateNotifier(prefs),
+            () => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) => DocumentStateNotifier(service: ExportService())
-              ..openDocument(
-                bytes: pdfBytes,
-                pageCount: 3,
-                knownPageCount: true,
-              ),
+            () => _PreloadedDocumentStateNotifier(
+              bytes: pdfBytes,
+              pageCount: 3,
+              service: ExportService(),
+            ),
           ),
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: false),
-          ),
+          pdfViewModelProvider.overrideWith(() => PdfViewModel()),
           pdfExportViewModelProvider.overrideWith(
-            (ref) => PdfExportViewModel(
-              ref,
+            () => PdfExportViewModel(
               savePathPicker: () async {
+                final dir = Directory.systemTemp.createTempSync(
+                  'pdfsig_linux_',
+                );
+                return '${dir.path}/out.pdf';
+              },
+              savePathPickerWithSuggestedName: (_) async {
                 final dir = Directory.systemTemp.createTempSync(
                   'pdfsig_linux_',
                 );
@@ -165,20 +186,16 @@ void main() {
       ProviderScope(
         overrides: [
           preferencesRepositoryProvider.overrideWith(
-            (ref) => PreferencesStateNotifier(prefs),
+            () => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) => DocumentStateNotifier(
-              service: ExportService(enableRaster: false),
-            )..openDocument(
+            () => _PreloadedDocumentStateNotifier(
               bytes: pdfBytes,
               pageCount: 3,
-              knownPageCount: true,
+              service: ExportService(enableRaster: false),
             ),
           ),
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: false),
-          ),
+          pdfViewModelProvider.overrideWith(() => PdfViewModel()),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -215,20 +232,16 @@ void main() {
       ProviderScope(
         overrides: [
           preferencesRepositoryProvider.overrideWith(
-            (ref) => PreferencesStateNotifier(prefs),
+            () => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) => DocumentStateNotifier(
-              service: ExportService(enableRaster: false),
-            )..openDocument(
+            () => _PreloadedDocumentStateNotifier(
               bytes: pdfBytes,
               pageCount: 3,
-              knownPageCount: true,
+              service: ExportService(enableRaster: false),
             ),
           ),
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: false),
-          ),
+          pdfViewModelProvider.overrideWith(() => PdfViewModel()),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -268,20 +281,16 @@ void main() {
       ProviderScope(
         overrides: [
           preferencesRepositoryProvider.overrideWith(
-            (ref) => PreferencesStateNotifier(prefs),
+            () => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) => DocumentStateNotifier(
-              service: ExportService(enableRaster: false),
-            )..openDocument(
+            () => _PreloadedDocumentStateNotifier(
               bytes: pdfBytes,
               pageCount: 3,
-              knownPageCount: true,
+              service: ExportService(enableRaster: false),
             ),
           ),
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: false),
-          ),
+          pdfViewModelProvider.overrideWith(() => PdfViewModel()),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -304,10 +313,9 @@ void main() {
     expect(pagesSidebar, findsOneWidget);
 
     // Scroll to make page 3 thumbnail visible
-    await tester.drag(pagesSidebar, const Offset(0, -300));
-    await tester.pumpAndSettle();
-
     final page3Thumb = find.text('3');
+    await tester.ensureVisible(page3Thumb);
+    await tester.pumpAndSettle();
     expect(page3Thumb, findsOneWidget);
     await tester.tap(page3Thumb);
     await tester.pumpAndSettle();
@@ -324,19 +332,16 @@ void main() {
       ProviderScope(
         overrides: [
           preferencesRepositoryProvider.overrideWith(
-            (ref) => PreferencesStateNotifier(prefs),
+            () => PreferencesStateNotifier(prefs),
           ),
           documentRepositoryProvider.overrideWith(
-            (ref) => DocumentStateNotifier(service: ExportService())
-              ..openDocument(
-                bytes: pdfBytes,
-                pageCount: 3,
-                knownPageCount: true,
-              ),
+            () => _PreloadedDocumentStateNotifier(
+              bytes: pdfBytes,
+              pageCount: 3,
+              service: ExportService(),
+            ),
           ),
-          pdfViewModelProvider.overrideWith(
-            (ref) => PdfViewModel(ref, useMockViewer: false),
-          ),
+          pdfViewModelProvider.overrideWith(() => PdfViewModel()),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -379,26 +384,28 @@ void main() {
         ProviderScope(
           overrides: [
             preferencesRepositoryProvider.overrideWith(
-              (ref) => PreferencesStateNotifier(prefs),
+              () => PreferencesStateNotifier(prefs),
             ),
             documentRepositoryProvider.overrideWith(
-              (ref) => DocumentStateNotifier(service: ExportService())
-                ..openDocument(
-                  bytes: pdfBytes,
-                  pageCount: 3,
-                  knownPageCount: true,
-                ),
+              () => _PreloadedDocumentStateNotifier(
+                bytes: pdfBytes,
+                pageCount: 3,
+                service: ExportService(),
+              ),
             ),
-            pdfViewModelProvider.overrideWith(
-              (ref) => PdfViewModel(ref, useMockViewer: false),
-            ),
+            pdfViewModelProvider.overrideWith(() => PdfViewModel()),
             // Disable overlays to reduce post-export timers/animations.
             viewerOverlaysEnabledProvider.overrideWith((ref) => false),
             // Override only save path picker to avoid native dialogs; use real exporter
             pdfExportViewModelProvider.overrideWith(
-              (ref) => PdfExportViewModel(
-                ref,
+              () => PdfExportViewModel(
                 savePathPicker: () async {
+                  final dir = Directory.systemTemp.createTempSync(
+                    'pdfsig_after_',
+                  );
+                  return '${dir.path}/output-after-export.pdf';
+                },
+                savePathPickerWithSuggestedName: (_) async {
                   final dir = Directory.systemTemp.createTempSync(
                     'pdfsig_after_',
                   );
