@@ -1,0 +1,53 @@
+name: Deploy PR Preview
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+concurrency: preview-${{ github.ref }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        if: github.event.action != 'closed'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        if: github.event.action != 'closed'
+        run: flutter pub get
+
+      - name: Run build_runner
+        if: github.event.action != 'closed'
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Run tests
+        if: github.event.action != 'closed'
+        run: flutter test
+
+      - name: Build web
+        if: github.event.action != 'closed'
+        run: flutter build web --base-href /pdf_signature/pr-preview/pr-${{ github.event.number }}/ --release -O4 --wasm
+
+      - name: Deploy preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: ./build/web/
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: auto
