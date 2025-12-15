@@ -23,13 +23,13 @@ jobs:
         working-directory: .
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         continue-on-error: true
         id: checkout_https
 
       - name: Checkout repository via SSH (fallback)
         if: steps.checkout_https.outcome == 'failure'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
           ssh-strict: false
