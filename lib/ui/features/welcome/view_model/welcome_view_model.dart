@@ -20,8 +20,8 @@ class WelcomeViewModel {
     }
 
     // Use PdfSessionViewModel to open and navigate.
-    final session = ref.read(pdfSessionViewModelProvider(router));
-    await session.openPdf(path: path, bytes: bytes);
+    final session = ref.read(pdfSessionViewModelProvider.notifier);
+    await session.openPdf(path: path, bytes: bytes, router: router);
   }
 }
 

@@ -42,9 +42,10 @@ class SignatureOverlay extends ConsumerWidget {
 
         Future<void> _showContextMenu(Offset position) async {
           final pdfViewModel = ref.read(pdfViewModelProvider.notifier);
-          final isLocked = ref
-              .watch(pdfViewModelProvider)
-              .isPlacementLocked(page: pageNumber, index: placedIndex);
+          final isLocked = pdfViewModel.isPlacementLocked(
+            page: pageNumber,
+            index: placedIndex,
+          );
           final selected = await showMenu<String>(
             context: context,
             position: RelativeRect.fromLTRB(
@@ -92,7 +93,7 @@ class SignatureOverlay extends ConsumerWidget {
               allowContentFlipping: false,
               onChanged:
                   ref
-                          .watch(pdfViewModelProvider)
+                          .read(pdfViewModelProvider.notifier)
                           .isPlacementLocked(
                             page: pageNumber,
                             index: placedIndex,
@@ -118,7 +119,7 @@ class SignatureOverlay extends ConsumerWidget {
               // Keep default handles; you can customize later if needed
               contentBuilder: (context, boxRect, flip) {
                 final isLocked = ref
-                    .watch(pdfViewModelProvider)
+                    .read(pdfViewModelProvider.notifier)
                     .isPlacementLocked(page: pageNumber, index: placedIndex);
                 return DecoratedBox(
                   decoration: BoxDecoration(

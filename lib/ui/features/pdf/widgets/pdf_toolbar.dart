@@ -59,11 +59,11 @@ class _PdfToolbarState extends ConsumerState<PdfToolbar> {
 
   @override
   Widget build(BuildContext context) {
-    final pdfViewModel = ref.watch(pdfViewModelProvider);
+    final pdfViewState = ref.watch(pdfViewModelProvider);
     final pdf = ref.watch(
       documentRepositoryProvider,
     ); // Watch document directly for updates
-    final currentPage = pdfViewModel.currentPage;
+    final currentPage = pdfViewState.currentPage;
     final l = AppLocalizations.of(context);
     final pageInfo = l.pageInfo(currentPage, pdf.pageCount);
 

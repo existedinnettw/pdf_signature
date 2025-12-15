@@ -8,12 +8,14 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../domain/models/model.dart';
 
-class DocumentStateNotifier extends StateNotifier<Document> {
-  DocumentStateNotifier({ExportService? service})
-    : _service = service ?? ExportService(),
-      super(Document.initial());
+class DocumentStateNotifier extends Notifier<Document> {
+  late final ExportService _service;
 
-  final ExportService _service;
+  @override
+  Document build() {
+    _service = ExportService();
+    return Document.initial();
+  }
 
   @visibleForTesting
   void openSample() {
@@ -278,8 +280,8 @@ class DocumentStateNotifier extends StateNotifier<Document> {
 }
 
 final documentRepositoryProvider =
-    StateNotifierProvider<DocumentStateNotifier, Document>(
-      (ref) => DocumentStateNotifier(),
+    NotifierProvider<DocumentStateNotifier, Document>(
+      DocumentStateNotifier.new,
     );
 
 /// --- Isolate helpers of DocumentRepository ---

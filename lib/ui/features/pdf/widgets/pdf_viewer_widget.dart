@@ -51,7 +51,7 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
     final bytes = doc.pickedPdfBytes!;
     if (!identical(bytes, _lastBytes)) {
       _lastBytes = bytes;
-      final viewModel = ref.read(pdfViewModelProvider);
+      final viewModel = ref.read(pdfViewModelProvider.notifier);
       debugPrint(
         '[PdfViewerWidget] New PDF bytes detected -> ${viewModel.documentSourceName}',
       );
@@ -84,9 +84,9 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final pdfViewModel = ref.watch(pdfViewModelProvider);
+    final pdfViewState = ref.watch(pdfViewModelProvider);
     final document = ref.watch(documentRepositoryProvider);
-    final useMock = pdfViewModel.useMockViewer;
+    final useMock = pdfViewState.useMockViewer;
     _updateDocRef(document);
 
     if (useMock) {
@@ -113,7 +113,7 @@ class _PdfViewerWidgetState extends ConsumerState<PdfViewerWidget> {
           }
           return Center(child: Text(text));
         }
-        final pdfViewModel = ref.read(pdfViewModelProvider);
+        final pdfViewModel = ref.read(pdfViewModelProvider.notifier);
         final viewerKey =
             widget.innerViewerKey ??
             Key('pdf_viewer_${pdfViewModel.documentSourceName}');

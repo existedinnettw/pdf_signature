@@ -36,12 +36,12 @@ class PdfPageOverlays extends ConsumerWidget {
     if (!overlaysEnabled) {
       return const SizedBox.shrink();
     }
-    final pdfViewModel = ref.watch(pdfViewModelProvider);
+    final pdfViewState = ref.watch(pdfViewModelProvider);
     // Subscribe to document changes to rebuild overlays
     final pdf = ref.watch(documentRepositoryProvider);
     final placed =
         pdf.placementsByPage[pageNumber] ?? const <SignaturePlacement>[];
-    final activeRect = pdfViewModel.activeRect;
+    final activeRect = pdfViewState.activeRect;
     final widgets = <Widget>[];
 
     // Base DragTarget filling the whole page to accept drops from signature cards.
@@ -116,10 +116,10 @@ class PdfPageOverlays extends ConsumerWidget {
 
     // TODO:Add active overlay if present and not using mock (mock has its own)
 
-    final useMock = pdfViewModel.useMockViewer;
+    final useMock = pdfViewState.useMockViewer;
     if (!useMock &&
         activeRect != null &&
-        pageNumber == pdfViewModel.currentPage) {
+        pageNumber == pdfViewState.currentPage) {
       widgets.add(
         LayoutBuilder(
           builder: (context, constraints) {

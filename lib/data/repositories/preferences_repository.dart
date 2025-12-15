@@ -89,9 +89,39 @@ String _normalizeLanguageTag(String tag) {
   return tags.contains('en') ? 'en' : tags.first;
 }
 
-class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
+class PreferencesStateNotifier extends Notifier<PreferencesState> {
   late final SharedPreferences _prefs;
   final Completer<void> _ready = Completer<void>();
+
+  @override
+  PreferencesState build() {
+    // Initialize with defaults
+    final defaultState = PreferencesState(
+      theme: 'system',
+      language: _normalizeLanguageTag(
+        WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag(),
+      ),
+      exportDpi: 144.0,
+      theme_color: '#FF2196F3', // blue
+    );
+    // Start async initialization
+    _initAsync();
+    return defaultState;
+  }
+
+  void _initAsync() async {
+    _prefs = await SharedPreferences.getInstance();
+    await _load();
+    _ready.complete();
+  }
+
+  // For testing - can be called with mock SharedPreferences
+  void initWithPrefs(SharedPreferences prefs) {
+    _prefs = prefs;
+    _load();
+    _ready.complete();
+  }
+
   static Color? _tryParseColor(String? s) {
     if (s == null || s.isEmpty) return null;
     final v = s.trim();
@@ -162,22 +192,7 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
     return '#$a$r$g$b';
   }
 
-  PreferencesStateNotifier([SharedPreferences? prefs])
-    : super(
-        PreferencesState(
-          theme: 'system',
-          language: _normalizeLanguageTag(
-            WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag(),
-          ),
-          exportDpi: 144.0,
-          theme_color: '#FF2196F3', // blue
-        ),
-      ) {
-    _init(prefs);
-  }
-
-  Future<void> _init(SharedPreferences? injected) async {
-    _prefs = injected ?? await SharedPreferences.getInstance();
+  Future<void> _load() async {
     // Load persisted values (with sane defaults)
     final loaded = PreferencesState(
       theme: _prefs.getString(_kTheme) ?? 'system',
@@ -291,9 +306,8 @@ class PreferencesStateNotifier extends StateNotifier<PreferencesState> {
 }
 
 final preferencesRepositoryProvider =
-    StateNotifierProvider<PreferencesStateNotifier, PreferencesState>((ref) {
-      // Construct with lazy SharedPreferences initialization.
-      return PreferencesStateNotifier();
-    });
+    NotifierProvider<PreferencesStateNotifier, PreferencesState>(
+      PreferencesStateNotifier.new,
+    );
 
 // pageViewModeProvider removed; the app always runs in continuous mode.

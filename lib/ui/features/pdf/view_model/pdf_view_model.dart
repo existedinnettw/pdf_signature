@@ -7,103 +7,70 @@ import 'package:pdf_signature/data/repositories/document_repository.dart';
 import 'package:pdf_signature/data/repositories/signature_card_repository.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 import 'package:pdf_signature/ui/features/pdf/view_model/document_version.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_view_state.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_session_state.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 
-class PdfViewModel extends ChangeNotifier {
-  final Ref ref;
-  PdfViewerController _controller = PdfViewerController();
-  PdfViewerController get controller => _controller;
-  int _currentPage = 1;
-  late final bool _useMockViewer;
-  bool _isDisposed = false;
-
-  // Active rect for signature placement overlay
-  Rect? _activeRect;
-  Rect? get activeRect => _activeRect;
-  set activeRect(Rect? value) {
-    _activeRect = value;
-    if (!_isDisposed) {
-      notifyListeners();
-    }
+class PdfViewModel extends Notifier<PdfViewState> {
+  @override
+  PdfViewState build() {
+    return PdfViewState.initial();
   }
 
-  // Locked placements: Set of (page, index) tuples
-  final Set<String> _lockedPlacements = {};
-  Set<String> get lockedPlacements => Set.unmodifiable(_lockedPlacements);
+  PdfViewerController get controller => state.controller;
+  int get currentPage => state.currentPage;
+  bool get useMockViewer => state.useMockViewer;
+  Rect? get activeRect => state.activeRect;
+  Set<String> get lockedPlacements => state.lockedPlacements;
 
-  // Document version tracking for UI consistency
-  DocumentVersion _documentVersion = DocumentVersion.initial();
+  set activeRect(Rect? value) {
+    state = state.copyWith(activeRect: value, clearActiveRect: value == null);
+  }
+
+  set currentPage(int value) {
+    final doc = ref.read(documentRepositoryProvider);
+    final clamped = value.clamp(1, doc.pageCount);
+    debugPrint('PdfViewModel.currentPage set to $clamped');
+    state = state.copyWith(currentPage: clamped);
+  }
 
   // Get current document source name for PdfDocumentRefData
   String get documentSourceName {
     // Ensure document version is up to date, but only update if really needed
     _updateDocumentVersionIfNeeded();
-    return _documentVersion.sourceName;
+    return state.documentVersion.sourceName;
   }
 
   void _updateDocumentVersionIfNeeded() {
     final document = ref.read(documentRepositoryProvider);
-    if (!identical(_documentVersion.lastBytes, document.pickedPdfBytes)) {
-      _documentVersion = DocumentVersion(
-        version: _documentVersion.version + 1,
-        lastBytes: document.pickedPdfBytes,
+    if (!identical(state.documentVersion.lastBytes, document.pickedPdfBytes)) {
+      state = state.copyWith(
+        documentVersion: DocumentVersion(
+          version: state.documentVersion.version + 1,
+          lastBytes: document.pickedPdfBytes,
+        ),
       );
     }
   }
 
-  // const bool.fromEnvironment('FLUTTER_TEST', defaultValue: false);
-  PdfViewModel(this.ref, {bool? useMockViewer})
-    : _useMockViewer =
-          useMockViewer ??
-          const bool.fromEnvironment('FLUTTER_TEST', defaultValue: false);
-
-  bool get useMockViewer => _useMockViewer;
-
-  int get currentPage => _currentPage;
-
-  set currentPage(int value) {
-    _currentPage = value.clamp(1, document.pageCount);
-    // ignore: avoid_print
-    debugPrint('PdfViewModel.currentPage set to $_currentPage');
-    if (!_isDisposed) {
-      notifyListeners();
-    }
-  }
-
   // Do not watch the document repository here; watching would cause this
-  // ChangeNotifier to be disposed/recreated on every document change, which
+  // notifier to be disposed/recreated on every document change, which
   // resets transient UI state like locked placements. Read instead.
   Document get document => ref.read(documentRepositoryProvider);
 
   void jumpToPage(int page) {
-    // ignore: avoid_print
-    debugPrint('PdfViewModel.jumpToPage ' + page.toString());
+    debugPrint('PdfViewModel.jumpToPage $page');
     currentPage = page;
   }
 
-  // Make this view model "int-like" for tests that compare it directly to an
-  // integer or use it as a Map key for page lookups.
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is int) {
-      return other == currentPage;
-    }
-    return false;
-  }
-
-  @override
-  int get hashCode => currentPage.hashCode;
-
   // Allow repositories to request a UI refresh without mutating provider state
   void notifyPlacementsChanged() {
-    if (!_isDisposed) {
-      notifyListeners();
-    }
+    // Force a rebuild by updating state
+    state = state.copyWith();
   }
 
   // Document repository methods
@@ -146,10 +113,9 @@ class PdfViewModel extends ChangeNotifier {
         .read(documentRepositoryProvider.notifier)
         .removePlacement(page: page, index: index);
     // Also remove from locked placements if it was locked
-    _lockedPlacements.remove(_placementKey(page, index));
-    if (!_isDisposed) {
-      notifyListeners();
-    }
+    final newLocked = Set<String>.from(state.lockedPlacements)
+      ..remove(_placementKey(page, index));
+    state = state.copyWith(lockedPlacements: newLocked);
   }
 
   void updatePlacementRect({
@@ -177,23 +143,21 @@ class PdfViewModel extends ChangeNotifier {
 
   // Check if a placement is locked
   bool isPlacementLocked({required int page, required int index}) {
-    return _lockedPlacements.contains(_placementKey(page, index));
+    return state.lockedPlacements.contains(_placementKey(page, index));
   }
 
   // Lock a placement
   void lockPlacement({required int page, required int index}) {
-    _lockedPlacements.add(_placementKey(page, index));
-    if (!_isDisposed) {
-      notifyListeners();
-    }
+    final newLocked = Set<String>.from(state.lockedPlacements)
+      ..add(_placementKey(page, index));
+    state = state.copyWith(lockedPlacements: newLocked);
   }
 
   // Unlock a placement
   void unlockPlacement({required int page, required int index}) {
-    _lockedPlacements.remove(_placementKey(page, index));
-    if (!_isDisposed) {
-      notifyListeners();
-    }
+    final newLocked = Set<String>.from(state.lockedPlacements)
+      ..remove(_placementKey(page, index));
+    state = state.copyWith(lockedPlacements: newLocked);
   }
 
   // Toggle lock state of a placement
@@ -250,37 +214,24 @@ class PdfViewModel extends ChangeNotifier {
   void clearAllSignatureCards() {
     ref.read(signatureCardRepositoryProvider.notifier).clearAll();
   }
-
-  @override
-  void dispose() {
-    _isDisposed = true;
-    super.dispose();
-  }
 }
 
-final pdfViewModelProvider = ChangeNotifierProvider<PdfViewModel>((ref) {
-  return PdfViewModel(ref);
-});
+final pdfViewModelProvider = NotifierProvider<PdfViewModel, PdfViewState>(
+  PdfViewModel.new,
+);
 
 /// ViewModel managing PDF session lifecycle (file picking/open/close) and
 /// navigation. Replaces the previous PdfManager helper.
-class PdfSessionViewModel extends ChangeNotifier {
-  final Ref ref;
-  final GoRouter router;
-  XFile _currentFile = XFile('');
-  // Keep a human display name in addition to XFile, because on Linux via
-  // xdg-desktop-portal the path can look like /run/user/.../doc/<UUID>, and
-  // XFile.name derives from that basename, yielding a random UUID instead of
-  // the actual filename the user selected. We preserve the picker/drop name
-  // here to offer a sensible default like "signed_<original>.pdf".
-  String _displayFileName = '';
+class PdfSessionViewModel extends Notifier<PdfSessionState> {
+  @override
+  PdfSessionState build() {
+    return PdfSessionState.initial();
+  }
 
-  PdfSessionViewModel({required this.ref, required this.router});
+  XFile get currentFile => state.currentFile;
+  String get displayFileName => state.displayFileName;
 
-  XFile get currentFile => _currentFile;
-  String get displayFileName => _displayFileName;
-
-  Future<void> pickAndOpenPdf() async {
+  Future<void> pickAndOpenPdf(GoRouter router) async {
     final result = await fp.FilePicker.platform.pickFiles(
       type: fp.FileType.custom,
       allowedExtensions: const ['pdf'],
@@ -304,7 +255,12 @@ class PdfSessionViewModel extends ChangeNotifier {
       }
     }
     if (effectiveBytes != null) {
-      await openPdf(path: path, bytes: effectiveBytes, fileName: name);
+      await openPdf(
+        path: path,
+        bytes: effectiveBytes,
+        fileName: name,
+        router: router,
+      );
     } else {
       debugPrint(
         '[PdfSessionViewModel] No PDF data available to open (path=$path, name=$name)',
@@ -316,6 +272,7 @@ class PdfSessionViewModel extends ChangeNotifier {
     String? path,
     required Uint8List bytes,
     String? fileName,
+    required GoRouter router,
   }) async {
     int pageCount = 1; // default
     try {
@@ -355,36 +312,44 @@ class PdfSessionViewModel extends ChangeNotifier {
       );
       debugPrint(st.toString());
     }
+    XFile newFile;
     if (path != null && path.isNotEmpty) {
-      _currentFile = XFile(path);
+      newFile = XFile(path);
     } else if ((fileName != null && fileName.isNotEmpty)) {
       // Keep in-memory XFile so .name is available for suggestion
       try {
-        _currentFile = XFile.fromData(
+        newFile = XFile.fromData(
           bytes,
           name: fileName,
           mimeType: 'application/pdf',
         );
       } catch (e, st) {
-        _currentFile = XFile(fileName);
+        newFile = XFile(fileName);
         debugPrint(
           '[PdfSessionViewModel] Failed to create XFile.fromData name=$fileName error=$e',
         );
         debugPrint(st.toString());
       }
     } else {
-      _currentFile = XFile('');
+      newFile = XFile('');
     }
 
     // Update display name: prefer explicit fileName (from picker/drop),
     // fall back to basename of path, otherwise empty.
+    String newDisplayFileName;
     if (fileName != null && fileName.isNotEmpty) {
-      _displayFileName = fileName;
+      newDisplayFileName = fileName;
     } else if (path != null && path.isNotEmpty) {
-      _displayFileName = path.split('/').last.split('\\').last;
+      newDisplayFileName = path.split('/').last.split('\\').last;
     } else {
-      _displayFileName = '';
+      newDisplayFileName = '';
     }
+
+    state = state.copyWith(
+      currentFile: newFile,
+      displayFileName: newDisplayFileName,
+    );
+
     // If fast path failed to set repository (e.g., exception earlier), fallback to async derive.
     if (ref.read(documentRepositoryProvider).pickedPdfBytes != bytes) {
       debugPrint(
@@ -397,21 +362,18 @@ class PdfSessionViewModel extends ChangeNotifier {
     // relies on this behavior. Placements are reset by openPicked() above.
     debugPrint('[PdfSessionViewModel] Navigating to /pdf');
     router.go('/pdf');
-    debugPrint('[PdfSessionViewModel] Notifying listeners after open');
-    notifyListeners();
+    debugPrint('[PdfSessionViewModel] State updated after open');
   }
 
-  void closePdf() {
+  void closePdf(GoRouter router) {
     ref.read(documentRepositoryProvider.notifier).close();
     ref.read(signatureCardRepositoryProvider.notifier).clearAll();
-    _currentFile = XFile('');
-    _displayFileName = '';
+    state = state.copyWith(currentFile: XFile(''), displayFileName: '');
     router.go('/');
-    notifyListeners();
   }
 }
 
 final pdfSessionViewModelProvider =
-    ChangeNotifierProvider.family<PdfSessionViewModel, GoRouter>((ref, router) {
-      return PdfSessionViewModel(ref: ref, router: router);
-    });
+    NotifierProvider<PdfSessionViewModel, PdfSessionState>(
+      PdfSessionViewModel.new,
+    );

@@ -54,8 +54,9 @@ class CachedSignatureCard {
       );
 }
 
-class SignatureCardStateNotifier extends StateNotifier<List<SignatureCard>> {
-  SignatureCardStateNotifier() : super(const []);
+class SignatureCardStateNotifier extends Notifier<List<SignatureCard>> {
+  @override
+  List<SignatureCard> build() => const [];
 
   // Internal storage with cache
   final List<CachedSignatureCard> _cards = <CachedSignatureCard>[];
@@ -207,6 +208,6 @@ class SignatureCardStateNotifier extends StateNotifier<List<SignatureCard>> {
 }
 
 final signatureCardRepositoryProvider =
-    StateNotifierProvider<SignatureCardStateNotifier, List<SignatureCard>>(
-      (ref) => SignatureCardStateNotifier(),
+    NotifierProvider<SignatureCardStateNotifier, List<SignatureCard>>(
+      SignatureCardStateNotifier.new,
     );

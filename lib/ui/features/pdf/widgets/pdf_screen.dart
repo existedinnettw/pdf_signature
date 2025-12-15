@@ -195,7 +195,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
 
         if (!kIsWeb) {
           final path = await ref
-              .read(pdfExportViewModelProvider)
+              .read(pdfExportViewModelProvider.notifier)
               .pickSavePathWithSuggestedName(suggested);
           if (path == null || path.trim().isEmpty) return;
           final fullPath = _ensurePdfExtension(path.trim());
@@ -203,7 +203,7 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
           // ignore: avoid_print
           debugPrint('_saveSignedPdf: picked save path ' + fullPath);
           ok = await ref
-              .read(pdfExportViewModelProvider)
+              .read(pdfExportViewModelProvider.notifier)
               .exportToPath(
                 outputPath: fullPath,
                 uiPageSize: _pageSize,
@@ -329,7 +329,8 @@ class _PdfSignatureHomePageState extends ConsumerState<PdfSignatureHomePage> {
               }(),
               child: Consumer(
                 builder: (context, ref, child) {
-                  final pdfViewModel = ref.watch(pdfViewModelProvider);
+                  final pdfViewState = ref.watch(pdfViewModelProvider);
+                  final pdfViewModel = ref.read(pdfViewModelProvider.notifier);
                   final pdf = pdfViewModel.document;
 
                   final documentRef =

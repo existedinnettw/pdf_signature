@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/domain/models/model.dart';
 
 ///
-class SignatureAssetRepository extends StateNotifier<List<SignatureAsset>> {
-  SignatureAssetRepository() : super(const []);
+class SignatureAssetRepository extends Notifier<List<SignatureAsset>> {
+  @override
+  List<SignatureAsset> build() => const [];
 
   /// Preferred API: add from an already decoded image to avoid re-decodes.
   void addImage(img.Image image, {String? name}) {
@@ -17,6 +18,6 @@ class SignatureAssetRepository extends StateNotifier<List<SignatureAsset>> {
 }
 
 final signatureAssetRepositoryProvider =
-    StateNotifierProvider<SignatureAssetRepository, List<SignatureAsset>>(
-      (ref) => SignatureAssetRepository(),
+    NotifierProvider<SignatureAssetRepository, List<SignatureAsset>>(
+      SignatureAssetRepository.new,
     );

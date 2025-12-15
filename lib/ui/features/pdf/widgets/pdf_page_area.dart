@@ -112,11 +112,12 @@ class _PdfPageAreaState extends ConsumerState<PdfPageArea> {
 
   @override
   Widget build(BuildContext context) {
-    final pdfViewModel = ref.watch(pdfViewModelProvider);
+    final pdfViewState = ref.watch(pdfViewModelProvider);
+    final pdfViewModel = ref.read(pdfViewModelProvider.notifier);
     final pdf = pdfViewModel.document;
     const pageViewMode = 'continuous';
-    // React to PdfViewModel currentPage changes. With ChangeNotifierProvider,
-    // prev/next are the same instance, so compare to a local cache.
+    // React to PdfViewModel currentPage changes. With NotifierProvider,
+    // prev/next are now different state objects, so we can compare them directly.
     ref.listen(pdfViewModelProvider, (prev, next) {
       // Only perform manual scrolling in mock viewer mode. In real viewer mode,
       // PdfViewerController + onPageChanged keep things in sync, and attempting

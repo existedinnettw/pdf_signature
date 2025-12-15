@@ -5,39 +5,30 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf_signature/data/repositories/document_repository.dart';
+import 'package:pdf_signature/ui/features/pdf/view_model/pdf_export_state.dart';
 
 /// ViewModel for export-related UI state and helpers.
-class PdfExportViewModel extends ChangeNotifier {
-  final Ref ref;
-  bool _exporting = false;
-
+class PdfExportViewModel extends Notifier<PdfExportState> {
   // Dependencies (injectable via constructor for tests)
   // Zero-arg picker retained for backward compatibility with tests.
-  final Future<String?> Function() _savePathPicker;
+  late final Future<String?> Function() _savePathPicker;
   // Preferred picker that accepts a suggested filename.
-  final Future<String?> Function(String suggestedName)
+  late final Future<String?> Function(String suggestedName)
   _savePathPickerWithSuggestedName;
 
-  PdfExportViewModel(
-    this.ref, {
-    Future<String?> Function()? savePathPicker,
-    Future<String?> Function(String suggestedName)?
-    savePathPickerWithSuggestedName,
-  }) : _savePathPicker = savePathPicker ?? _defaultSavePathPicker,
-       // Prefer provided suggested-name picker; otherwise, if only zero-arg
-       // picker is given (tests), wrap it; else use default that honors name.
-       _savePathPickerWithSuggestedName =
-           savePathPickerWithSuggestedName ??
-           (savePathPicker != null
-               ? ((_) => savePathPicker())
-               : _defaultSavePathPickerWithSuggestedName);
+  @override
+  PdfExportState build() {
+    // Initialize with default pickers
+    _savePathPicker = _defaultSavePathPicker;
+    _savePathPickerWithSuggestedName = _defaultSavePathPickerWithSuggestedName;
+    return PdfExportState.initial();
+  }
 
-  bool get exporting => _exporting;
+  bool get exporting => state.exporting;
 
   void setExporting(bool value) {
-    if (_exporting == value) return;
-    _exporting = value;
-    notifyListeners();
+    if (state.exporting == value) return;
+    state = state.copyWith(exporting: value);
   }
 
   /// Perform export via document repository. Returns true on success.
@@ -122,8 +113,7 @@ class PdfExportViewModel extends ChangeNotifier {
   }
 }
 
-final pdfExportViewModelProvider = ChangeNotifierProvider<PdfExportViewModel>((
-  ref,
-) {
-  return PdfExportViewModel(ref);
-});
+final pdfExportViewModelProvider =
+    NotifierProvider<PdfExportViewModel, PdfExportState>(
+      PdfExportViewModel.new,
+    );

@@ -25,9 +25,6 @@ class _DropReadableFromDesktop implements DropReadable {
   Future<Uint8List> readAsBytes() => inner.readAsBytes();
 }
 
-// Allow injecting Riverpod's read function from either WidgetRef or ProviderContainer
-typedef Reader = T Function<T>(ProviderListenable<T> provider);
-
 // Select first .pdf file (case-insensitive) or fall back to first entry.
 Future<void> handleDroppedFiles(
   Future<void> Function({String? path, Uint8List? bytes, String? fileName})

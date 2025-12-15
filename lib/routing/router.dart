@@ -26,15 +26,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) {
-          final sessionVm = ref.read(pdfSessionViewModelProvider(router));
+          final sessionVm = ref.read(pdfSessionViewModelProvider.notifier);
           return WelcomeScreen(
-            onPickPdf: () => sessionVm.pickAndOpenPdf(),
+            onPickPdf: () => sessionVm.pickAndOpenPdf(router),
             onOpenPdf:
                 ({String? path, Uint8List? bytes, String? fileName}) =>
                     sessionVm.openPdf(
                       path: path,
                       bytes: bytes ?? Uint8List(0),
                       fileName: fileName,
+                      router: router,
                     ),
           );
         },
@@ -42,12 +43,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pdf',
         builder: (context, state) {
-          final sessionVm = ref.read(pdfSessionViewModelProvider(router));
+          final sessionVm = ref.read(pdfSessionViewModelProvider.notifier);
+          final sessionState = ref.read(pdfSessionViewModelProvider);
           return PdfSignatureHomePage(
-            onPickPdf: () => sessionVm.pickAndOpenPdf(),
-            onClosePdf: () => sessionVm.closePdf(),
-            currentFile: sessionVm.currentFile,
-            currentFileName: sessionVm.displayFileName,
+            onPickPdf: () => sessionVm.pickAndOpenPdf(router),
+            onClosePdf: () => sessionVm.closePdf(router),
+            currentFile: sessionState.currentFile,
+            currentFileName: sessionState.displayFileName,
           );
         },
       ),

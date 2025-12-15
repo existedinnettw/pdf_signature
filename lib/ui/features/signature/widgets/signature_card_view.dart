@@ -158,10 +158,14 @@ class _SignatureCardViewState extends ConsumerState<SignatureCardView> {
         ),
       ),
       onDragStarted: () {
-        ref.read(isDraggingSignatureViewModelProvider.notifier).state = true;
+        ref
+            .read(isDraggingSignatureViewModelProvider.notifier)
+            .setDragging(true);
       },
       onDragEnd: (_) {
-        ref.read(isDraggingSignatureViewModelProvider.notifier).state = false;
+        ref
+            .read(isDraggingSignatureViewModelProvider.notifier)
+            .setDragging(false);
       },
       feedback: Opacity(
         opacity: 0.9,
