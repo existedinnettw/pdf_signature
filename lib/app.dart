@@ -59,7 +59,9 @@ class MyApp extends StatelessWidget {
               final router = ref.watch(routerProvider);
               final content = Scaffold(
                 appBar: AppBar(
-                  title: Text(AppLocalizations.of(context).appTitle),
+                  title: Text(
+                    AppLocalizations.of(context).appTitle + "(PR preview)",
+                  ),
                   actions: [
                     OutlinedButton.icon(
                       key: const Key('btn_appbar_settings'),
